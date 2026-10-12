@@ -11,7 +11,58 @@
 <script id="app-logic">
 const Logic = (() => {
   const VERSION = 1;
-  return { VERSION };
+  // version n の settings を n+1 へ変換する関数を MIGRATIONS[n] に置く。
+  const MIGRATIONS = {};
+
+  function coerce(spec, value) {
+    if (value === undefined || value === null) return undefined;
+    switch (spec.type) {
+      case 'int': {
+        const n = typeof value === 'number' ? value : Number.parseInt(String(value), 10);
+        if (!Number.isInteger(n)) return undefined;
+        if (spec.min !== undefined && n < spec.min) return undefined;
+        if (spec.max !== undefined && n > spec.max) return undefined;
+        return n;
+      }
+      case 'enum': {
+        const v = typeof spec.values[0] === 'number' ? Number(value) : String(value);
+        return spec.values.includes(v) ? v : undefined;
+      }
+      case 'string':
+        return String(value);
+      case 'object':
+        return typeof value === 'object' ? value : undefined;
+      default:
+        return undefined;
+    }
+  }
+
+  function resolveSettings(schema, stored, query) {
+    const out = {};
+    for (const [key, spec] of Object.entries(schema)) {
+      let v = coerce(spec, stored && stored[key]);
+      if (spec.type !== 'object' && query && query[key] !== undefined) {
+        const q = coerce(spec, query[key]);
+        if (q !== undefined) v = q;
+      }
+      out[key] = v === undefined ? spec.default : v;
+    }
+    return out;
+  }
+
+  function migrateStored(raw, version) {
+    if (!raw || typeof raw !== 'object' || typeof raw.settings !== 'object' || raw.settings === null) return {};
+    if (!Number.isInteger(raw.version)) return {};
+    let settings = raw.settings;
+    for (let v = raw.version; v < version; v++) {
+      const m = MIGRATIONS[v];
+      if (!m) return {};
+      settings = m(settings);
+    }
+    return settings;
+  }
+
+  return { VERSION, coerce, resolveSettings, migrateStored };
 })();
 </script>
 <script id="app-ui">
