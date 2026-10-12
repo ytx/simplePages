@@ -78,3 +78,21 @@ test('normalizeJma: real fixture has 7 weekly days and 3h pops', () => {
   assert.ok(j.pops.length >= 4);
   for (const d of j.weekly) assert.match(d.date, /^\d{4}-\d{2}-\d{2}$/);
 });
+
+test('normalizeJma: selects non-first area by code for days and pops', () => {
+  const j = Logic.normalizeJma(mini, '120030');
+  assert.equal(j.areaName, '南部');
+  assert.equal(j.days[0].weather, '晴れ');
+  assert.deepEqual(j.pops.map((p) => p.pop), [20, 20, 20]);
+});
+
+test('normalizeJma: weekly area matched by code, temps taken at same index', () => {
+  const multi = JSON.parse(JSON.stringify(mini));
+  multi[1].timeSeries[0].areas.push({ area: { name: '伊豆', code: '120030' }, weatherCodes: ['300', '400'], pops: ['70', '80'], reliabilities: ['', ''] });
+  multi[1].timeSeries[1].areas.push({ area: { name: '伊豆点', code: '99999' }, tempsMin: ['10', '11'], tempsMax: ['18', '19'] });
+  const j = Logic.normalizeJma(multi, '120030');
+  assert.deepEqual(j.weekly[1], { date: '2026-10-14', code: '400', icon: 'snow', pop: 80, tMin: 11, tMax: 19 });
+  const first = Logic.normalizeJma(multi, '120010');
+  assert.equal(first.weekly[1].code, '202');
+  assert.equal(first.weekly[1].tMax, 22);
+});

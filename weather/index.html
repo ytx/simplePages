@@ -459,8 +459,10 @@ const Logic = (() => {
     if (week && Array.isArray(week.timeSeries)) {
       const w0 = week.timeSeries[0];
       const w1 = week.timeSeries[1];
-      const wa = w0?.areas?.[0];
-      const ta = w1?.areas?.[0];
+      const wa = pickArea(w0, class10Code);
+      // 気温は天気と同じ並び順の地点を使う(無ければ先頭)
+      const wIndex = wa && Array.isArray(w0.areas) ? Math.max(0, w0.areas.indexOf(wa)) : 0;
+      const ta = w1?.areas?.[wIndex] ?? w1?.areas?.[0];
       if (w0 && wa) {
         out.weekly = (w0.timeDefines || []).map((t, i) => {
           const code = wa.weatherCodes?.[i] ?? null;
