@@ -7,6 +7,7 @@ index.html 1 ファイルで動く小さな Web ページの集まり。各ペ�
 | ページ | 説明 | 使用 API |
 |---|---|---|
 | `_template/` | 新ページのひな形(コピーして使う) | なし |
+| `weather/` | 1 地点の天気予報を横長 1 画面に常時表示 | 気象庁 bosai JSON、Open-Meteo Forecast / Geocoding |
 
 ## 共通規約(要約)
 
