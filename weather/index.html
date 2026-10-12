@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather</title>
+<style>
+:root {
+  --bg: #f6f7f9;
+  --bg-panel: #ffffff;
+  --fg: #1c1f26;
+  --fg-muted: #5c6370;
+  --border: #d9dde3;
+  --accent: #2b7de9;
+  --ok: #2fa84f;
+  --busy: #e6a700;
+  --error: #d64545;
+  --radius: 10px;
+  --gap: clamp(8px, 1vw, 16px);
+  --fs-base: clamp(14px, 1.2vw, 20px);
+  --fs-small: calc(var(--fs-base) * 0.8);
+  --fs-large: calc(var(--fs-base) * 1.6);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+html[data-theme="dark"] {
+  --bg: #12151b;
+  --bg-panel: #1b1f27;
+  --fg: #e7eaf0;
+  --fg-muted: #9aa3b2;
+  --border: #2d333f;
+  --accent: #5b9cf5;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: var(--fs-base);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#status-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  padding: calc(var(--gap) / 2) var(--gap);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-small);
+  color: var(--fg-muted);
+}
+#status-bar .title { color: var(--fg); font-weight: 600; }
+#status-bar .spacer { flex: 1; }
+#status-dot {
+  width: 0.7em; height: 0.7em; border-radius: 50%;
+  background: var(--fg-muted);
+}
+#status-dot[data-state="ok"] { background: var(--ok); }
+#status-dot[data-state="busy"] { background: var(--busy); }
+#status-dot[data-state="error"] { background: var(--error); }
+#status-message[data-state="error"] { color: var(--error); }
+#content { flex: 1; min-height: 0; padding: var(--gap); }
+#settings-btn {
+  position: fixed; right: var(--gap); bottom: var(--gap);
+  width: 2.6em; height: 2.6em; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--bg-panel); color: var(--fg);
+  cursor: pointer; display: grid; place-items: center;
+  transition: opacity 0.6s;
+}
+#settings-btn.idle { opacity: 0.15; }
+#settings-btn svg { width: 1.3em; height: 1.3em; fill: currentColor; }
+dialog#settings {
+  background: var(--bg-panel); color: var(--fg);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  width: min(90vw, 36em); padding: 0;
+}
+dialog#settings::backdrop { background: rgba(0,0,0,0.5); }
+.dlg-header { display: flex; align-items: center; padding: var(--gap); border-bottom: 1px solid var(--border); }
+.dlg-header h2 { margin: 0; font-size: var(--fs-base); flex: 1; }
+.tabs { display: flex; gap: 2px; padding: 0 var(--gap); border-bottom: 1px solid var(--border); }
+.tabs button {
+  background: none; border: none; color: var(--fg-muted); padding: 0.6em 1em;
+  cursor: pointer; border-bottom: 2px solid transparent; font: inherit;
+}
+.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.tab-panel { display: none; padding: var(--gap); }
+.tab-panel.active { display: block; }
+.field { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); align-items: center; margin-bottom: var(--gap); }
+.field label { color: var(--fg-muted); }
+select, input, button.btn {
+  font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 0.4em 0.6em;
+}
+button.btn { cursor: pointer; }
+button.btn.danger { color: var(--error); }
+.row { display: flex; gap: var(--gap); flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header id="status-bar">
+  <span class="title" id="page-title" data-i18n="placeholder_content"></span>
+  <span class="spacer"></span>
+  <span id="clock"></span>
+  <span id="status-message"></span>
+  <span id="status-dot" data-state="none"></span>
+</header>
+<main id="content">
+  <p data-i18n="placeholder_content"></p>
+</main>
+<button id="settings-btn" type="button" aria-label="Settings">
+  <svg viewBox="0 0 24 24"><path d="M19.4 13a7.9 7.9 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a8 8 0 0 0-1.7-1L15 3.3H9l-.3 2.6a8 8 0 0 0-1.7 1l-2.5-1-2 3.5L4.6 11a7.9 7.9 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a8 8 0 0 0 1.7 1l.3 2.6h6l.3-2.6a8 8 0 0 0 1.7-1l2.5 1 2-3.5L19.4 13zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+</button>
+<dialog id="settings">
+  <div class="dlg-header">
+    <h2 data-i18n="settings"></h2>
+    <button class="btn" id="settings-close" data-i18n="close"></button>
+  </div>
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="general" aria-selected="true" data-i18n="tab_general"></button>
+    <button role="tab" data-tab="display" data-i18n="tab_display"></button>
+    <button role="tab" data-tab="data" data-i18n="tab_data"></button>
+  </div>
+  <section class="tab-panel active" data-panel="general">
+    <div class="field">
+      <label for="set-refresh" data-i18n="refresh_minutes"></label>
+      <input id="set-refresh" type="number" min="1" max="120" data-setting="refreshMinutes">
+    </div>
+    <div id="settings-extra-general"></div>
+  </section>
+  <section class="tab-panel" data-panel="display">
+    <div class="field">
+      <label for="set-lang" data-i18n="language"></label>
+      <select id="set-lang" data-setting="lang">
+        <option value="ja">日本語</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="set-theme" data-i18n="theme"></label>
+      <select id="set-theme" data-setting="theme">
+        <option value="auto" data-i18n="theme_auto"></option>
+        <option value="light" data-i18n="theme_light"></option>
+        <option value="dark" data-i18n="theme_dark"></option>
+      </select>
+    </div>
+    <div id="settings-extra-display"></div>
+  </section>
+  <section class="tab-panel" data-panel="data">
+    <div class="row">
+      <button class="btn" id="btn-export" data-i18n="export_json"></button>
+      <button class="btn" id="btn-import" data-i18n="import_json"></button>
+      <input id="import-file" type="file" accept="application/json" hidden>
+      <button class="btn danger" id="btn-clear" data-i18n="clear_all"></button>
+    </div>
+  </section>
+</dialog>
+<script id="app-logic">
+const Logic = (() => {
+  const VERSION = 1;
+  // version n の settings を n+1 へ変換する関数を MIGRATIONS[n] に置く。
+  const MIGRATIONS = {};
+
+  function coerce(spec, value) {
+    if (value === undefined || value === null) return undefined;
+    switch (spec.type) {
+      case 'int': {
+        const n = typeof value === 'number' ? value : Number.parseInt(String(value), 10);
+        if (!Number.isInteger(n)) return undefined;
+        if (spec.min !== undefined && n < spec.min) return undefined;
+        if (spec.max !== undefined && n > spec.max) return undefined;
+        return n;
+      }
+      case 'enum': {
+        const v = typeof spec.values[0] === 'number' ? Number(value) : String(value);
+        return spec.values.includes(v) ? v : undefined;
+      }
+      case 'string':
+        return String(value);
+      case 'object':
+        return typeof value === 'object' ? value : undefined;
+      default:
+        return undefined;
+    }
+  }
+
+  function resolveSettings(schema, stored, query) {
+    const out = {};
+    for (const [key, spec] of Object.entries(schema)) {
+      let v = coerce(spec, stored && stored[key]);
+      if (spec.type !== 'object' && query && query[key] !== undefined) {
+        const q = coerce(spec, query[key]);
+        if (q !== undefined) v = q;
+      }
+      out[key] = v === undefined ? spec.default : v;
+    }
+    return out;
+  }
+
+  function migrateStored(raw, version) {
+    if (!raw || typeof raw !== 'object' || typeof raw.settings !== 'object' || raw.settings === null) return {};
+    if (!Number.isInteger(raw.version)) return {};
+    let settings = raw.settings;
+    for (let v = raw.version; v < version; v++) {
+      const m = MIGRATIONS[v];
+      if (!m) return {};
+      settings = m(settings);
+    }
+    return settings;
+  }
+
+  const I18N = {
+    ja: {
+      settings: '設定',
+      tab_general: '一般',
+      tab_display: '表示',
+      tab_data: 'データ',
+      language: '言語',
+      theme: 'テーマ',
+      theme_auto: '自動',
+      theme_light: 'ライト',
+      theme_dark: 'ダーク',
+      refresh_minutes: '更新間隔(分)',
+      export_json: 'JSON をエクスポート',
+      import_json: 'JSON をインポート',
+      clear_all: 'すべて消去',
+      confirm_clear: '保存した設定をすべて消去します。よろしいですか?',
+      import_failed: 'インポートに失敗しました: {reason}',
+      close: '閉じる',
+      updated_at: '最終更新 {time}',
+      updating: '更新中',
+      never_updated: '未取得',
+      error_fetch: '取得失敗: {reason}',
+      placeholder_content: 'ここにページ固有の UI',
+    },
+    en: {
+      settings: 'Settings',
+      tab_general: 'General',
+      tab_display: 'Display',
+      tab_data: 'Data',
+      language: 'Language',
+      theme: 'Theme',
+      theme_auto: 'Auto',
+      theme_light: 'Light',
+      theme_dark: 'Dark',
+      refresh_minutes: 'Refresh interval (min)',
+      export_json: 'Export JSON',
+      import_json: 'Import JSON',
+      clear_all: 'Clear all',
+      confirm_clear: 'Delete all saved settings?',
+      import_failed: 'Import failed: {reason}',
+      close: 'Close',
+      updated_at: 'Updated {time}',
+      updating: 'Updating',
+      never_updated: 'Not fetched yet',
+      error_fetch: 'Fetch failed: {reason}',
+      placeholder_content: 'Page-specific UI goes here',
+    },
+  };
+
+  function t(lang, key, params) {
+    const dict = I18N[lang] || I18N.ja;
+    let s = dict[key] ?? I18N.ja[key] ?? key;
+    if (params) {
+      for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, String(v));
+    }
+    return s;
+  }
+
+  function detectLang(navigatorLanguage) {
+    return typeof navigatorLanguage === 'string' && navigatorLanguage.toLowerCase().startsWith('ja') ? 'ja' : 'en';
+  }
+
+  function effectiveTheme(setting, prefersDark) {
+    if (setting === 'light' || setting === 'dark') return setting;
+    return prefersDark ? 'dark' : 'light';
+  }
+
+  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme };
+})();
+</script>
+<script id="app-ui">
+const App = (() => {
+  const PAGE = 'weather';
+  const STORAGE_KEY = `simplePages.${PAGE}`;
+  const SCHEMA = {
+    lang: { type: 'enum', values: ['ja', 'en'], default: Logic.detectLang(navigator.language) },
+    theme: { type: 'enum', values: ['auto', 'light', 'dark'], default: 'auto' },
+    refreshMinutes: { type: 'int', min: 1, max: 120, default: 10 },
+  };
+  const IDLE_MS = 10000;
+
+  let settings = {};
+  let nextRefreshAt = 0;
+  let refreshTimer = null;
+  let idleTimer = null;
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  const storage = {
+    read() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
+    },
+    write(s) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: Logic.VERSION, settings: s })); } catch { /* ignore */ }
+    },
+    clear() {
+      try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    },
+  };
+
+  function loadSettings() {
+    const query = Object.fromEntries(new URLSearchParams(location.search));
+    const stored = Logic.migrateStored(storage.read(), Logic.VERSION);
+    settings = Logic.resolveSettings(SCHEMA, stored, query);
+    if (query.save === '1') storage.write(settings);
+  }
+
+  function getSettings() { return { ...settings }; }
+
+  function updateSettings(patch) {
+    settings = Logic.resolveSettings(SCHEMA, { ...settings, ...patch }, {});
+    storage.write(settings);
+    applySettings();
+  }
+
+  function applyI18n() {
+    document.documentElement.lang = settings.lang;
+    for (const el of $$('[data-i18n]')) el.textContent = Logic.t(settings.lang, el.dataset.i18n);
+  }
+
+  function applyTheme() {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.dataset.theme = Logic.effectiveTheme(settings.theme, prefersDark);
+  }
+
+  function applySettings() {
+    applyI18n();
+    applyTheme();
+    for (const el of $$('[data-setting]')) el.value = settings[el.dataset.setting];
+    renderSettingsExtra(settings);
+    scheduleRefresh(0);
+  }
+
+  function setStatus(state, message) {
+    $('#status-dot').dataset.state = state;
+    const el = $('#status-message');
+    el.dataset.state = state;
+    el.textContent = message || '';
+  }
+
+  function formatTime(d) {
+    return new Intl.DateTimeFormat(settings.lang === 'ja' ? 'ja-JP' : 'en-US', { hour: '2-digit', minute: '2-digit' }).format(d);
+  }
+
+  function tickClock() {
+    const d = new Date();
+    $('#clock').textContent = new Intl.DateTimeFormat(settings.lang === 'ja' ? 'ja-JP' : 'en-US',
+      { month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(d);
+  }
+
+  // ページ固有: ここでデータを取得して描画する。ひな形は更新時刻を表示するだけ。
+  async function refresh() {
+    setStatus('busy', Logic.t(settings.lang, 'updating'));
+    await Promise.resolve();
+    setStatus('ok', Logic.t(settings.lang, 'updated_at', { time: formatTime(new Date()) }));
+  }
+
+  // ページ固有: 設定タブに項目を追加する。
+  function renderSettingsExtra(_settings) {}
+
+  function scheduleRefresh(delayMs) {
+    clearTimeout(refreshTimer);
+    const delay = delayMs ?? settings.refreshMinutes * 60000;
+    nextRefreshAt = Date.now() + delay;
+    refreshTimer = setTimeout(async () => {
+      try { await refresh(); } finally { scheduleRefresh(); }
+    }, delay);
+  }
+
+  function onVisibility() {
+    if (document.visibilityState === 'visible' && Date.now() >= nextRefreshAt) scheduleRefresh(0);
+  }
+
+  function resetIdle() {
+    $('#settings-btn').classList.remove('idle');
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => $('#settings-btn').classList.add('idle'), IDLE_MS);
+  }
+
+  function bindSettingsDialog() {
+    const dlg = $('#settings');
+    $('#settings-btn').addEventListener('click', () => dlg.showModal());
+    $('#settings-close').addEventListener('click', () => dlg.close());
+    for (const tab of $$('[role="tab"]')) {
+      tab.addEventListener('click', () => {
+        for (const t2 of $$('[role="tab"]')) t2.setAttribute('aria-selected', String(t2 === tab));
+        for (const p of $$('.tab-panel')) p.classList.toggle('active', p.dataset.panel === tab.dataset.tab);
+      });
+    }
+    for (const el of $$('[data-setting]')) {
+      el.addEventListener('change', () => updateSettings({ [el.dataset.setting]: el.value }));
+    }
+    $('#btn-export').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify({ version: Logic.VERSION, settings }, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${PAGE}-settings.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 0);
+    });
+    $('#btn-import').addEventListener('click', () => $('#import-file').click());
+    $('#import-file').addEventListener('change', async (ev) => {
+      const file = ev.target.files[0];
+      if (!file) return;
+      try {
+        const raw = JSON.parse(await file.text());
+        const imported = Logic.migrateStored(raw, Logic.VERSION);
+        if (Object.keys(imported).length === 0) throw new Error('unrecognized format');
+        updateSettings(imported);
+      } catch (e) {
+        setStatus('error', Logic.t(settings.lang, 'import_failed', { reason: e.message }));
+      }
+      ev.target.value = '';
+    });
+    $('#btn-clear').addEventListener('click', () => {
+      if (!confirm(Logic.t(settings.lang, 'confirm_clear'))) return;
+      storage.clear();
+      location.href = location.pathname;
+    });
+  }
+
+  function init() {
+    loadSettings();
+    bindSettingsDialog();
+    applySettings();
+    tickClock();
+    setInterval(tickClock, 1000);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+    for (const ev of ['mousemove', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
+    resetIdle();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh };
+})();
+</script>
+</body>
+</html>
