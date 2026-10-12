@@ -232,6 +232,30 @@ const Logic = (() => {
       never_updated: '未取得',
       error_fetch: '取得失敗: {reason}',
       placeholder_content: 'ここにページ固有の UI',
+      tab_location: '地点',
+      search: '検索',
+      search_placeholder: '地名(例: 千葉市、新宿)',
+      search_hint: '市区町村名まで入力してください(例: 千葉市)',
+      no_results: '見つかりませんでした',
+      office: '気象庁 府県予報区',
+      area: '一次細分区域',
+      area_none: '(気象庁予報なし)',
+      current: '現在',
+      hourly: '今日・明日',
+      weekly: '週間',
+      humidity: '湿度',
+      apparent: '体感',
+      wind: '風',
+      wave: '波',
+      pop: '降水確率',
+      precip: '降水量',
+      set_location_hint: '右下の設定から地点を選んでください',
+      hourly_step: '時間別の刻み(時間)',
+      hourly_count: '時間別のコマ数',
+      daily_days: '週間の日数',
+      jma_report: '気象庁 {time} 発表',
+      today: '今日',
+      tomorrow: '明日',
     },
     en: {
       settings: 'Settings',
@@ -255,6 +279,30 @@ const Logic = (() => {
       never_updated: 'Not fetched yet',
       error_fetch: 'Fetch failed: {reason}',
       placeholder_content: 'Page-specific UI goes here',
+      tab_location: 'Location',
+      search: 'Search',
+      search_placeholder: 'Place name (e.g. Chiba, Shinjuku)',
+      search_hint: 'Enter a city or town name (e.g. Chiba-shi)',
+      no_results: 'No results',
+      office: 'JMA forecast office',
+      area: 'JMA sub-area',
+      area_none: '(no JMA forecast)',
+      current: 'Now',
+      hourly: 'Today & tomorrow',
+      weekly: 'Week',
+      humidity: 'Humidity',
+      apparent: 'Feels like',
+      wind: 'Wind',
+      wave: 'Waves',
+      pop: 'Precip. prob.',
+      precip: 'Precip.',
+      set_location_hint: 'Choose a location from the settings (bottom right)',
+      hourly_step: 'Hourly step (hours)',
+      hourly_count: 'Hourly columns',
+      daily_days: 'Days in week view',
+      jma_report: 'JMA issued {time}',
+      today: 'Today',
+      tomorrow: 'Tomorrow',
     },
   };
 
@@ -596,7 +644,52 @@ const Logic = (() => {
     };
   }
 
-  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, ICONS, ICON_SEVERITY, jmaCodeToIcon, wmoCodeToIcon, wmoCodeToText, worstIcon, JMA_OFFICES, guessJmaOffices, findOffice, normalizeJma, normalizeOpenMeteo, aggregateHourly, addDays, mergeForecast, toNum, cleanText };
+  function validLocation(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    const lat = toNum(obj.lat);
+    const lon = toNum(obj.lon);
+    if (lat === null || lon === null || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+    const office = typeof obj.jmaOffice === 'string' && findOffice(obj.jmaOffice) ? obj.jmaOffice : null;
+    const area = typeof obj.jmaClass10 === 'string' && /^\d{6}$/.test(obj.jmaClass10) ? obj.jmaClass10 : null;
+    return {
+      name: typeof obj.name === 'string' && obj.name ? obj.name : `${lat}, ${lon}`,
+      lat, lon,
+      jmaOffice: office,
+      jmaClass10: office ? area : null,
+      jmaClass10Name: typeof obj.jmaClass10Name === 'string' ? obj.jmaClass10Name : null,
+    };
+  }
+
+  function locationFromQuery(query) {
+    if (!query || query.lat === undefined || query.lon === undefined) return null;
+    return validLocation({ name: query.name, lat: query.lat, lon: query.lon, jmaOffice: query.office, jmaClass10: query.area });
+  }
+
+  function jmaForecastUrl(office) {
+    return `https://www.jma.go.jp/bosai/forecast/data/forecast/${office}.json`;
+  }
+
+  function openMeteoUrl(lat, lon) {
+    const p = new URLSearchParams({
+      latitude: String(lat), longitude: String(lon), timezone: 'Asia/Tokyo', forecast_days: '7',
+      current: 'temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,wind_direction_10m,weather_code,is_day',
+      hourly: 'temperature_2m,precipitation_probability,precipitation,weather_code',
+      daily: 'temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max',
+    });
+    return `https://api.open-meteo.com/v1/forecast?${p}`;
+  }
+
+  function geocodingUrl(name) {
+    const p = new URLSearchParams({ name, language: 'ja', count: '10' });
+    return `https://geocoding-api.open-meteo.com/v1/search?${p}`;
+  }
+
+  function toLocalIso(d) {
+    const z = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
+  }
+
+  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, ICONS, ICON_SEVERITY, jmaCodeToIcon, wmoCodeToIcon, wmoCodeToText, worstIcon, JMA_OFFICES, guessJmaOffices, findOffice, normalizeJma, normalizeOpenMeteo, aggregateHourly, addDays, mergeForecast, toNum, cleanText, locationFromQuery, validLocation, jmaForecastUrl, openMeteoUrl, geocodingUrl, toLocalIso };
 })();
 </script>
 <script id="app-ui">
@@ -607,6 +700,10 @@ const App = (() => {
     lang: { type: 'enum', values: ['ja', 'en'], default: Logic.detectLang(navigator.language) },
     theme: { type: 'enum', values: ['auto', 'light', 'dark'], default: 'auto' },
     refreshMinutes: { type: 'int', min: 1, max: 120, default: 10 },
+    hourlyStep: { type: 'enum', values: [1, 3], default: 3 },
+    hourlyCount: { type: 'int', min: 6, max: 24, default: 16 },
+    dailyDays: { type: 'int', min: 5, max: 7, default: 7 },
+    location: { type: 'object', default: null },
   };
   const IDLE_MS = 10000;
 
@@ -634,6 +731,7 @@ const App = (() => {
     const query = Object.fromEntries(new URLSearchParams(location.search));
     const stored = Logic.migrateStored(storage.read(), Logic.VERSION);
     settings = Logic.resolveSettings(SCHEMA, stored, query);
+    settings.location = Logic.locationFromQuery(query) || Logic.validLocation(settings.location);
     if (query.save === '1') storage.write(settings);
   }
 
