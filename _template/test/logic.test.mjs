@@ -49,3 +49,23 @@ test('migrateStored: accepts current format, rejects garbage', () => {
   assert.deepEqual(Logic.migrateStored({ theme: 'dark' }, 1), {});
   assert.deepEqual(Logic.migrateStored({ version: 1, settings: 'x' }, 1), {});
 });
+
+test('t: lookup, fallback to ja, then key, with params', () => {
+  assert.equal(Logic.t('ja', 'settings'), '設定');
+  assert.equal(Logic.t('en', 'settings'), 'Settings');
+  assert.equal(Logic.t('en', 'no.such.key'), 'no.such.key');
+  assert.equal(Logic.t('en', 'updated_at', { time: '19:40' }), 'Updated 19:40');
+});
+
+test('detectLang', () => {
+  assert.equal(Logic.detectLang('ja-JP'), 'ja');
+  assert.equal(Logic.detectLang('en-US'), 'en');
+  assert.equal(Logic.detectLang(undefined), 'en');
+});
+
+test('effectiveTheme', () => {
+  assert.equal(Logic.effectiveTheme('auto', true), 'dark');
+  assert.equal(Logic.effectiveTheme('auto', false), 'light');
+  assert.equal(Logic.effectiveTheme('light', true), 'light');
+  assert.equal(Logic.effectiveTheme('dark', false), 'dark');
+});

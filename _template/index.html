@@ -62,7 +62,74 @@ const Logic = (() => {
     return settings;
   }
 
-  return { VERSION, coerce, resolveSettings, migrateStored };
+  const I18N = {
+    ja: {
+      settings: '設定',
+      tab_general: '一般',
+      tab_display: '表示',
+      tab_data: 'データ',
+      language: '言語',
+      theme: 'テーマ',
+      theme_auto: '自動',
+      theme_light: 'ライト',
+      theme_dark: 'ダーク',
+      refresh_minutes: '更新間隔(分)',
+      export_json: 'JSON をエクスポート',
+      import_json: 'JSON をインポート',
+      clear_all: 'すべて消去',
+      confirm_clear: '保存した設定をすべて消去します。よろしいですか?',
+      import_failed: 'インポートに失敗しました: {reason}',
+      close: '閉じる',
+      updated_at: '最終更新 {time}',
+      updating: '更新中',
+      never_updated: '未取得',
+      error_fetch: '取得失敗: {reason}',
+      placeholder_content: 'ここにページ固有の UI',
+    },
+    en: {
+      settings: 'Settings',
+      tab_general: 'General',
+      tab_display: 'Display',
+      tab_data: 'Data',
+      language: 'Language',
+      theme: 'Theme',
+      theme_auto: 'Auto',
+      theme_light: 'Light',
+      theme_dark: 'Dark',
+      refresh_minutes: 'Refresh interval (min)',
+      export_json: 'Export JSON',
+      import_json: 'Import JSON',
+      clear_all: 'Clear all',
+      confirm_clear: 'Delete all saved settings?',
+      import_failed: 'Import failed: {reason}',
+      close: 'Close',
+      updated_at: 'Updated {time}',
+      updating: 'Updating',
+      never_updated: 'Not fetched yet',
+      error_fetch: 'Fetch failed: {reason}',
+      placeholder_content: 'Page-specific UI goes here',
+    },
+  };
+
+  function t(lang, key, params) {
+    const dict = I18N[lang] || I18N.ja;
+    let s = dict[key] ?? I18N.ja[key] ?? key;
+    if (params) {
+      for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, String(v));
+    }
+    return s;
+  }
+
+  function detectLang(navigatorLanguage) {
+    return typeof navigatorLanguage === 'string' && navigatorLanguage.toLowerCase().startsWith('ja') ? 'ja' : 'en';
+  }
+
+  function effectiveTheme(setting, prefersDark) {
+    if (setting === 'light' || setting === 'dark') return setting;
+    return prefersDark ? 'dark' : 'light';
+  }
+
+  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme };
 })();
 </script>
 <script id="app-ui">
