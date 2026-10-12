@@ -973,7 +973,105 @@ const App = (() => {
 
   function getLastModel() { return lastModel; }
 
-  function renderLocationTab() {} // Task 10 で置き換える
+  let geoResults = [];
+  let pendingLoc = null; // 検索で選んだがまだ保存していない地点
+
+  function fillOfficeSelect(selectedCode) {
+    const sel = $('#loc-office');
+    sel.replaceChildren();
+    const none = el('option', null, Logic.t(settings.lang, 'area_none'));
+    none.value = '';
+    sel.appendChild(none);
+    for (const o of Logic.JMA_OFFICES) {
+      const op = el('option', null, settings.lang === 'ja' ? o.name : o.enName);
+      op.value = o.code;
+      sel.appendChild(op);
+    }
+    sel.value = selectedCode || '';
+  }
+
+  async function fillAreaSelect(officeCode, selectedCode) {
+    const sel = $('#loc-area');
+    sel.replaceChildren();
+    sel.disabled = !officeCode;
+    if (!officeCode) return;
+    const res = await fetchJson(Logic.jmaForecastUrl(officeCode));
+    if (!res.ok) { setStatus('error', Logic.t(settings.lang, 'error_fetch', { reason: `JMA: ${res.error}` })); return; }
+    const areas = res.data?.[0]?.timeSeries?.[0]?.areas ?? [];
+    for (const a of areas) {
+      const op = el('option', null, a.area.name);
+      op.value = a.area.code;
+      op.dataset.name = a.area.name;
+      sel.appendChild(op);
+    }
+    sel.value = selectedCode && areas.some((a) => a.area.code === selectedCode) ? selectedCode : (areas[0]?.area.code ?? '');
+  }
+
+  function renderLocationTab() {
+    const loc = settings.location;
+    $('#loc-query').placeholder = Logic.t(settings.lang, 'search_placeholder');
+    fillOfficeSelect(loc?.jmaOffice);
+    fillAreaSelect(loc?.jmaOffice, loc?.jmaClass10);
+    $('#loc-current').textContent = loc
+      ? `${loc.name} (${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)})${loc.jmaClass10Name ? ` / ${loc.jmaClass10Name}` : ''}`
+      : '';
+  }
+
+  function commitLocation(patch) {
+    const base = pendingLoc || settings.location || {};
+    const loc = Logic.validLocation({ ...base, ...patch });
+    if (!loc) return;
+    const areaOp = $('#loc-area').selectedOptions[0];
+    loc.jmaClass10Name = loc.jmaClass10 && areaOp && areaOp.value === loc.jmaClass10 ? areaOp.dataset.name : null;
+    pendingLoc = null;
+    updateSettings({ location: loc });
+  }
+
+  function bindLocationTab() {
+    const hint = $('#loc-hint');
+    const results = $('#loc-results');
+
+    async function search() {
+      const q = $('#loc-query').value.trim();
+      if (!q) return;
+      hint.hidden = true;
+      results.replaceChildren();
+      const res = await fetchJson(Logic.geocodingUrl(q));
+      geoResults = res.ok ? (res.data.results || []) : [];
+      if (!res.ok) { hint.textContent = Logic.t(settings.lang, 'error_fetch', { reason: res.error }); hint.hidden = false; return; }
+      if (geoResults.length === 0) { hint.textContent = `${Logic.t(settings.lang, 'no_results')} — ${Logic.t(settings.lang, 'search_hint')}`; hint.hidden = false; return; }
+      geoResults.forEach((r, i) => {
+        const parts = [r.name, r.admin1, r.country_code !== 'JP' ? r.country : null].filter(Boolean);
+        const op = el('option', null, parts.join(' / '));
+        op.value = String(i);
+        results.appendChild(op);
+      });
+    }
+
+    $('#loc-search').addEventListener('click', search);
+    $('#loc-query').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); search(); } });
+
+    results.addEventListener('change', async () => {
+      const r = geoResults[Number(results.value)];
+      if (!r) return;
+      const offices = r.country_code === 'JP' ? Logic.guessJmaOffices(r.admin1) : [];
+      const office = offices[0]?.code ?? null;
+      pendingLoc = { name: r.name, lat: r.latitude, lon: r.longitude, jmaOffice: office, jmaClass10: null, jmaClass10Name: null };
+      fillOfficeSelect(office);
+      await fillAreaSelect(office, null);
+      commitLocation({ jmaClass10: $('#loc-area').value || null });
+    });
+
+    $('#loc-office').addEventListener('change', async () => {
+      const office = $('#loc-office').value || null;
+      await fillAreaSelect(office, null);
+      commitLocation({ jmaOffice: office, jmaClass10: $('#loc-area').value || null });
+    });
+
+    $('#loc-area').addEventListener('change', () => {
+      commitLocation({ jmaOffice: $('#loc-office').value || null, jmaClass10: $('#loc-area').value || null });
+    });
+  }
 
   function iconSvg(id, cls) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1171,6 +1269,7 @@ const App = (() => {
   function init() {
     loadSettings();
     bindSettingsDialog();
+    bindLocationTab();
     applySettings();
     tickClock();
     setInterval(tickClock, 1000);
