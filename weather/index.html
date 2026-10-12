@@ -134,7 +134,6 @@ html[data-theme="dark"] { --cloud: #a7b0bf; }
 .icon { width: 1.8em; height: 1.8em; display: inline-block; vertical-align: middle; }
 #hourly-chart { flex: 1; width: 100%; min-height: 0; }
 #hourly-chart .temp-line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
-#hourly-chart .temp-dot { fill: var(--accent); }
 #hourly-chart .pop-bar { fill: var(--rain); opacity: 0.35; }
 #hourly-chart .precip-bar { fill: var(--rain); }
 #hourly-chart .grid { stroke: var(--border); stroke-width: 1; vector-effect: non-scaling-stroke; }
@@ -869,7 +868,9 @@ const App = (() => {
   function getSettings() { return { ...settings }; }
 
   function updateSettings(patch) {
+    const prevLoc = settings.location;
     settings = Logic.resolveSettings(SCHEMA, { ...settings, ...patch }, {});
+    if (JSON.stringify(prevLoc) !== JSON.stringify(settings.location)) lastModel = null;
     storage.write(settings);
     applySettings();
   }
@@ -911,7 +912,7 @@ const App = (() => {
   }
 
   let lastModel = null;
-  let jmaCache = null; // { office, class10, json } 気象庁は更新が少ないので同一地点なら失敗時に再利用
+  let jmaCache = null; // { office, json } 気象庁は更新が少ないので同一地点なら失敗時に再利用
 
   async function fetchJson(url) {
     try {
@@ -1058,7 +1059,8 @@ const App = (() => {
     const ns = 'http://www.w3.org/2000/svg';
     const mk = (tag, attrs) => { const e = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); return e; };
     const temps = items.map((h) => h.temp).filter((v) => v !== null);
-    const tMin = Math.min(...temps, 0), tMax = Math.max(...temps, 1);
+    const tMin = temps.length ? Math.min(...temps) - 1 : 0;
+    const tMax = temps.length ? Math.max(...temps) + 1 : 1;
     const tY = (t) => 8 + (1 - (t - tMin) / (tMax - tMin || 1)) * 50; // 気温は上 8〜58
     const maxPrecip = Math.max(5, ...items.map((h) => h.precip ?? 0));
     for (const y of [tY(tMax), tY(tMin)]) svg.appendChild(mk('line', { x1: 0, x2: W, y1: y, y2: y, class: 'grid' }));
@@ -1176,7 +1178,15 @@ const App = (() => {
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
     for (const ev of ['mousemove', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
     resetIdle();
-    window.addEventListener('resize', () => { if (lastModel) scheduleRefresh(0); });
+    let resizeTimer = null;
+    let lastHourlyCount = hourlyCount();
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const n = hourlyCount();
+        if (n !== lastHourlyCount) { lastHourlyCount = n; if (lastModel) scheduleRefresh(0); }
+      }, 500);
+    });
   }
 
   document.addEventListener('DOMContentLoaded', init);
