@@ -412,7 +412,73 @@ const Logic = (() => {
     return JMA_OFFICES.find((o) => o.code === code);
   }
 
-  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, ICONS, ICON_SEVERITY, jmaCodeToIcon, wmoCodeToIcon, wmoCodeToText, worstIcon, JMA_OFFICES, guessJmaOffices, findOffice };
+  function toNum(s) {
+    if (s === null || s === undefined || s === '') return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function cleanText(s) {
+    return typeof s === 'string' ? s.replace(/　+/g, ' ').trim() : null;
+  }
+
+  function pickArea(series, code) {
+    if (!series || !Array.isArray(series.areas) || series.areas.length === 0) return null;
+    return series.areas.find((a) => a.area && a.area.code === code) || series.areas[0];
+  }
+
+  function normalizeJma(json, class10Code) {
+    const main = Array.isArray(json) ? json[0] : null;
+    const week = Array.isArray(json) ? json[1] : null;
+    const out = { reportTime: main?.reportDatetime ?? null, areaName: null, days: [], pops: [], weekly: [] };
+    if (!main || !Array.isArray(main.timeSeries)) return out;
+
+    const ts0 = main.timeSeries[0];
+    const a0 = pickArea(ts0, class10Code);
+    if (a0) {
+      out.areaName = a0.area?.name ?? null;
+      out.days = (ts0.timeDefines || []).map((t, i) => {
+        const code = a0.weatherCodes?.[i] ?? null;
+        return {
+          date: t.slice(0, 10),
+          code,
+          icon: jmaCodeToIcon(code),
+          weather: cleanText(a0.weathers?.[i]),
+          wind: cleanText(a0.winds?.[i]),
+          wave: cleanText(a0.waves?.[i]),
+        };
+      });
+    }
+
+    const ts1 = main.timeSeries[1];
+    const a1 = pickArea(ts1, class10Code);
+    if (a1) {
+      out.pops = (ts1.timeDefines || []).map((t, i) => ({ time: t.slice(0, 16), pop: toNum(a1.pops?.[i]) }));
+    }
+
+    if (week && Array.isArray(week.timeSeries)) {
+      const w0 = week.timeSeries[0];
+      const w1 = week.timeSeries[1];
+      const wa = w0?.areas?.[0];
+      const ta = w1?.areas?.[0];
+      if (w0 && wa) {
+        out.weekly = (w0.timeDefines || []).map((t, i) => {
+          const code = wa.weatherCodes?.[i] ?? null;
+          return {
+            date: t.slice(0, 10),
+            code,
+            icon: jmaCodeToIcon(code),
+            pop: toNum(wa.pops?.[i]),
+            tMin: toNum(ta?.tempsMin?.[i]),
+            tMax: toNum(ta?.tempsMax?.[i]),
+          };
+        });
+      }
+    }
+    return out;
+  }
+
+  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, ICONS, ICON_SEVERITY, jmaCodeToIcon, wmoCodeToIcon, wmoCodeToText, worstIcon, JMA_OFFICES, guessJmaOffices, findOffice, normalizeJma, toNum, cleanText };
 })();
 </script>
 <script id="app-ui">
