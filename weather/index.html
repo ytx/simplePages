@@ -586,6 +586,28 @@ const Logic = (() => {
     return JMA_OFFICES.filter((o) => o.pref === admin1);
   }
 
+  // 複数の府県予報区を持つ都道府県の、各予報区の代表座標(おおよそ)。最も近い区を既定にする。
+  const JMA_OFFICE_CENTERS = {
+    '011000': [45.42, 141.67], '012000': [43.77, 142.37], '013000': [43.80, 143.89], '014030': [42.92, 143.20],
+    '014100': [42.98, 144.38], '015000': [42.32, 140.97], '016000': [43.06, 141.35], '017000': [41.77, 140.73],
+    '460040': [28.38, 129.49], '460100': [31.60, 130.56],
+    '471000': [26.21, 127.68], '472000': [25.83, 131.23], '473000': [24.80, 125.28], '474000': [24.34, 124.16],
+  };
+
+  function pickJmaOffice(candidates, lat, lon) {
+    if (!Array.isArray(candidates) || candidates.length === 0) return null;
+    if (candidates.length === 1 || !Number.isFinite(lat) || !Number.isFinite(lon)) return candidates[0];
+    let best = candidates[0];
+    let bestD = Infinity;
+    for (const c of candidates) {
+      const ctr = JMA_OFFICE_CENTERS[c.code];
+      if (!ctr) continue;
+      const d = (ctr[0] - lat) ** 2 + ((ctr[1] - lon) * Math.cos((lat * Math.PI) / 180)) ** 2;
+      if (d < bestD) { bestD = d; best = c; }
+    }
+    return best;
+  }
+
   function findOffice(code) {
     return JMA_OFFICES.find((o) => o.code === code);
   }
@@ -819,7 +841,7 @@ const Logic = (() => {
     return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
   }
 
-  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, ICONS, ICON_SEVERITY, jmaCodeToIcon, wmoCodeToIcon, wmoCodeToText, worstIcon, JMA_OFFICES, guessJmaOffices, findOffice, normalizeJma, normalizeOpenMeteo, aggregateHourly, addDays, mergeForecast, toNum, cleanText, locationFromQuery, validLocation, jmaForecastUrl, openMeteoUrl, geocodingUrl, toLocalIso };
+  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, ICONS, ICON_SEVERITY, jmaCodeToIcon, wmoCodeToIcon, wmoCodeToText, worstIcon, JMA_OFFICES, guessJmaOffices, pickJmaOffice, findOffice, normalizeJma, normalizeOpenMeteo, aggregateHourly, addDays, mergeForecast, toNum, cleanText, locationFromQuery, validLocation, jmaForecastUrl, openMeteoUrl, geocodingUrl, toLocalIso };
 })();
 </script>
 <script id="app-ui">
@@ -990,20 +1012,19 @@ const App = (() => {
     sel.value = selectedCode || '';
   }
 
+  let areaReq = 0;
   async function fillAreaSelect(officeCode, selectedCode) {
     const sel = $('#loc-area');
-    sel.replaceChildren();
+    const req = ++areaReq;
     sel.disabled = !officeCode;
-    if (!officeCode) return;
+    if (!officeCode) { sel.replaceChildren(); sel.dataset.office = ''; return; }
     const res = await fetchJson(Logic.jmaForecastUrl(officeCode));
-    if (!res.ok) { setStatus('error', Logic.t(settings.lang, 'error_fetch', { reason: `JMA: ${res.error}` })); return; }
+    if (req !== areaReq) return; // 古い応答は捨てる
+    if (!res.ok) { sel.replaceChildren(); setStatus('error', Logic.t(settings.lang, 'error_fetch', { reason: `JMA: ${res.error}` })); return; }
     const areas = res.data?.[0]?.timeSeries?.[0]?.areas ?? [];
-    for (const a of areas) {
-      const op = el('option', null, a.area.name);
-      op.value = a.area.code;
-      op.dataset.name = a.area.name;
-      sel.appendChild(op);
-    }
+    const opts = areas.map((a) => { const op = el('option', null, a.area.name); op.value = a.area.code; op.dataset.name = a.area.name; return op; });
+    sel.replaceChildren(...opts);
+    sel.dataset.office = officeCode;
     sel.value = selectedCode && areas.some((a) => a.area.code === selectedCode) ? selectedCode : (areas[0]?.area.code ?? '');
   }
 
@@ -1011,7 +1032,12 @@ const App = (() => {
     const loc = settings.location;
     $('#loc-query').placeholder = Logic.t(settings.lang, 'search_placeholder');
     fillOfficeSelect(loc?.jmaOffice);
-    fillAreaSelect(loc?.jmaOffice, loc?.jmaClass10);
+    const areaSel = $('#loc-area');
+    if ((loc?.jmaOffice || '') !== (areaSel.dataset.office || '') || areaSel.options.length === 0) {
+      fillAreaSelect(loc?.jmaOffice, loc?.jmaClass10);
+    } else if (loc?.jmaClass10) {
+      areaSel.value = loc.jmaClass10;
+    }
     $('#loc-current').textContent = loc
       ? `${loc.name} (${loc.lat.toFixed(3)}, ${loc.lon.toFixed(3)})${loc.jmaClass10Name ? ` / ${loc.jmaClass10Name}` : ''}`
       : '';
@@ -1031,12 +1057,15 @@ const App = (() => {
     const hint = $('#loc-hint');
     const results = $('#loc-results');
 
+    let searchReq = 0;
     async function search() {
       const q = $('#loc-query').value.trim();
       if (!q) return;
+      const req = ++searchReq;
       hint.hidden = true;
-      results.replaceChildren();
       const res = await fetchJson(Logic.geocodingUrl(q));
+      if (req !== searchReq) return;
+      results.replaceChildren();
       geoResults = res.ok ? (res.data.results || []) : [];
       if (!res.ok) { hint.textContent = Logic.t(settings.lang, 'error_fetch', { reason: res.error }); hint.hidden = false; return; }
       if (geoResults.length === 0) { hint.textContent = `${Logic.t(settings.lang, 'no_results')} — ${Logic.t(settings.lang, 'search_hint')}`; hint.hidden = false; return; }
@@ -1055,16 +1084,18 @@ const App = (() => {
       const r = geoResults[Number(results.value)];
       if (!r) return;
       const offices = r.country_code === 'JP' ? Logic.guessJmaOffices(r.admin1) : [];
-      const office = offices[0]?.code ?? null;
+      const office = Logic.pickJmaOffice(offices, r.latitude, r.longitude)?.code ?? null;
       pendingLoc = { name: r.name, lat: r.latitude, lon: r.longitude, jmaOffice: office, jmaClass10: null, jmaClass10Name: null };
       fillOfficeSelect(office);
       await fillAreaSelect(office, null);
+      if (office && $('#loc-area').dataset.office !== office) return;
       commitLocation({ jmaClass10: $('#loc-area').value || null });
     });
 
     $('#loc-office').addEventListener('change', async () => {
       const office = $('#loc-office').value || null;
       await fillAreaSelect(office, null);
+      if (office && $('#loc-area').dataset.office !== office) return;
       commitLocation({ jmaOffice: office, jmaClass10: $('#loc-area').value || null });
     });
 

@@ -26,3 +26,15 @@ test('findOffice', () => {
   assert.equal(Logic.findOffice('120000').name, '千葉県');
   assert.equal(Logic.findOffice('000000'), undefined);
 });
+
+test('pickJmaOffice chooses nearest region for multi-office prefectures', () => {
+  const g = (p) => Logic.guessJmaOffices(p);
+  assert.equal(Logic.pickJmaOffice(g('北海道'), 43.06, 141.35).code, '016000');   // 札幌
+  assert.equal(Logic.pickJmaOffice(g('北海道'), 41.77, 140.73).code, '017000');   // 函館
+  assert.equal(Logic.pickJmaOffice(g('鹿児島県'), 31.6, 130.56).code, '460100'); // 鹿児島市
+  assert.equal(Logic.pickJmaOffice(g('鹿児島県'), 28.38, 129.49).code, '460040'); // 奄美
+  assert.equal(Logic.pickJmaOffice(g('沖縄県'), 24.34, 124.16).code, '474000');   // 石垣
+  assert.equal(Logic.pickJmaOffice(g('千葉県'), 35.6, 140.1).code, '120000');
+  assert.equal(Logic.pickJmaOffice(g('千葉県'), NaN, NaN).code, '120000');
+  assert.equal(Logic.pickJmaOffice([], 0, 0), null);
+});
