@@ -30,6 +30,11 @@ html[data-theme="dark"] {
   --border: #2d333f;
   --accent: #5b9cf5;
 }
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    --bg: #12151b; --bg-panel: #1b1f27; --fg: #e7eaf0; --fg-muted: #9aa3b2; --border: #2d333f; --accent: #5b9cf5;
+  }
+}
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
@@ -99,7 +104,7 @@ button.btn.danger { color: var(--error); }
 </head>
 <body>
 <header id="status-bar">
-  <span class="title" id="page-title" data-i18n="placeholder_content"></span>
+  <span class="title" id="page-title" data-i18n="page_title"></span>
   <span class="spacer"></span>
   <span id="clock"></span>
   <span id="status-message"></span>
@@ -232,6 +237,7 @@ const Logic = (() => {
       never_updated: '未取得',
       error_fetch: '取得失敗: {reason}',
       placeholder_content: 'ここにページ固有の UI',
+      page_title: 'ページ名',
     },
     en: {
       settings: 'Settings',
@@ -255,6 +261,7 @@ const Logic = (() => {
       never_updated: 'Not fetched yet',
       error_fetch: 'Fetch failed: {reason}',
       placeholder_content: 'Page-specific UI goes here',
+      page_title: 'Page title',
     },
   };
 
@@ -262,7 +269,7 @@ const Logic = (() => {
     const dict = I18N[lang] || I18N.ja;
     let s = dict[key] ?? I18N.ja[key] ?? key;
     if (params) {
-      for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, String(v));
+      for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, () => String(v));
     }
     return s;
   }
@@ -360,6 +367,19 @@ const App = (() => {
       { month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(d);
   }
 
+  // API 呼び出しはすべてこの fetchJson を使う(タイムアウトと失敗理由の整形を共通化)。
+  const FETCH_TIMEOUT_MS = 20000;
+  async function fetchJson(url) {
+    try {
+      const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+      if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
+      return { ok: true, data: await r.json() };
+    } catch (e) {
+      const reason = e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'timeout' : (e.message || 'network');
+      return { ok: false, error: reason };
+    }
+  }
+
   // ページ固有: ここでデータを取得して描画する。ひな形は更新時刻を表示するだけ。
   async function refresh() {
     setStatus('busy', Logic.t(settings.lang, 'updating'));
@@ -445,7 +465,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh };
+  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh, fetchJson };
 })();
 </script>
 </body>

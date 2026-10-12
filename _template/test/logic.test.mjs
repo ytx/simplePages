@@ -69,3 +69,7 @@ test('effectiveTheme', () => {
   assert.equal(Logic.effectiveTheme('light', true), 'light');
   assert.equal(Logic.effectiveTheme('dark', false), 'dark');
 });
+
+test('t: parameter values containing $ patterns are inserted literally', () => {
+  assert.equal(Logic.t('en', 'error_fetch', { reason: 'cost $$ and $& ok' }), 'Fetch failed: cost $$ and $& ok');
+});
