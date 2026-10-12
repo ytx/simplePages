@@ -18,7 +18,7 @@ index.html 1 ファイルで動く小さな Web ページの集まり。各ペ�
 - 外部由来の文字列は `textContent` で挿入する。
 - CSS は `:root` の変数に集約。テーマは `html[data-theme="light"|"dark"]` で変数を上書き。
 - 設定は localStorage `simplePages.<page>` に `{ version, settings }`。優先順位は URL クエリ > localStorage > 既定値。URL は `?save=1` のときだけ保存。
-- 設定 UI は右下の歯車 → モーダル(一般 / 表示 / データ)。データタブに JSON エクスポート/インポート/全消去。
+- 設定 UI は左下の歯車 → モーダル(一般 / 表示 / データ)。データタブに JSON エクスポート/インポート/全消去。
 - i18n は `Logic.I18N` 辞書と `Logic.t(lang, key, params)`。静的文字列は `data-i18n`。
 - ステータス帯に最終更新時刻と状態ドット(緑/黄/赤)。失敗時も前回データを残す。
 - 更新は「次回更新時刻」方式。`visibilitychange` 復帰時に期限切れなら即時更新。

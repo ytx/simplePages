@@ -62,7 +62,7 @@ body {
 #status-message[data-state="error"] { color: var(--error); }
 #content { flex: 1; min-height: 0; padding: var(--gap); }
 #settings-btn {
-  position: fixed; right: var(--gap); bottom: var(--gap);
+  position: fixed; left: var(--gap); bottom: var(--gap);
   width: 2.6em; height: 2.6em; border-radius: 50%;
   border: 1px solid var(--border); background: var(--bg-panel); color: var(--fg);
   cursor: pointer; display: grid; place-items: center;
@@ -385,7 +385,7 @@ const Logic = (() => {
       wave: '波',
       pop: '降水確率',
       precip: '降水量',
-      set_location_hint: '右下の設定から地点を選んでください',
+      set_location_hint: '左下の設定から地点を選んでください',
       hourly_step: '時間別の刻み(時間)',
       hourly_count: '時間別のコマ数',
       daily_days: '週間の日数',
@@ -432,7 +432,7 @@ const Logic = (() => {
       wave: 'Waves',
       pop: 'Precip. prob.',
       precip: 'Precip.',
-      set_location_hint: 'Choose a location from the settings (bottom right)',
+      set_location_hint: 'Choose a location from the settings (bottom left)',
       hourly_step: 'Hourly step (hours)',
       hourly_count: 'Hourly columns',
       daily_days: 'Days in week view',
