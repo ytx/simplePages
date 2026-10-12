@@ -276,7 +276,71 @@ const Logic = (() => {
     return prefersDark ? 'dark' : 'light';
   }
 
-  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme };
+  const ICONS = ['sunny', 'sunny-cloudy', 'cloudy', 'cloudy-sunny', 'rain-light', 'rain', 'rain-heavy', 'sleet', 'snow', 'thunder', 'fog', 'unknown'];
+  // 軽い順。worstIcon はこの配列で後ろにあるものを選ぶ。
+  const ICON_SEVERITY = ['unknown', 'sunny', 'sunny-cloudy', 'cloudy-sunny', 'cloudy', 'fog', 'rain-light', 'rain', 'sleet', 'snow', 'rain-heavy', 'thunder'];
+
+  // 気象庁天気コード(3桁)。先頭桁: 1 晴, 2 曇, 3 雨, 4 雪。下2桁: 副天気。
+  // 例: 101 晴れ時々曇り, 102 晴れ一時雨, 104 晴れ一時雪, 106 晴れ一時雨か雪, 111 晴れ後曇り,
+  //     112 晴れ後一時雨, 115 晴れ後一時雪, 118 晴れ後雨か雪, 303 雨時々雪, 314 雨後雪, 403 雪時々雨, 414 雪後雨
+  const JMA_THUNDER = new Set(['108', '119', '140', '209', '219', '240', '350']); // 雷を伴う
+  const JMA_HEAVY = new Set(['308']);                                            // 雨で暴風を伴う
+  const SUB_SLEET = new Set(['06', '07', '18']);                                 // 雨か雪
+  const SUB_RAIN = new Set(['02', '03', '12', '13', '14']);                      // 一時雨 / 時々雨 / 後雨
+  const SUB_SNOW = new Set(['04', '05', '15', '16', '17']);                      // 一時雪 / 時々雪 / 後雪
+
+  function jmaCodeToIcon(code) {
+    const s = code === null || code === undefined ? '' : String(code);
+    if (!/^[1-4]\d\d$/.test(s)) return 'unknown';
+    if (JMA_THUNDER.has(s)) return 'thunder';
+    if (JMA_HEAVY.has(s)) return 'rain-heavy';
+    const head = s[0];
+    const sub = s.slice(1);
+    if (head === '3') return sub === '03' || sub === '14' ? 'sleet' : 'rain';
+    if (head === '4') return sub === '03' || sub === '14' ? 'sleet' : 'snow';
+    // 晴(1) / 曇(2)
+    if (SUB_SLEET.has(sub)) return 'sleet';
+    if (SUB_SNOW.has(sub)) return 'snow';
+    if (SUB_RAIN.has(sub)) return 'rain-light';
+    if (sub === '00') return head === '1' ? 'sunny' : 'cloudy';
+    // 上記以外の副天気(時々曇り、後曇り など)は晴曇の混在として扱う
+    return head === '1' ? 'sunny-cloudy' : 'cloudy-sunny';
+  }
+
+  const WMO_ICON = [
+    [[0], 'sunny'], [[1], 'sunny-cloudy'], [[2], 'cloudy-sunny'], [[3], 'cloudy'],
+    [[45, 48], 'fog'],
+    [[51, 53, 56, 61, 80], 'rain-light'],
+    [[55, 57, 63, 81], 'rain'],
+    [[65, 82], 'rain-heavy'],
+    [[66, 67], 'sleet'],
+    [[71, 73, 75, 77, 85, 86], 'snow'],
+    [[95, 96, 99], 'thunder'],
+  ];
+
+  function wmoCodeToIcon(code) {
+    if (code === null || code === undefined) return 'unknown';
+    for (const [codes, icon] of WMO_ICON) if (codes.includes(Number(code))) return icon;
+    return 'unknown';
+  }
+
+  const WMO_TEXT = {
+    ja: { 0: '快晴', 1: '晴れ', 2: '晴れ時々曇り', 3: '曇り', 45: '霧', 48: '霧(着氷)', 51: '霧雨', 53: '霧雨', 55: '強い霧雨', 56: '着氷性の霧雨', 57: '着氷性の霧雨', 61: '弱い雨', 63: '雨', 65: '強い雨', 66: '着氷性の雨', 67: '着氷性の雨', 71: '弱い雪', 73: '雪', 75: '強い雪', 77: '霧雪', 80: 'にわか雨', 81: 'にわか雨', 82: '激しいにわか雨', 85: 'にわか雪', 86: '強いにわか雪', 95: '雷雨', 96: '雷雨(霰)', 99: '激しい雷雨(霰)' },
+    en: { 0: 'Clear', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast', 45: 'Fog', 48: 'Rime fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Dense drizzle', 56: 'Freezing drizzle', 57: 'Freezing drizzle', 61: 'Slight rain', 63: 'Rain', 65: 'Heavy rain', 66: 'Freezing rain', 67: 'Freezing rain', 71: 'Slight snow', 73: 'Snow', 75: 'Heavy snow', 77: 'Snow grains', 80: 'Rain showers', 81: 'Rain showers', 82: 'Violent showers', 85: 'Snow showers', 86: 'Heavy snow showers', 95: 'Thunderstorm', 96: 'Thunderstorm, hail', 99: 'Severe thunderstorm' },
+  };
+
+  function wmoCodeToText(lang, code) {
+    const dict = WMO_TEXT[lang] || WMO_TEXT.ja;
+    return dict[Number(code)] ?? '';
+  }
+
+  function worstIcon(icons) {
+    let best = 'unknown';
+    for (const ic of icons) if (ICON_SEVERITY.indexOf(ic) > ICON_SEVERITY.indexOf(best)) best = ic;
+    return best;
+  }
+
+  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, ICONS, ICON_SEVERITY, jmaCodeToIcon, wmoCodeToIcon, wmoCodeToText, worstIcon };
 })();
 </script>
 <script id="app-ui">
