@@ -138,6 +138,12 @@ html[data-theme="dark"] { --cloud: #a7b0bf; }
 .cols .pop small { color: var(--fg-muted); }
 .cols .precip { color: var(--fg-muted); font-size: var(--fs-small); }
 .icon { width: 1.8em; height: 1.8em; display: inline-block; vertical-align: middle; }
+.legend { display: flex; align-items: center; gap: var(--gap); font-size: var(--fs-small); color: var(--fg-muted); margin: calc(var(--gap) / 2) 0 2px; }
+.legend .chart-title { color: var(--fg); font-weight: 600; margin-right: auto; }
+.legend .sw { display: inline-block; width: 1.4em; height: 0.7em; vertical-align: middle; margin-right: 0.35em; border-radius: 2px; }
+.legend .sw.temp { height: 0; border-top: 2px solid var(--accent); border-radius: 0; }
+.legend .sw.pop { background: var(--rain); opacity: 0.35; }
+.legend .sw.precip { background: var(--rain); }
 #hourly-chart { flex: 1; width: 100%; min-height: 0; }
 #hourly-chart .temp-line { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
 #hourly-chart .pop-bar { fill: var(--rain); opacity: 0.35; }
@@ -208,6 +214,7 @@ html[data-theme="dark"] { --cloud: #a7b0bf; }
   <section class="panel" id="panel-hourly">
     <h2 data-i18n="hourly"></h2>
     <div id="hourly-grid"></div>
+    <div id="hourly-legend" class="legend"></div>
     <svg id="hourly-chart" viewBox="0 0 1600 100" preserveAspectRatio="none"></svg>
   </section>
   <section class="panel" id="panel-weekly">
@@ -385,6 +392,8 @@ const Logic = (() => {
       wave: '波',
       pop: '降水確率',
       precip: '降水量',
+      temp: '気温',
+      chart_title: '気温と降水の推移',
       set_location_hint: '左下の設定から地点を選んでください',
       hourly_step: '時間別の刻み(時間)',
       hourly_count: '時間別のコマ数',
@@ -432,6 +441,8 @@ const Logic = (() => {
       wave: 'Waves',
       pop: 'Precip. prob.',
       precip: 'Precip.',
+      temp: 'Temp.',
+      chart_title: 'Temperature and precipitation',
       set_location_hint: 'Choose a location from the settings (bottom left)',
       hourly_step: 'Hourly step (hours)',
       hourly_count: 'Hourly columns',
@@ -1191,7 +1202,19 @@ const App = (() => {
       rows.precip.appendChild(el('div', 'precip', h.precip ? fmtNum(h.precip, 'mm', 1) : ''));
     }
     for (const r of Object.values(rows)) grid.appendChild(r);
+    renderHourlyLegend();
     renderHourlyChart(items);
+  }
+
+  function renderHourlyLegend() {
+    const legend = $('#hourly-legend');
+    legend.replaceChildren(el('span', 'chart-title', Logic.t(settings.lang, 'chart_title')));
+    for (const [cls, key] of [['temp', 'temp'], ['pop', 'pop'], ['precip', 'precip']]) {
+      const item = el('span', 'legend-item');
+      item.appendChild(el('span', `sw ${cls}`));
+      item.appendChild(document.createTextNode(Logic.t(settings.lang, key)));
+      legend.appendChild(item);
+    }
   }
 
   function renderHourlyChart(items) {
