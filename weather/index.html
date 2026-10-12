@@ -547,7 +547,56 @@ const Logic = (() => {
     return out;
   }
 
-  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, ICONS, ICON_SEVERITY, jmaCodeToIcon, wmoCodeToIcon, wmoCodeToText, worstIcon, JMA_OFFICES, guessJmaOffices, findOffice, normalizeJma, normalizeOpenMeteo, aggregateHourly, toNum, cleanText };
+  function addDays(dateStr, n) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+  }
+
+  function mergeForecast(jma, om, nowIso, opts) {
+    const today = nowIso.slice(0, 10);
+    const jmaToday = jma ? (jma.days.find((d) => d.date === today) || jma.days[0] || null) : null;
+    const cur = om?.current ?? null;
+
+    const current = {
+      temp: cur?.temp ?? null,
+      humidity: cur?.humidity ?? null,
+      apparent: cur?.apparent ?? null,
+      windSpeed: cur?.windSpeed ?? null,
+      windDir: cur?.windDir ?? null,
+      isDay: cur ? cur.isDay : true,
+      code: cur?.code ?? null,
+      icon: cur ? wmoCodeToIcon(cur.code) : (jmaToday ? jmaToday.icon : 'unknown'),
+      text: jmaToday?.weather ?? null,
+      wind: jmaToday?.wind ?? null,
+      wave: jmaToday?.wave ?? null,
+    };
+
+    const popByTime = new Map((jma?.pops ?? []).map((p) => [p.time, p.pop]));
+    const hourly = (om ? aggregateHourly(om.hourly, opts.step, nowIso, opts.count) : [])
+      .map((h) => ({ ...h, jmaPop: popByTime.has(h.time) ? popByTime.get(h.time) : null }));
+
+    const daily = [];
+    for (let i = 0; i < opts.days; i++) {
+      const date = addDays(today, i);
+      const w = jma?.weekly.find((x) => x.date === date) ?? null;
+      const jd = jma?.days.find((x) => x.date === date) ?? null;
+      const o = om?.daily.find((x) => x.date === date) ?? null;
+      const pick = (jVal, oVal) => (jVal !== null && jVal !== undefined ? [jVal, false] : [oVal ?? null, oVal !== null && oVal !== undefined]);
+      const jIcon = w?.code ? w.icon : (jd?.code ? jd.icon : null);
+      const [icon, fIcon] = pick(jIcon, o?.icon);
+      const [tMax, fMax] = pick(w?.tMax, o?.tMax);
+      const [tMin, fMin] = pick(w?.tMin, o?.tMin);
+      const [pop, fPop] = pick(w?.pop, o?.pop);
+      daily.push({ date, icon: icon ?? 'unknown', tMax, tMin, pop, fromFallback: { icon: fIcon, tMax: fMax, tMin: fMin, pop: fPop } });
+    }
+
+    return {
+      current, hourly, daily,
+      meta: { jmaReportTime: jma?.reportTime ?? null, omTime: cur?.time ?? null, jmaOk: !!jma, omOk: !!om },
+    };
+  }
+
+  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, ICONS, ICON_SEVERITY, jmaCodeToIcon, wmoCodeToIcon, wmoCodeToText, worstIcon, JMA_OFFICES, guessJmaOffices, findOffice, normalizeJma, normalizeOpenMeteo, aggregateHourly, addDays, mergeForecast, toNum, cleanText };
 })();
 </script>
 <script id="app-ui">
