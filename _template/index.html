@@ -375,8 +375,7 @@ const App = (() => {
     const delay = delayMs ?? settings.refreshMinutes * 60000;
     nextRefreshAt = Date.now() + delay;
     refreshTimer = setTimeout(async () => {
-      await refresh();
-      scheduleRefresh();
+      try { await refresh(); } finally { scheduleRefresh(); }
     }, delay);
   }
 
@@ -409,7 +408,7 @@ const App = (() => {
       a.href = URL.createObjectURL(blob);
       a.download = `${PAGE}-settings.json`;
       a.click();
-      URL.revokeObjectURL(a.href);
+      setTimeout(() => URL.revokeObjectURL(a.href), 0);
     });
     $('#btn-import').addEventListener('click', () => $('#import-file').click());
     $('#import-file').addEventListener('change', async (ev) => {
