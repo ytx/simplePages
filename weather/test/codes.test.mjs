@@ -58,3 +58,34 @@ test('worstIcon picks most severe', () => {
   assert.equal(Logic.worstIcon(['unknown', 'sunny']), 'sunny');
   assert.equal(Logic.worstIcon([]), 'unknown');
 });
+
+test('jmaCodeToIcon: codes the heuristic got wrong', () => {
+  assert.equal(Logic.jmaCodeToIcon('209'), 'fog');
+  assert.equal(Logic.jmaCodeToIcon('208'), 'thunder');
+  assert.equal(Logic.jmaCodeToIcon('225'), 'rain-light');
+  assert.equal(Logic.jmaCodeToIcon('126'), 'rain-light');
+  assert.equal(Logic.jmaCodeToIcon('228'), 'snow');
+  assert.equal(Logic.jmaCodeToIcon('124'), 'snow');
+  assert.equal(Logic.jmaCodeToIcon('160'), 'sleet');
+  assert.equal(Logic.jmaCodeToIcon('281'), 'sleet');
+  assert.equal(Logic.jmaCodeToIcon('130'), 'fog');
+  assert.equal(Logic.jmaCodeToIcon('110'), 'sunny-cloudy');
+  assert.equal(Logic.jmaCodeToIcon('223'), 'cloudy-sunny');
+  assert.equal(Logic.jmaCodeToIcon('306'), 'rain-heavy');
+  assert.equal(Logic.jmaCodeToIcon('304'), 'sleet');
+  assert.equal(Logic.jmaCodeToIcon('313'), 'rain');
+  assert.equal(Logic.jmaCodeToIcon('409'), 'sleet');
+  assert.equal(Logic.jmaCodeToIcon('450'), 'thunder');
+  assert.equal(Logic.jmaCodeToIcon(201), 'cloudy-sunny');      // number input
+  assert.equal(Logic.jmaCodeToIcon('199'), 'sunny-cloudy');    // unlisted -> head fallback
+  assert.equal(Logic.jmaCodeToIcon('399'), 'rain');
+});
+
+test('wmo helpers reject empty/non-integer input; worstIcon tolerates null', () => {
+  assert.equal(Logic.wmoCodeToIcon(''), 'unknown');
+  assert.equal(Logic.wmoCodeToIcon('63'), 'rain');
+  assert.equal(Logic.wmoCodeToIcon(1.5), 'unknown');
+  assert.equal(Logic.wmoCodeToText('ja', ''), '');
+  assert.equal(Logic.worstIcon(null), 'unknown');
+  assert.equal(Logic.worstIcon(['bogus', 'cloudy']), 'cloudy');
+});

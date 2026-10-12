@@ -280,31 +280,28 @@ const Logic = (() => {
   // 軽い順。worstIcon はこの配列で後ろにあるものを選ぶ。
   const ICON_SEVERITY = ['unknown', 'sunny', 'sunny-cloudy', 'cloudy-sunny', 'cloudy', 'fog', 'rain-light', 'rain', 'sleet', 'snow', 'rain-heavy', 'thunder'];
 
-  // 気象庁天気コード(3桁)。先頭桁: 1 晴, 2 曇, 3 雨, 4 雪。下2桁: 副天気。
-  // 例: 101 晴れ時々曇り, 102 晴れ一時雨, 104 晴れ一時雪, 106 晴れ一時雨か雪, 111 晴れ後曇り,
-  //     112 晴れ後一時雨, 115 晴れ後一時雪, 118 晴れ後雨か雪, 303 雨時々雪, 314 雨後雪, 403 雪時々雨, 414 雪後雨
-  const JMA_THUNDER = new Set(['108', '119', '140', '209', '219', '240', '350']); // 雷を伴う
-  const JMA_HEAVY = new Set(['308']);                                            // 雨で暴風を伴う
-  const SUB_SLEET = new Set(['06', '07', '18']);                                 // 雨か雪
-  const SUB_RAIN = new Set(['02', '03', '12', '13', '14']);                      // 一時雨 / 時々雨 / 後雨
-  const SUB_SNOW = new Set(['04', '05', '15', '16', '17']);                      // 一時雪 / 時々雪 / 後雪
+  // 気象庁天気コード → アイコン ID。公開されている全コードを列挙する。無いコードは先頭桁で代替。
+  const JMA_ICON = {
+    100: 'sunny', 101: 'sunny-cloudy', 102: 'rain-light', 103: 'rain-light', 104: 'snow', 105: 'snow', 106: 'sleet', 107: 'sleet', 108: 'thunder',
+    110: 'sunny-cloudy', 111: 'sunny-cloudy', 112: 'rain-light', 113: 'rain-light', 114: 'rain-light', 115: 'snow', 116: 'snow', 117: 'snow', 118: 'sleet', 119: 'thunder',
+    120: 'rain-light', 121: 'rain-light', 122: 'rain-light', 123: 'thunder', 124: 'snow', 125: 'thunder', 126: 'rain-light', 127: 'rain-light', 128: 'rain-light',
+    130: 'fog', 131: 'fog', 132: 'sunny-cloudy', 140: 'thunder', 160: 'sleet', 170: 'sleet', 181: 'sleet',
+    200: 'cloudy', 201: 'cloudy-sunny', 202: 'rain-light', 203: 'rain-light', 204: 'snow', 205: 'snow', 206: 'sleet', 207: 'sleet', 208: 'thunder', 209: 'fog',
+    210: 'cloudy-sunny', 211: 'cloudy-sunny', 212: 'rain-light', 213: 'rain-light', 214: 'rain-light', 215: 'snow', 216: 'snow', 217: 'snow', 218: 'sleet', 219: 'thunder',
+    220: 'rain-light', 221: 'rain-light', 222: 'rain-light', 223: 'cloudy-sunny', 224: 'rain-light', 225: 'rain-light', 226: 'rain-light', 228: 'snow', 229: 'snow', 230: 'snow',
+    231: 'fog', 240: 'thunder', 250: 'thunder', 260: 'sleet', 270: 'sleet', 281: 'sleet',
+    300: 'rain', 301: 'rain', 302: 'rain', 303: 'sleet', 304: 'sleet', 306: 'rain-heavy', 308: 'rain-heavy', 309: 'sleet', 311: 'rain', 313: 'rain', 314: 'sleet', 315: 'sleet',
+    316: 'sleet', 317: 'sleet', 320: 'rain', 321: 'rain', 322: 'sleet', 323: 'rain', 324: 'rain', 325: 'rain', 326: 'sleet', 327: 'sleet', 328: 'rain-heavy', 329: 'sleet',
+    340: 'sleet', 350: 'thunder', 361: 'sleet', 371: 'sleet',
+    400: 'snow', 401: 'snow', 402: 'snow', 403: 'sleet', 405: 'snow', 406: 'snow', 407: 'snow', 409: 'sleet', 411: 'snow', 413: 'snow', 414: 'sleet',
+    420: 'snow', 421: 'snow', 422: 'sleet', 423: 'sleet', 425: 'snow', 426: 'sleet', 427: 'sleet', 450: 'thunder',
+  };
+  const JMA_HEAD_FALLBACK = { 1: 'sunny-cloudy', 2: 'cloudy-sunny', 3: 'rain', 4: 'snow' };
 
   function jmaCodeToIcon(code) {
-    const s = code === null || code === undefined ? '' : String(code);
+    const s = code === null || code === undefined ? '' : String(code).trim();
     if (!/^[1-4]\d\d$/.test(s)) return 'unknown';
-    if (JMA_THUNDER.has(s)) return 'thunder';
-    if (JMA_HEAVY.has(s)) return 'rain-heavy';
-    const head = s[0];
-    const sub = s.slice(1);
-    if (head === '3') return sub === '03' || sub === '14' ? 'sleet' : 'rain';
-    if (head === '4') return sub === '03' || sub === '14' ? 'sleet' : 'snow';
-    // 晴(1) / 曇(2)
-    if (SUB_SLEET.has(sub)) return 'sleet';
-    if (SUB_SNOW.has(sub)) return 'snow';
-    if (SUB_RAIN.has(sub)) return 'rain-light';
-    if (sub === '00') return head === '1' ? 'sunny' : 'cloudy';
-    // 上記以外の副天気(時々曇り、後曇り など)は晴曇の混在として扱う
-    return head === '1' ? 'sunny-cloudy' : 'cloudy-sunny';
+    return JMA_ICON[s] ?? JMA_HEAD_FALLBACK[s[0]];
   }
 
   const WMO_ICON = [
@@ -319,8 +316,10 @@ const Logic = (() => {
   ];
 
   function wmoCodeToIcon(code) {
-    if (code === null || code === undefined) return 'unknown';
-    for (const [codes, icon] of WMO_ICON) if (codes.includes(Number(code))) return icon;
+    if (code === null || code === undefined || code === '') return 'unknown';
+    const n = Number(code);
+    if (!Number.isInteger(n)) return 'unknown';
+    for (const [codes, icon] of WMO_ICON) if (codes.includes(n)) return icon;
     return 'unknown';
   }
 
@@ -330,13 +329,14 @@ const Logic = (() => {
   };
 
   function wmoCodeToText(lang, code) {
+    if (code === null || code === undefined || code === '') return '';
     const dict = WMO_TEXT[lang] || WMO_TEXT.ja;
     return dict[Number(code)] ?? '';
   }
 
   function worstIcon(icons) {
     let best = 'unknown';
-    for (const ic of icons) if (ICON_SEVERITY.indexOf(ic) > ICON_SEVERITY.indexOf(best)) best = ic;
+    for (const ic of icons || []) if (ICON_SEVERITY.indexOf(ic) > ICON_SEVERITY.indexOf(best)) best = ic;
     return best;
   }
 
