@@ -480,7 +480,74 @@ const Logic = (() => {
     return out;
   }
 
-  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, ICONS, ICON_SEVERITY, jmaCodeToIcon, wmoCodeToIcon, wmoCodeToText, worstIcon, JMA_OFFICES, guessJmaOffices, findOffice, normalizeJma, toNum, cleanText };
+  function normalizeOpenMeteo(json) {
+    const out = { current: null, hourly: [], daily: [] };
+    if (!json || typeof json !== 'object') return out;
+    const c = json.current;
+    if (c && typeof c === 'object') {
+      out.current = {
+        time: c.time ?? null,
+        temp: toNum(c.temperature_2m),
+        humidity: toNum(c.relative_humidity_2m),
+        apparent: toNum(c.apparent_temperature),
+        windSpeed: toNum(c.wind_speed_10m),
+        windDir: toNum(c.wind_direction_10m),
+        code: toNum(c.weather_code),
+        isDay: c.is_day === undefined ? true : Number(c.is_day) === 1,
+      };
+    }
+    const h = json.hourly;
+    if (h && Array.isArray(h.time)) {
+      out.hourly = h.time.map((t, i) => ({
+        time: t,
+        temp: toNum(h.temperature_2m?.[i]),
+        pop: toNum(h.precipitation_probability?.[i]),
+        precip: toNum(h.precipitation?.[i]),
+        code: toNum(h.weather_code?.[i]),
+      }));
+    }
+    const d = json.daily;
+    if (d && Array.isArray(d.time)) {
+      out.daily = d.time.map((t, i) => {
+        const code = toNum(d.weather_code?.[i]);
+        return {
+          date: t,
+          code,
+          icon: wmoCodeToIcon(code),
+          tMax: toNum(d.temperature_2m_max?.[i]),
+          tMin: toNum(d.temperature_2m_min?.[i]),
+          pop: toNum(d.precipitation_probability_max?.[i]),
+        };
+      });
+    }
+    return out;
+  }
+
+  function aggregateHourly(hourly, step, nowIso, count) {
+    if (!Array.isArray(hourly) || hourly.length === 0) return [];
+    const nowHour = Number.parseInt(nowIso.slice(11, 13), 10);
+    const startHour = Math.floor(nowHour / step) * step;
+    const startKey = `${nowIso.slice(0, 10)}T${String(startHour).padStart(2, '0')}:00`;
+    let i = hourly.findIndex((h) => h.time >= startKey);
+    if (i < 0) return [];
+    const out = [];
+    while (out.length < count && i < hourly.length) {
+      const chunk = hourly.slice(i, i + step);
+      const pops = chunk.map((c) => c.pop).filter((p) => p !== null);
+      const precip = chunk.reduce((s, c) => s + (c.precip ?? 0), 0);
+      out.push({
+        time: chunk[0].time,
+        temp: chunk[0].temp,
+        pop: pops.length ? Math.max(...pops) : null,
+        precip: Math.round(precip * 10) / 10,
+        icon: worstIcon(chunk.map((c) => wmoCodeToIcon(c.code))),
+      });
+      i += step;
+    }
+    return out;
+  }
+
+  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, ICONS, ICON_SEVERITY, jmaCodeToIcon, wmoCodeToIcon, wmoCodeToText, worstIcon, JMA_OFFICES, guessJmaOffices, findOffice, normalizeJma, normalizeOpenMeteo, aggregateHourly, toNum, cleanText };
 })();
 </script>
 <script id="app-ui">
