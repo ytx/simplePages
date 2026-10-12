@@ -69,6 +69,7 @@ body {
   transition: opacity 0.6s;
 }
 #settings-btn.idle { opacity: 0.15; }
+#settings-btn.attention { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); opacity: 1; }
 #settings-btn svg { width: 1.3em; height: 1.3em; fill: currentColor; }
 dialog#settings {
   background: var(--bg-panel); color: var(--fg);
@@ -104,6 +105,11 @@ button.btn.danger { color: var(--error); }
   --fs-temp: clamp(48px, 7vw, 120px);
 }
 html[data-theme="dark"] { --cloud: #a7b0bf; }
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) {
+    --bg: #12151b; --bg-panel: #1b1f27; --fg: #e7eaf0; --fg-muted: #9aa3b2; --border: #2d333f; --accent: #5b9cf5; --cloud: #a7b0bf;
+  }
+}
 #content {
   display: grid;
   grid-template-columns: 28fr 72fr;
@@ -440,7 +446,7 @@ const Logic = (() => {
     const dict = I18N[lang] || I18N.ja;
     let s = dict[key] ?? I18N.ja[key] ?? key;
     if (params) {
-      for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, String(v));
+      for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, () => String(v));
     }
     return s;
   }
@@ -892,6 +898,7 @@ const App = (() => {
   function updateSettings(patch) {
     const prevLoc = settings.location;
     settings = Logic.resolveSettings(SCHEMA, { ...settings, ...patch }, {});
+    settings.location = Logic.validLocation(settings.location);
     if (JSON.stringify(prevLoc) !== JSON.stringify(settings.location)) lastModel = null;
     storage.write(settings);
     applySettings();
@@ -934,15 +941,18 @@ const App = (() => {
   }
 
   let lastModel = null;
+  let lastOkAt = null;
   let jmaCache = null; // { office, json } 気象庁は更新が少ないので同一地点なら失敗時に再利用
 
+  const FETCH_TIMEOUT_MS = 20000;
   async function fetchJson(url) {
     try {
-      const r = await fetch(url, { cache: 'no-store' });
+      const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
       return { ok: true, data: await r.json() };
     } catch (e) {
-      return { ok: false, error: e.message || 'network' };
+      const reason = e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'timeout' : (e.message || 'network');
+      return { ok: false, error: reason };
     }
   }
 
@@ -955,6 +965,7 @@ const App = (() => {
   async function refresh() {
     const loc = settings.location;
     $('#no-location').hidden = !!loc;
+    $('#settings-btn').classList.toggle('attention', !loc);
     for (const p of $$('.panel')) p.hidden = !loc;
     if (!loc) { setStatus('error', Logic.t(settings.lang, 'set_location_hint')); return; }
 
@@ -962,6 +973,8 @@ const App = (() => {
     const tasks = [fetchJson(Logic.openMeteoUrl(loc.lat, loc.lon))];
     if (loc.jmaOffice) tasks.push(fetchJson(Logic.jmaForecastUrl(loc.jmaOffice)));
     const [omRes, jmaRes] = await Promise.all(tasks);
+    const jmaFailed = !!loc.jmaOffice && !jmaRes.ok;
+    const allFailed = !omRes.ok && (!loc.jmaOffice || jmaFailed);
 
     const errors = [];
     const om = omRes.ok ? Logic.normalizeOpenMeteo(omRes.data) : null;
@@ -978,15 +991,17 @@ const App = (() => {
       if (cached) jma = Logic.normalizeJma(cached, loc.jmaClass10);
     }
 
-    if (!om && !jma && lastModel) {
-      setStatus('error', Logic.t(settings.lang, 'error_fetch', { reason: errors.join(' / ') }));
+    if (!errors.length) lastOkAt = new Date();
+    const okText = lastOkAt ? Logic.t(settings.lang, 'updated_at', { time: formatTime(lastOkAt) }) : Logic.t(settings.lang, 'never_updated');
+    if (allFailed && lastModel) {
+      setStatus('error', `${okText} / ${Logic.t(settings.lang, 'error_fetch', { reason: errors.join(' / ') })}`);
       return;
     }
     const nowIso = Logic.toLocalIso(new Date());
     lastModel = Logic.mergeForecast(jma, om, nowIso, { step: settings.hourlyStep, count: hourlyCount(), days: settings.dailyDays });
     render(lastModel);
-    if (errors.length) setStatus('error', Logic.t(settings.lang, 'error_fetch', { reason: errors.join(' / ') }));
-    else setStatus('ok', Logic.t(settings.lang, 'updated_at', { time: formatTime(new Date()) }));
+    if (errors.length) setStatus('error', `${okText} / ${Logic.t(settings.lang, 'error_fetch', { reason: errors.join(' / ') })}`);
+    else setStatus('ok', okText);
   }
 
   function renderSettingsExtra(_settings) {
@@ -1136,7 +1151,8 @@ const App = (() => {
   function renderCurrent(c) {
     const loc = settings.location;
     const office = loc?.jmaOffice ? Logic.findOffice(loc.jmaOffice) : null;
-    const name = loc ? loc.name + (office ? ` / ${settings.lang === 'ja' ? office.name : office.enName}` : '') : '';
+    const area = typeof loc?.jmaClass10Name === 'string' && loc.jmaClass10Name ? ` ${loc.jmaClass10Name}` : '';
+    const name = loc ? loc.name + (office ? ` / ${settings.lang === 'ja' ? office.name : office.enName}${area}` : '') : '';
     $('#page-title').textContent = name;
     const night = !c.isDay && (c.icon === 'sunny' || c.icon === 'sunny-cloudy');
     $('#cur-icon').firstElementChild.setAttribute('href', `#icon-${c.icon}${night ? '-night' : ''}`);
@@ -1252,7 +1268,7 @@ const App = (() => {
   function resetIdle() {
     $('#settings-btn').classList.remove('idle');
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => $('#settings-btn').classList.add('idle'), IDLE_MS);
+    idleTimer = setTimeout(() => { if (settings.location) $('#settings-btn').classList.add('idle'); }, IDLE_MS);
   }
 
   function bindSettingsDialog() {

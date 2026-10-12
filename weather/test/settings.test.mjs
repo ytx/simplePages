@@ -55,3 +55,14 @@ test('i18n has weather keys in both languages', () => {
     assert.ok(Logic.I18N.en[k], `en.${k}`);
   }
 });
+
+test('hourlyStep numeric enum coerces select string values', () => {
+  const schema = { hourlyStep: { type: 'enum', values: [1, 3], default: 3 } };
+  assert.equal(Logic.resolveSettings(schema, {}, { hourlyStep: '1' }).hourlyStep, 1);
+  assert.equal(Logic.resolveSettings(schema, { hourlyStep: '3' }, {}).hourlyStep, 3);
+  assert.equal(Logic.resolveSettings(schema, {}, { hourlyStep: '2' }).hourlyStep, 3);
+});
+
+test('t: parameter values containing $ patterns are inserted literally', () => {
+  assert.equal(Logic.t('en', 'error_fetch', { reason: 'cost $$ and $& ok' }), 'Fetch failed: cost $$ and $& ok');
+});
