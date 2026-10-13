@@ -1214,6 +1214,7 @@ const App = (() => {
     lastOkAt = new Date();
     cache = { from: win.from, to: win.to, events: norm.events, calendars: norm.calendars, errors: norm.errors, fetchedAt: lastOkAt };
     render();
+    if (!Logic.coversRange(cache, currentRange())) { fetchWindow(currentRange()); return; }
     if (norm.errors.length) setStatus('warn', `${okText()} / ${Logic.t(settings.lang, 'partial_errors', { n: norm.errors.length })}`);
     else setStatus('ok', okText());
   }
@@ -1236,6 +1237,7 @@ const App = (() => {
     const range = currentRange();
     $('#range-title').textContent = Logic.formatRangeTitle(settings.view, anchor, range, settings.lang);
     for (const b of $$('.view-btn')) b.setAttribute('aria-pressed', String(b.dataset.view === settings.view));
+    scheduleReturnToToday();
     if (cache && !Logic.coversRange(cache, range)) { render(); fetchWindow(range); } else render();
   }
 
@@ -1371,12 +1373,86 @@ const App = (() => {
     Logic.monthCells(events, days, max).forEach((cell, i) => {
       for (const it of cell.items) {
         const e = eventEl(it.event, 'mitem' + (it.allDay ? ' allday' : ''), it.allDay);
-        e.textContent = (it.allDay ? '' : `${tf.format(it.start)} `) + (it.event.title || Logic.t(settings.lang, 'untitled'));
+        e.textContent = (it.allDay ? '' : `${tf.format(it.event.start)} `) + (it.event.title || Logic.t(settings.lang, 'untitled'));
         cells[i].appendChild(e);
       }
       if (cell.more) cells[i].appendChild(el('div', 'mitem more', Logic.t(settings.lang, 'more', { n: cell.more })));
     });
   }
+
+  let returnTimer = null;
+
+  function navigate(dir) {
+    anchor = Logic.shiftAnchor(settings.view, anchor, dir);
+    hidePopover();
+    showRange();
+  }
+  function goToday() {
+    anchor = Logic.startOfDay(new Date());
+    hidePopover();
+    showRange();
+  }
+  // 今日以外を見ているときだけ、無操作 returnToTodayMinutes 分で今日へ戻す
+  function scheduleReturnToToday() {
+    clearTimeout(returnTimer);
+    const mins = settings.returnToTodayMinutes;
+    if (mins > 0 && !Logic.isToday(anchor, new Date())) returnTimer = setTimeout(goToday, mins * 60000);
+  }
+
+  function bindNav() {
+    $('#btn-prev').addEventListener('click', () => navigate(-1));
+    $('#btn-next').addEventListener('click', () => navigate(1));
+    $('#btn-today').addEventListener('click', goToday);
+    for (const b of $$('.view-btn')) b.addEventListener('click', () => updateSettings({ view: b.dataset.view }));
+    const cal = $('#cal');
+    let down = null;
+    cal.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, id: e.pointerId }; });
+    cal.addEventListener('pointerup', (e) => {
+      if (!down || down.id !== e.pointerId) return;
+      const dx = e.clientX - down.x, dy = e.clientY - down.y;
+      down = null;
+      if (Logic.isSwipe(dx, dy)) navigate(dx < 0 ? 1 : -1);
+    });
+    cal.addEventListener('pointercancel', () => { down = null; });
+    document.addEventListener('pointerdown', (e) => {
+      const pop = $('#popover');
+      if (!pop.hidden && !pop.contains(e.target)) hidePopover();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hidePopover(); });
+  }
+
+  function formatEventWhen(ev) {
+    const dFmt = new Intl.DateTimeFormat(locale(), { month: 'numeric', day: 'numeric', weekday: 'short' });
+    if (ev.allDay) {
+      const last = Logic.addDays(ev.end, -1);
+      return last > ev.start ? `${dFmt.format(ev.start)} – ${dFmt.format(last)}` : dFmt.format(ev.start);
+    }
+    const tf = timeFmt();
+    const sameDay = Logic.startOfDay(ev.start).getTime() === Logic.startOfDay(new Date(ev.end.getTime() - 1)).getTime();
+    return sameDay
+      ? `${dFmt.format(ev.start)} ${tf.format(ev.start)} – ${tf.format(ev.end)}`
+      : `${dFmt.format(ev.start)} ${tf.format(ev.start)} – ${dFmt.format(ev.end)} ${tf.format(ev.end)}`;
+  }
+
+  function showPopover(ev, anchorEl) {
+    const pop = $('#popover');
+    pop.replaceChildren();
+    pop.appendChild(el('div', 'pop-title', ev.title || Logic.t(settings.lang, 'untitled')));
+    pop.appendChild(el('div', 'pop-line', formatEventWhen(ev)));
+    const cal = settings.calendars.find((c) => c.id === ev.calendarId) || calendarsFromGas().find((c) => c.id === ev.calendarId);
+    if (cal) pop.appendChild(el('div', 'pop-line muted', `${Logic.t(settings.lang, 'calendar_label')}: ${cal.name}`));
+    if (ev.location) pop.appendChild(el('div', 'pop-line', `${Logic.t(settings.lang, 'location_label')}: ${ev.location}`));
+    if (ev.description) pop.appendChild(el('div', 'pop-desc', ev.description));
+    pop.hidden = false;
+    const r = anchorEl.getBoundingClientRect();
+    const pw = pop.offsetWidth, ph = pop.offsetHeight, gap = 6;
+    const left = Math.min(Math.max(gap, r.left), window.innerWidth - pw - gap);
+    let top = r.bottom + gap;
+    if (top + ph > window.innerHeight - gap) top = Math.max(gap, r.top - ph - gap);
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+  }
+  function hidePopover() { $('#popover').hidden = true; }
 
   // ページ固有: 設定タブに項目を追加する。
   function setConnMessage(state, text) {
@@ -1544,9 +1620,12 @@ const App = (() => {
 
   function init() {
     loadSettings();
+    const startDate = Logic.parseYmd(new URLSearchParams(location.search).get('date'));
+    if (startDate) anchor = startDate;
     bindSettingsDialog();
     bindToolbar();
     bindConnectionTab();
+    bindNav();
     applySettings();
     scheduleRefresh(0);
     tickClock();
@@ -1554,12 +1633,18 @@ const App = (() => {
     document.addEventListener('visibilitychange', onVisibility);
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
+    setInterval(updateNowLine, 60000);
+    // 日付が変わったら今日の列と月グリッドを更新する
+    let dayKey = Logic.ymd(new Date());
+    setInterval(() => { const k = Logic.ymd(new Date()); if (k !== dayKey) { dayKey = k; showRange(); } }, 30000);
+    let resizeTimer = null;
+    window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 300); });
     resetIdle();
   }
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh, fetchJson, applyZoom, setToolbarAttention, getCache: () => cache, injectResponse };
+  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh, fetchJson, applyZoom, setToolbarAttention, getCache: () => cache, injectResponse, navigate, goToday };
 })();
 </script>
 </body>
