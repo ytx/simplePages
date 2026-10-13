@@ -1,6 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { Logic } from './logic.test.mjs';
+
+const html = fileURLToPath(new URL('../index.html', import.meta.url));
 
 test('locationFromQuery: lat/lon required and validated', () => {
   assert.equal(Logic.locationFromQuery({}), null);
@@ -65,4 +69,56 @@ test('hourlyStep numeric enum coerces select string values', () => {
 
 test('t: parameter values containing $ patterns are inserted literally', () => {
   assert.equal(Logic.t('en', 'error_fetch', { reason: 'cost $$ and $& ok' }), 'Fetch failed: cost $$ and $& ok');
+});
+
+test('stepZoom / toggleTheme / toggleLang (shared helpers)', () => {
+  assert.equal(Logic.stepZoom(100, 1), 110);
+  assert.equal(Logic.stepZoom(200, 1), 200);
+  assert.equal(Logic.stepZoom(50, -1), 50);
+  assert.equal(Logic.stepZoom(155, 1), 170);
+  assert.equal(Logic.toggleTheme('dark'), 'light');
+  assert.equal(Logic.toggleTheme('light'), 'dark');
+  assert.equal(Logic.toggleLang('ja'), 'en');
+  assert.equal(Logic.toggleLang('en'), 'ja');
+});
+
+test('parseImport: valid, broken JSON, wrong shape', () => {
+  assert.deepEqual(Logic.parseImport('{"version":1,"settings":{"lang":"en"}}', 1), { ok: true, settings: { lang: 'en' } });
+  assert.deepEqual(Logic.parseImport('{bad', 1), { ok: false, reason: 'invalid_json' });
+  assert.deepEqual(Logic.parseImport('{"lang":"en"}', 1), { ok: false, reason: 'unrecognized_format' });
+  assert.deepEqual(Logic.parseImport('{"version":1,"settings":[1,2]}', 1), { ok: false, reason: 'unrecognized_format' });
+});
+
+test('i18n has toolbar, data and about keys; hint points to the top-right settings', () => {
+  const keys = ['zoom_in', 'zoom_out', 'fullscreen', 'exit_fullscreen', 'toggle_theme', 'toggle_lang', 'tab_about',
+    'export_file', 'import_file', 'import_text', 'data_hint', 'import_ok', 'import_failed_json', 'import_failed_format',
+    'about_description', 'about_links', 'about_repo', 'about_page', 'about_license', 'about_credits', 'credit_icons'];
+  for (const k of keys) {
+    assert.equal(typeof Logic.I18N.ja[k], 'string', `ja.${k}`);
+    assert.equal(typeof Logic.I18N.en[k], 'string', `en.${k}`);
+  }
+  assert.equal(Logic.I18N.ja.export_json, undefined);
+  assert.equal(Logic.I18N.ja.import_failed, undefined);
+  assert.equal(Logic.I18N.ja.set_location_hint, '右上の設定から地点を選んでください');
+  assert.equal(Logic.I18N.en.set_location_hint, 'Choose a location from the settings (top right)');
+});
+
+test('zoom schema entry coerces URL strings and rejects out-of-range', () => {
+  const zoomSchema = { zoom: { type: 'int', min: 50, max: 200, default: 100 } };
+  assert.equal(Logic.resolveSettings(zoomSchema, {}, { zoom: '120' }).zoom, 120);
+  assert.equal(Logic.resolveSettings(zoomSchema, {}, { zoom: '999' }).zoom, 100);
+});
+
+test('every i18n key used in index.html exists in both languages', () => {
+  const src = readFileSync(html, 'utf8');
+  const keys = new Set();
+  for (const re of [/data-i18n(?:-label)?="([^"]+)"/g, /Logic\.t\(\s*settings\.lang\s*,\s*'([^']+)'/g]) {
+    for (const m of src.matchAll(re)) keys.add(m[1]);
+  }
+  assert.ok(keys.size > 0);
+  for (const k of keys) {
+    for (const lang of ['ja', 'en']) {
+      assert.equal(typeof Logic.I18N[lang][k], 'string', `${lang} missing ${k}`);
+    }
+  }
 });
