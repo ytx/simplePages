@@ -569,9 +569,103 @@ const Logic = (() => {
     return ((m - a) / (b - a)) * 100;
   }
 
+  // ---- レイアウト ----
+  function isAllDayLike(ev) { return ev.allDay || ev.end - ev.start >= DAY_MS; }
+
+  function segmentsByDay(events, days) {
+    return days.map((day) => {
+      const d0 = startOfDay(day), d1 = addDays(d0, 1);
+      const allDay = [], timed = [];
+      for (const ev of events) {
+        if (ev.end <= d0 || ev.start >= d1) continue;
+        if (isAllDayLike(ev)) { allDay.push(ev); continue; }
+        timed.push({
+          event: ev,
+          start: ev.start > d0 ? ev.start : d0,
+          end: ev.end < d1 ? ev.end : d1,
+          continuesBefore: ev.start < d0,
+          continuesAfter: ev.end > d1,
+        });
+      }
+      timed.sort((a, b) => a.start - b.start || b.end - a.end);
+      return { date: d0, allDay, timed };
+    });
+  }
+
+  function allDayBars(events, days) {
+    if (days.length === 0) return [];
+    const first = startOfDay(days[0]);
+    const endAll = addDays(startOfDay(days[days.length - 1]), 1);
+    const bars = [];
+    for (const ev of events) {
+      if (!isAllDayLike(ev) || ev.end <= first || ev.start >= endAll) continue;
+      const s = ev.start < first ? first : startOfDay(ev.start);
+      const e = ev.end > endAll ? endAll : ev.end;
+      const startCol = Math.round((s - first) / DAY_MS);
+      const endCol = Math.min(days.length, Math.ceil((e - first) / DAY_MS));
+      bars.push({ event: ev, startCol, span: Math.max(1, endCol - startCol), continuesLeft: ev.start < first, continuesRight: ev.end > endAll, row: 0 });
+    }
+    bars.sort((a, b) => a.startCol - b.startCol || b.span - a.span || a.event.start - b.event.start);
+    const rows = []; // rows[r] = [[startCol, endCol), ...]
+    for (const bar of bars) {
+      const s = bar.startCol, e = bar.startCol + bar.span;
+      let r = 0;
+      for (;;) {
+        const taken = rows[r] || (rows[r] = []);
+        if (taken.every(([ts, te]) => s >= te || e <= ts)) { taken.push([s, e]); bar.row = r; break; }
+        r++;
+      }
+    }
+    return bars;
+  }
+
+  function layoutColumns(segs) {
+    const sorted = [...segs].sort((a, b) => a.start - b.start || b.end - a.end);
+    const out = [];
+    let cluster = [], clusterEnd = null;
+    const flush = () => {
+      const colEnds = [];
+      const placed = cluster.map((seg) => {
+        let col = colEnds.findIndex((end) => end <= seg.start);
+        if (col === -1) { col = colEnds.length; colEnds.push(seg.end); } else colEnds[col] = seg.end;
+        return { seg, col };
+      });
+      for (const p of placed) out.push({ seg: p.seg, col: p.col, cols: colEnds.length });
+      cluster = []; clusterEnd = null;
+    };
+    for (const seg of sorted) {
+      if (clusterEnd !== null && seg.start >= clusterEnd) flush();
+      cluster.push(seg);
+      if (clusterEnd === null || seg.end > clusterEnd) clusterEnd = seg.end;
+    }
+    if (cluster.length) flush();
+    return out;
+  }
+
+  function clipToHours(seg, dayStart, dayEnd) {
+    const d0 = startOfDay(seg.start);
+    const a = dayStart * 60, b = dayEnd * 60;
+    const s = Math.round((seg.start - d0) / 60000), e = Math.round((seg.end - d0) / 60000);
+    const top = Math.max(s, a), bottom = Math.min(e, b);
+    if (bottom <= top) return null;
+    return { topPct: ((top - a) / (b - a)) * 100, heightPct: ((bottom - top) / (b - a)) * 100, clippedTop: s < a, clippedBottom: e > b };
+  }
+
+  function monthCells(events, days, max) {
+    const byDay = segmentsByDay(events, days.map((d) => (d instanceof Date ? d : d.date)));
+    return byDay.map((d) => {
+      const items = [
+        ...d.allDay.map((ev) => ({ event: ev, allDay: true })),
+        ...d.timed.map((seg) => ({ event: seg.event, allDay: false, start: seg.start })),
+      ];
+      return { date: d.date, items: items.slice(0, max), more: Math.max(0, items.length - max) };
+    });
+  }
+
   return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport,
     DAY_MS, WEEKDAYS_JA, startOfDay, addDays, addMonths, ymd, parseYmd, startOfWeek, monthGridDays, rangeForView, daysInRange, shiftAnchor, windowFor, coversRange, isToday, formatRangeTitle,
-    normalizeHex, normalizeResponse, validCalendars, mergeCalendarList, eventColor, textColorFor, validGasUrl, gasRequestUrl, isSwipe, normalizeHours, nowLinePct };
+    normalizeHex, normalizeResponse, validCalendars, mergeCalendarList, eventColor, textColorFor, validGasUrl, gasRequestUrl, isSwipe, normalizeHours, nowLinePct,
+    isAllDayLike, segmentsByDay, allDayBars, layoutColumns, clipToHours, monthCells };
 })();
 </script>
 <script id="app-ui">
