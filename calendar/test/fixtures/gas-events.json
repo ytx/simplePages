@@ -1,0 +1,21 @@
+{ "ok": true, "tz": "Asia/Tokyo", "generatedAt": "2026-10-13T19:40:12+09:00",
+  "calendars": [
+    { "id": "a@group.calendar.google.com", "name": "仕事", "color": "#039be5" },
+    { "id": "b@group.calendar.google.com", "name": "家族", "color": "#33b679" }
+  ],
+  "events": [
+    { "id": "e1", "calendarId": "a@group.calendar.google.com", "title": "朝会", "start": "2026-10-13T09:00:00+09:00", "end": "2026-10-13T09:30:00+09:00", "allDay": false, "location": "", "description": "", "color": "" },
+    { "id": "e2", "calendarId": "a@group.calendar.google.com", "title": "打合せ", "start": "2026-10-13T10:00:00+09:00", "end": "2026-10-13T11:30:00+09:00", "allDay": false, "location": "3F 会議室", "description": "資料は Drive", "color": "" },
+    { "id": "e3", "calendarId": "b@group.calendar.google.com", "title": "レビュー", "start": "2026-10-13T10:30:00+09:00", "end": "2026-10-13T11:00:00+09:00", "allDay": false, "location": "", "description": "", "color": "#dc2127" },
+    { "id": "e4", "calendarId": "a@group.calendar.google.com", "title": "面談", "start": "2026-10-13T11:00:00+09:00", "end": "2026-10-13T12:00:00+09:00", "allDay": false, "location": "", "description": "", "color": "" },
+    { "id": "e5", "calendarId": "a@group.calendar.google.com", "title": "夜勤", "start": "2026-10-14T23:30:00+09:00", "end": "2026-10-15T00:30:00+09:00", "allDay": false, "location": "", "description": "", "color": "" },
+    { "id": "e6", "calendarId": "b@group.calendar.google.com", "title": "祝日", "start": "2026-10-12", "end": "2026-10-13", "allDay": true, "location": "", "description": "", "color": "" },
+    { "id": "e7", "calendarId": "a@group.calendar.google.com", "title": "出張", "start": "2026-10-14", "end": "2026-10-17", "allDay": true, "location": "大阪", "description": "", "color": "" },
+    { "id": "e8", "calendarId": "b@group.calendar.google.com", "title": "展示会", "start": "2026-10-16", "end": "2026-10-20", "allDay": true, "location": "", "description": "", "color": "" },
+    { "id": "e9", "calendarId": "a@group.calendar.google.com", "title": "24時間イベント", "start": "2026-10-15T09:00:00+09:00", "end": "2026-10-16T09:00:00+09:00", "allDay": false, "location": "", "description": "", "color": "" },
+    { "id": "e10", "calendarId": "a@group.calendar.google.com", "title": "早朝", "start": "2026-10-16T05:00:00+09:00", "end": "2026-10-16T07:00:00+09:00", "allDay": false, "location": "", "description": "", "color": "" },
+    { "id": "e11", "calendarId": "a@group.calendar.google.com", "title": "深夜作業", "start": "2026-10-16T22:00:00+09:00", "end": "2026-10-16T23:59:00+09:00", "allDay": false, "location": "", "description": "", "color": "" },
+    { "id": "e12", "calendarId": "a@group.calendar.google.com", "title": "壊れた予定", "end": "2026-10-16T10:00:00+09:00", "allDay": false },
+    { "id": "rec@google.com_20261017T010000Z", "calendarId": "a@group.calendar.google.com", "title": "定例", "start": "2026-10-17T10:00:00+09:00", "end": "2026-10-17T10:30:00+09:00", "allDay": false, "location": "", "description": "", "color": "" }
+  ],
+  "errors": [ { "calendarId": "missing@group.calendar.google.com", "error": "not_found" } ] }

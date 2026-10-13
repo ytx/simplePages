@@ -1,0 +1,6 @@
+{ "ok": true, "tz": "Asia/Tokyo", "generatedAt": "2026-10-13T19:40:12+09:00",
+  "calendars": [
+    { "id": "a@group.calendar.google.com", "name": "仕事", "color": "#039BE5" },
+    { "id": "b@group.calendar.google.com", "name": "家族", "color": "#33b679" },
+    { "id": "", "name": "broken", "color": "x" }
+  ] }
