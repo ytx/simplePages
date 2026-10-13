@@ -472,6 +472,7 @@ const App = (() => {
     for (const el of $$('[data-i18n-label]')) el.setAttribute('aria-label', Logic.t(settings.lang, el.dataset.i18nLabel));
     // data-i18n-label ループの後に実行する: 全画面ボタンのラベルを状態に合った値で上書きするため。
     updateFullscreenButton();
+    if (lastStatus) setStatus(lastStatus.state, lastStatus.message);
   }
 
   function currentTheme() {
@@ -538,11 +539,14 @@ const App = (() => {
     });
   }
 
+  // message は文字列か、現在言語で文字列を返す関数。関数なら言語切替時に再評価する。
+  let lastStatus = null;
   function setStatus(state, message) {
+    lastStatus = { state, message };
     $('#status-dot').dataset.state = state;
     const el = $('#status-message');
     el.dataset.state = state;
-    el.textContent = message || '';
+    el.textContent = (typeof message === 'function' ? message() : message) || '';
   }
 
   function formatTime(d) {
@@ -570,9 +574,10 @@ const App = (() => {
 
   // ページ固有: ここでデータを取得して描画する。ひな形は更新時刻を表示するだけ。
   async function refresh() {
-    setStatus('busy', Logic.t(settings.lang, 'updating'));
+    setStatus('busy', () => Logic.t(settings.lang, 'updating'));
     await Promise.resolve();
-    setStatus('ok', Logic.t(settings.lang, 'updated_at', { time: formatTime(new Date()) }));
+    const at = new Date();
+    setStatus('ok', () => Logic.t(settings.lang, 'updated_at', { time: formatTime(at) }));
   }
 
   // ページ固有: 設定タブに項目を追加する。

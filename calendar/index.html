@@ -180,6 +180,8 @@ button.btn.danger { color: var(--error); }
 #cal-list label { display: flex; align-items: center; gap: 0.5em; }
 #cal-list input[type="color"] { width: 2.2em; height: 1.6em; padding: 0; border: 1px solid var(--border); }
 #conn-message { min-height: 1.4em; margin: 0.3em 0; }
+.code-head { align-items: center; }
+.code-head .hint { margin: 0; flex: 1; }
 #conn-message[data-state="error"] { color: var(--error); }
 textarea#gas-code { width: 100%; min-height: 12em; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: var(--fs-small); }
 .steps { padding-left: 1.4em; font-size: var(--fs-small); }
@@ -273,7 +275,7 @@ textarea#gas-code { width: 100%; min-height: 12em; font-family: ui-monospace, Me
         <li data-i18n="gas_step4"></li>
         <li data-i18n="gas_step5"></li>
       </ol>
-      <p class="hint" data-i18n="gas_code_label"></p>
+      <div class="row code-head"><p class="hint" data-i18n="gas_code_label"></p><button type="button" class="btn" id="btn-copy-code" data-i18n="copy_code"></button><span id="copy-message" class="hint"></span></div>
       <textarea id="gas-code" readonly spellcheck="false">// simplePages calendar — Google Apps Script ウェブアプリ
 // デプロイ: 種類「ウェブアプリ」/ 次のユーザーとして実行「自分」/ アクセスできるユーザー「全員」
 // 設定を変えたら「デプロイを管理」から同じデプロイを新バージョンで更新する(URL は変わらない)。
@@ -542,6 +544,9 @@ const Logic = (() => {
       gas_step4: '表示された「ウェブアプリの URL」(…/exec)を上の欄に貼り、トークンを入れたら「接続して一覧を取得」。',
       gas_step5: '表示するカレンダーにチェックを入れる。コードを変えたときは「デプロイを管理」から同じデプロイを新バージョンで更新する(URL は変わらない)。',
       gas_code_label: 'Code.gs(コピーして貼り付け)',
+      copy_code: 'コピー',
+      copied: 'コピーしました',
+      copy_failed: 'コピーできません。テキストを選択してコピーしてください',
       storage_note: 'URL とトークンはこのブラウザの localStorage に保存され、「データ」タブから書き出せます。',
       set_connection_hint: '右上の設定 → 接続タブで GAS の URL を設定してください',
       prev: '‹ 前',
@@ -621,6 +626,9 @@ const Logic = (() => {
       gas_step4: 'Paste the "Web app URL" (…/exec) above, enter the token if any, then press "Connect and list calendars".',
       gas_step5: 'Tick the calendars to show. After changing the code, update the same deployment with a new version from "Manage deployments" (the URL stays the same).',
       gas_code_label: 'Code.gs (copy and paste)',
+      copy_code: 'Copy',
+      copied: 'Copied',
+      copy_failed: 'Copy failed. Select the text and copy it manually',
       storage_note: 'The URL and token are stored in this browser\'s localStorage and can be exported from the Data tab.',
       set_connection_hint: 'Open Settings (top right) → Connection and set the GAS URL',
       prev: '‹ Prev',
@@ -1081,6 +1089,7 @@ const App = (() => {
     for (const el of $$('[data-i18n-label]')) el.setAttribute('aria-label', Logic.t(settings.lang, el.dataset.i18nLabel));
     // data-i18n-label ループの後に実行する: 全画面ボタンのラベルを状態に合った値で上書きするため。
     updateFullscreenButton();
+    if (lastStatus) setStatus(lastStatus.state, lastStatus.message);
   }
 
   function currentTheme() {
@@ -1148,11 +1157,14 @@ const App = (() => {
     });
   }
 
+  // message は文字列か、現在言語で文字列を返す関数。関数なら言語切替時に再評価する。
+  let lastStatus = null;
   function setStatus(state, message) {
+    lastStatus = { state, message };
     $('#status-dot').dataset.state = state;
     const el = $('#status-message');
     el.dataset.state = state;
-    el.textContent = message || '';
+    el.textContent = (typeof message === 'function' ? message() : message) || '';
   }
 
   function formatTime(d) {
@@ -1197,7 +1209,7 @@ const App = (() => {
     $('#cal').hidden = !connected;
     $('#range-title').hidden = !connected;
     setToolbarAttention(!connected);
-    if (!connected) { setStatus('error', Logic.t(settings.lang, 'set_connection_hint')); return; }
+    if (!connected) { setStatus('error', () => Logic.t(settings.lang, 'set_connection_hint')); return; }
     await fetchWindow(currentRange());
   }
 
@@ -1209,17 +1221,17 @@ const App = (() => {
       lastOkAt = new Date();
       cache = { from: win.from, to: win.to, events: [], calendars: settings.calendars.map((c) => ({ id: c.id, name: c.name, color: c.color })), errors: [], fetchedAt: lastOkAt };
       render();
-      setStatus('ok', okText());
+      setStatus('ok', okText);
       return;
     }
     const url = Logic.gasRequestUrl(settings.gasUrl, { from: Logic.ymd(win.from), to: Logic.ymd(win.to), cal: enabledIds().join(','), token: settings.token });
     if (!url) return;
-    setStatus('busy', Logic.t(settings.lang, 'updating'));
+    setStatus('busy', () => Logic.t(settings.lang, 'updating'));
     const res = await fetchJson(url);
     if (seq !== refreshSeq) return;
     const norm = res.ok ? Logic.normalizeResponse(res.data) : { ok: false, error: res.error };
     if (!norm.ok) {
-      setStatus('error', `${okText()} / ${Logic.t(settings.lang, 'error_fetch', { reason: reasonText(norm.error, norm.detail) })}`);
+      setStatus('error', () => `${okText()} / ${Logic.t(settings.lang, 'error_fetch', { reason: reasonText(norm.error, norm.detail) })}`);
       render();
       // 失敗時は 1 分後に再試行。定期更新の予約は上書きされる
       scheduleRefresh(60000);
@@ -1229,8 +1241,8 @@ const App = (() => {
     cache = { from: win.from, to: win.to, events: norm.events, calendars: norm.calendars, errors: norm.errors, fetchedAt: lastOkAt };
     render();
     if (!Logic.coversRange(cache, currentRange())) { fetchWindow(currentRange()); return; }
-    if (norm.errors.length) setStatus('warn', `${okText()} / ${Logic.t(settings.lang, 'partial_errors', { n: norm.errors.length })}`);
-    else setStatus('ok', okText());
+    if (norm.errors.length) setStatus('warn', () => `${okText()} / ${Logic.t(settings.lang, 'partial_errors', { n: norm.errors.length })}`);
+    else setStatus('ok', okText);
   }
 
   // 手動確認用: GAS なしで応答 JSON を流し込む(現在の表示範囲の窓として保存)
@@ -1241,7 +1253,7 @@ const App = (() => {
     lastOkAt = new Date();
     cache = { from: win.from, to: win.to, events: norm.events, calendars: norm.calendars, errors: norm.errors, fetchedAt: lastOkAt };
     render();
-    setStatus('ok', okText());
+    setStatus('ok', okText);
     return norm;
   }
 
@@ -1499,6 +1511,14 @@ const App = (() => {
   }
 
   function bindConnectionTab() {
+    $('#btn-copy-code').addEventListener('click', async () => {
+      const ta = $('#gas-code');
+      let ok = false;
+      try { await navigator.clipboard.writeText(ta.value); ok = true; } catch { /* クリップボード API 不可 → 選択してフォールバック */ }
+      if (!ok) { ta.focus(); ta.select(); try { ok = document.execCommand('copy'); } catch { ok = false; } }
+      $('#copy-message').textContent = Logic.t(settings.lang, ok ? 'copied' : 'copy_failed');
+      setTimeout(() => { $('#copy-message').textContent = ''; }, 3000);
+    });
     $('#set-gas-url').addEventListener('input', (e) => { rawUrl = e.target.value; });
     $('#btn-conn-list').addEventListener('click', async () => {
       const url = Logic.gasRequestUrl(settings.gasUrl, { action: 'list', token: settings.token });

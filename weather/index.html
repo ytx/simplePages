@@ -1055,6 +1055,7 @@ const App = (() => {
     for (const el of $$('[data-i18n-label]')) el.setAttribute('aria-label', Logic.t(settings.lang, el.dataset.i18nLabel));
     // data-i18n-label ループの後に実行する: 全画面ボタンのラベルを状態に合った値で上書きするため。
     updateFullscreenButton();
+    if (lastStatus) setStatus(lastStatus.state, lastStatus.message);
   }
 
   function currentTheme() {
@@ -1122,11 +1123,14 @@ const App = (() => {
     });
   }
 
+  // message は文字列か、現在言語で文字列を返す関数。関数なら言語切替時に再評価する。
+  let lastStatus = null;
   function setStatus(state, message) {
+    lastStatus = { state, message };
     $('#status-dot').dataset.state = state;
     const el = $('#status-message');
     el.dataset.state = state;
-    el.textContent = message || '';
+    el.textContent = (typeof message === 'function' ? message() : message) || '';
   }
 
   function formatTime(d) {
@@ -1168,9 +1172,9 @@ const App = (() => {
     $('#no-location').hidden = !!loc;
     setToolbarAttention(!loc);
     for (const p of $$('.panel')) p.hidden = !loc;
-    if (!loc) { setStatus('error', Logic.t(settings.lang, 'set_location_hint')); return; }
+    if (!loc) { setStatus('error', () => Logic.t(settings.lang, 'set_location_hint')); return; }
 
-    setStatus('busy', Logic.t(settings.lang, 'updating'));
+    setStatus('busy', () => Logic.t(settings.lang, 'updating'));
     const tasks = [fetchJson(Logic.openMeteoUrl(loc.lat, loc.lon))];
     if (loc.jmaOffice) tasks.push(fetchJson(Logic.jmaForecastUrl(loc.jmaOffice)));
     const [omRes, jmaRes] = await Promise.all(tasks);
@@ -1194,15 +1198,16 @@ const App = (() => {
     }
 
     if (!errors.length) lastOkAt = new Date();
-    const okText = lastOkAt ? Logic.t(settings.lang, 'updated_at', { time: formatTime(lastOkAt) }) : Logic.t(settings.lang, 'never_updated');
+    const okText = () => (lastOkAt ? Logic.t(settings.lang, 'updated_at', { time: formatTime(lastOkAt) }) : Logic.t(settings.lang, 'never_updated'));
+    const failText = () => `${okText()} / ${Logic.t(settings.lang, 'error_fetch', { reason: errors.join(' / ') })}`;
     if (allFailed && lastModel) {
-      setStatus('error', `${okText} / ${Logic.t(settings.lang, 'error_fetch', { reason: errors.join(' / ') })}`);
+      setStatus('error', failText);
       return;
     }
     const nowIso = Logic.toLocalIso(new Date());
     lastModel = Logic.mergeForecast(jma, om, nowIso, { step: settings.hourlyStep, count: hourlyCount(), days: settings.dailyDays });
     render(lastModel);
-    if (errors.length) setStatus('error', `${okText} / ${Logic.t(settings.lang, 'error_fetch', { reason: errors.join(' / ') })}`);
+    if (errors.length) setStatus('error', failText);
     else setStatus('ok', okText);
   }
 
