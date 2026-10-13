@@ -415,6 +415,9 @@ const App = (() => {
     refreshMinutes: { type: 'int', min: 1, max: 120, default: 10 },
   };
   const IDLE_MS = 10000;
+  // 表示だけに影響する設定。変更しても再取得しない。
+  // ページ側で追加する表示専用の設定キーもここに足す。
+  const DISPLAY_ONLY_KEYS = new Set(['theme', 'zoom', 'lang']);
 
   let settings = {};
   let nextRefreshAt = 0;
@@ -447,15 +450,19 @@ const App = (() => {
   function getSettings() { return { ...settings }; }
 
   function updateSettings(patch) {
+    const prev = settings;
     settings = Logic.resolveSettings(SCHEMA, { ...settings, ...patch }, {});
     storage.write(settings);
     applySettings();
+    const changed = (k) => JSON.stringify(prev[k]) !== JSON.stringify(settings[k]);
+    if (Object.keys(patch).some((k) => !DISPLAY_ONLY_KEYS.has(k) && changed(k))) scheduleRefresh(0);
   }
 
   function applyI18n() {
     document.documentElement.lang = settings.lang;
     for (const el of $$('[data-i18n]')) el.textContent = Logic.t(settings.lang, el.dataset.i18n);
     for (const el of $$('[data-i18n-label]')) el.setAttribute('aria-label', Logic.t(settings.lang, el.dataset.i18nLabel));
+    // data-i18n-label ループの後に実行する: 全画面ボタンのラベルを状態に合った値で上書きするため。
     updateFullscreenButton();
   }
 
@@ -483,7 +490,6 @@ const App = (() => {
     applyZoom(settings.zoom);
     for (const el of $$('[data-setting]')) el.value = settings[el.dataset.setting];
     renderSettingsExtra(settings);
-    scheduleRefresh(0);
   }
 
   function updateFullscreenButton() {
@@ -506,6 +512,7 @@ const App = (() => {
     toolbarAttention = !!on;
     $('#btn-settings').classList.toggle('attention', toolbarAttention);
     if (toolbarAttention) $('#toolbar').classList.remove('idle');
+    else resetIdle();
   }
 
   function bindToolbar() {
@@ -623,6 +630,7 @@ const App = (() => {
     bindSettingsDialog();
     bindToolbar();
     applySettings();
+    scheduleRefresh(0);
     tickClock();
     setInterval(tickClock, 1000);
     document.addEventListener('visibilitychange', onVisibility);
