@@ -1103,6 +1103,7 @@ const App = (() => {
     applyZoom(settings.zoom);
     for (const el of $$('[data-setting]')) el.value = settings[el.dataset.setting];
     renderSettingsExtra(settings);
+    showRange();
   }
 
   function updateFullscreenButton() {
@@ -1229,11 +1230,152 @@ const App = (() => {
     return norm;
   }
 
-  // Task 8 で本実装に置き換える。ここではビューの表示切替だけ。
+  const ALLDAY_ROWS = 3;
+
+  function showRange() {
+    const range = currentRange();
+    $('#range-title').textContent = Logic.formatRangeTitle(settings.view, anchor, range, settings.lang);
+    for (const b of $$('.view-btn')) b.setAttribute('aria-pressed', String(b.dataset.view === settings.view));
+    if (cache && !Logic.coversRange(cache, range)) { render(); fetchWindow(range); } else render();
+  }
+
   function render() {
     const month = settings.view === 'month';
     $('#timegrid').hidden = month;
     $('#month').hidden = !month;
+    if (month) renderMonth(Logic.monthGridDays(anchor, settings.weekStart));
+    else renderTimeGrid(Logic.daysInRange(currentRange()));
+  }
+
+  function calendarsFromGas() { return cache ? cache.calendars : []; }
+
+  function eventEl(ev, cls, solid = true) {
+    const e = el('div', cls);
+    const color = Logic.eventColor(ev, settings.calendars, calendarsFromGas()) || accentColor();
+    if (solid) { e.style.background = color; e.style.color = Logic.textColorFor(color); }
+    else e.style.setProperty('--dot', color);
+    e.addEventListener('click', (evt) => {
+      evt.stopPropagation();
+      if (typeof showPopover === 'function') showPopover(ev, e);
+    });
+    return e;
+  }
+
+  function barEl(b) {
+    const e = eventEl(b.event, 'bar');
+    e.style.gridRow = String(b.row + 1);
+    e.style.gridColumn = `${b.startCol + 2} / span ${b.span}`;
+    if (b.continuesLeft) e.classList.add('cont-left');
+    if (b.continuesRight) e.classList.add('cont-right');
+    e.textContent = (b.continuesLeft ? '‹ ' : '') + (b.event.title || Logic.t(settings.lang, 'untitled')) + (b.continuesRight ? ' ›' : '');
+    return e;
+  }
+
+  function renderTimeGrid(days) {
+    const n = days.length;
+    const now = new Date();
+    const tg = $('#timegrid');
+    tg.style.setProperty('--cols', String(n));
+    tg.style.setProperty('--hours', String(settings.dayEnd - settings.dayStart));
+    const events = cache ? cache.events : [];
+
+    // 列見出し
+    const hdr = $('#day-headers');
+    hdr.replaceChildren(el('div', 'corner'));
+    const wd = new Intl.DateTimeFormat(locale(), { weekday: 'short' });
+    for (const d of days) {
+      const h = el('div', 'day-head' + (Logic.isToday(d, now) ? ' today' : ''));
+      h.appendChild(el('span', 'dnum', String(d.getDate())));
+      h.appendChild(el('span', 'wd', wd.format(d)));
+      hdr.appendChild(h);
+    }
+
+    // 終日帯(最大 ALLDAY_ROWS 行。超過は列ごとに +N)
+    const bars = Logic.allDayBars(events, days);
+    const ad = $('#allday');
+    ad.replaceChildren(el('div', 'corner', Logic.t(settings.lang, 'all_day')));
+    const overflow = bars.some((b) => b.row >= ALLDAY_ROWS);
+    const extra = new Map(); // col -> count
+    for (const b of bars) {
+      if (!overflow || b.row < ALLDAY_ROWS - 1) { ad.appendChild(barEl(b)); continue; }
+      for (let c = b.startCol; c < b.startCol + b.span; c++) extra.set(c, (extra.get(c) || 0) + 1);
+    }
+    for (const [c, k] of extra) {
+      const m = el('div', 'bar more', Logic.t(settings.lang, 'more', { n: k }));
+      m.style.gridRow = String(ALLDAY_ROWS);
+      m.style.gridColumn = `${c + 2} / span 1`;
+      ad.appendChild(m);
+    }
+
+    // 時刻グリッド
+    const grid = $('#grid');
+    grid.replaceChildren();
+    const hours = el('div', 'hours');
+    const span = settings.dayEnd - settings.dayStart;
+    for (let h = settings.dayStart; h <= settings.dayEnd; h++) {
+      const lab = el('div', 'hour-label', `${String(h).padStart(2, '0')}:00`);
+      lab.style.top = `${((h - settings.dayStart) / span) * 100}%`;
+      hours.appendChild(lab);
+    }
+    grid.appendChild(hours);
+    const tf = timeFmt();
+    for (const d of Logic.segmentsByDay(events, days)) {
+      const today = Logic.isToday(d.date, now);
+      const col = el('div', 'day-col' + (today ? ' today' : ''));
+      for (const { seg, col: c, cols } of Logic.layoutColumns(d.timed)) {
+        const clip = Logic.clipToHours(seg, settings.dayStart, settings.dayEnd);
+        if (!clip) continue;
+        const b = eventEl(seg.event, 'ev');
+        b.style.top = `${clip.topPct}%`;
+        b.style.height = `${clip.heightPct}%`;
+        b.style.left = `calc(${(c / cols) * 100}% + 1px)`;
+        b.style.width = `calc(${100 / cols}% - 2px)`;
+        if (clip.clippedTop) b.classList.add('clip-top');
+        if (clip.clippedBottom) b.classList.add('clip-bottom');
+        b.appendChild(el('span', 'ev-time', tf.format(seg.event.start)));
+        b.appendChild(el('span', 'ev-title', seg.event.title || Logic.t(settings.lang, 'untitled')));
+        col.appendChild(b);
+      }
+      if (today) { const line = el('div', 'now-line'); line.id = 'now-line'; col.appendChild(line); }
+      grid.appendChild(col);
+    }
+    updateNowLine();
+  }
+
+  function updateNowLine() {
+    const line = $('#now-line');
+    if (!line) return;
+    const pct = Logic.nowLinePct(new Date(), settings.dayStart, settings.dayEnd);
+    line.hidden = pct === null;
+    if (pct !== null) line.style.top = `${pct}%`;
+  }
+
+  function renderMonth(days) {
+    const month = $('#month');
+    month.replaceChildren();
+    const wd = new Intl.DateTimeFormat(locale(), { weekday: 'short' });
+    for (let i = 0; i < 7; i++) month.appendChild(el('div', 'mhead', wd.format(days[i].date)));
+    const now = new Date();
+    const cells = days.map((d) => {
+      const c = el('div', 'cell' + (d.inMonth ? '' : ' out') + (Logic.isToday(d.date, now) ? ' today' : ''));
+      c.appendChild(el('div', 'dnum', String(d.date.getDate())));
+      month.appendChild(c);
+      return c;
+    });
+    // 1 セルに入る行数は実測で決める(高さと文字サイズに追従)
+    const probe = cells[0];
+    const lineH = parseFloat(getComputedStyle(probe).fontSize) * 1.35;
+    const max = Math.max(1, Math.floor((probe.clientHeight - probe.firstElementChild.offsetHeight - 4) / lineH));
+    const events = cache ? cache.events : [];
+    const tf = timeFmt();
+    Logic.monthCells(events, days, max).forEach((cell, i) => {
+      for (const it of cell.items) {
+        const e = eventEl(it.event, 'mitem' + (it.allDay ? ' allday' : ''), it.allDay);
+        e.textContent = (it.allDay ? '' : `${tf.format(it.start)} `) + (it.event.title || Logic.t(settings.lang, 'untitled'));
+        cells[i].appendChild(e);
+      }
+      if (cell.more) cells[i].appendChild(el('div', 'mitem more', Logic.t(settings.lang, 'more', { n: cell.more })));
+    });
   }
 
   // ページ固有: 設定タブに項目を追加する。
