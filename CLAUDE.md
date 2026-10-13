@@ -8,6 +8,7 @@ index.html 1 ファイルで動く小さな Web ページの集まり。各ペ�
 |---|---|---|
 | `_template/` | 新ページのひな形(コピーして使う) | なし |
 | `weather/` | 1 地点の天気予報を横長 1 画面に常時表示 | 気象庁 bosai JSON、Open-Meteo Forecast / Geocoding |
+| `calendar/` | Google カレンダーの予定を日・週・月で常時表示 | Google Apps Script ウェブアプリ(`calendar/gas/Code.gs`、CalendarApp) |
 
 ## 共通規約(要約)
 
