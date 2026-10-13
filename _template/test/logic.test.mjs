@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { loadLogic } from './load-logic.mjs';
 
@@ -123,4 +124,23 @@ test('i18n has toolbar, data and about keys in both languages', () => {
   assert.equal(Logic.I18N.ja.export_json, undefined);
   assert.equal(Logic.I18N.ja.import_json, undefined);
   assert.equal(Logic.I18N.ja.import_failed, undefined);
+});
+
+test('migrateStored / parseImport reject array settings', () => {
+  assert.deepEqual(Logic.migrateStored({ version: 1, settings: [1, 2] }, 1), {});
+  assert.deepEqual(Logic.parseImport('{"version":1,"settings":[1,2]}', 1), { ok: false, reason: 'unrecognized_format' });
+});
+
+test('every i18n key used in index.html exists in both languages', () => {
+  const src = fs.readFileSync(html, 'utf8');
+  const keys = new Set();
+  for (const re of [/data-i18n(?:-label)?="([^"]+)"/g, /Logic\.t\(\s*settings\.lang\s*,\s*'([^']+)'/g]) {
+    for (const m of src.matchAll(re)) keys.add(m[1]);
+  }
+  assert.ok(keys.size > 0);
+  for (const k of keys) {
+    for (const lang of ['ja', 'en']) {
+      assert.equal(typeof Logic.I18N[lang][k], 'string', `${lang} missing ${k}`);
+    }
+  }
 });

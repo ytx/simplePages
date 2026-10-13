@@ -59,6 +59,7 @@ body {
   cursor: pointer; display: grid; place-items: center; padding: 0; font: inherit;
 }
 .icon-btn:disabled { opacity: 0.35; cursor: default; }
+.icon-btn[hidden] { display: none; }
 .icon-btn svg { width: 1.3em; height: 1.3em; fill: currentColor; }
 .icon-btn.attention { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
 #content { flex: 1; min-height: 0; padding: 0 var(--gap) var(--gap); }
@@ -127,12 +128,12 @@ button.btn.danger { color: var(--error); }
   <symbol id="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
 </svg>
 <header id="toolbar">
-  <button id="btn-theme" class="icon-btn" type="button" data-i18n-label="toggle_theme"><svg><use href="#icon-dark-mode"></use></svg></button>
-  <button id="btn-zoom-in" class="icon-btn" type="button" data-i18n-label="zoom_in"><svg><use href="#icon-zoom-in"></use></svg></button>
-  <button id="btn-zoom-out" class="icon-btn" type="button" data-i18n-label="zoom_out"><svg><use href="#icon-zoom-out"></use></svg></button>
-  <button id="btn-fullscreen" class="icon-btn" type="button" data-i18n-label="fullscreen"><svg><use href="#icon-fullscreen"></use></svg></button>
-  <button id="btn-lang" class="icon-btn" type="button" data-i18n-label="toggle_lang"><svg><use href="#icon-translate"></use></svg></button>
-  <button id="btn-settings" class="icon-btn" type="button" data-i18n-label="settings"><svg><use href="#icon-settings"></use></svg></button>
+  <button id="btn-theme" class="icon-btn" type="button" data-i18n-label="toggle_theme"><svg aria-hidden="true"><use href="#icon-dark-mode"></use></svg></button>
+  <button id="btn-zoom-in" class="icon-btn" type="button" data-i18n-label="zoom_in"><svg aria-hidden="true"><use href="#icon-zoom-in"></use></svg></button>
+  <button id="btn-zoom-out" class="icon-btn" type="button" data-i18n-label="zoom_out"><svg aria-hidden="true"><use href="#icon-zoom-out"></use></svg></button>
+  <button id="btn-fullscreen" class="icon-btn" type="button" data-i18n-label="fullscreen"><svg aria-hidden="true"><use href="#icon-fullscreen"></use></svg></button>
+  <button id="btn-lang" class="icon-btn" type="button" data-i18n-label="toggle_lang"><svg aria-hidden="true"><use href="#icon-translate"></use></svg></button>
+  <button id="btn-settings" class="icon-btn" type="button" data-i18n-label="settings"><svg aria-hidden="true"><use href="#icon-settings"></use></svg></button>
 </header>
 <main id="content">
   <h1 id="page-title" data-i18n="page_title"></h1>
@@ -146,7 +147,7 @@ button.btn.danger { color: var(--error); }
 <dialog id="settings">
   <div class="dlg-header">
     <h2 data-i18n="settings"></h2>
-    <button id="settings-close" class="icon-btn" type="button" data-i18n-label="close"><svg><use href="#icon-close"></use></svg></button>
+    <button id="settings-close" class="icon-btn" type="button" data-i18n-label="close"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button>
   </div>
   <div class="tabs" role="tablist">
     <button role="tab" data-tab="general" aria-selected="true" data-i18n="tab_general"></button>
@@ -184,7 +185,7 @@ button.btn.danger { color: var(--error); }
       <div class="row">
         <button type="button" class="btn" id="btn-export" data-i18n="export_file"></button>
         <button type="button" class="btn" id="btn-import" data-i18n="import_file"></button>
-        <input id="import-file" type="file" accept="application/json" hidden>
+        <input id="import-file" type="file" accept="application/json,.json" hidden>
         <button type="button" class="btn danger" id="btn-clear" data-i18n="clear_all"></button>
       </div>
       <p class="hint" data-i18n="data_hint"></p>
@@ -202,7 +203,7 @@ button.btn.danger { color: var(--error); }
         <li><a id="about-page" href="https://github.com/ytx/simplePages" target="_blank" rel="noopener" data-i18n="about_page"></a></li>
       </ul>
       <h3 data-i18n="about_license"></h3>
-      <p id="about-license"><a href="../LICENSE" target="_blank" rel="noopener">MIT License</a> — Copyright (c) 2026 ytx</p>
+      <p id="about-license"><a href="https://github.com/ytx/simplePages/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a> — Copyright (c) 2026 ytx</p>
       <h3 data-i18n="about_credits"></h3>
       <ul id="about-credits">
         <li data-i18n="credit_icons"></li>
@@ -253,7 +254,7 @@ const Logic = (() => {
   }
 
   function migrateStored(raw, version) {
-    if (!raw || typeof raw !== 'object' || typeof raw.settings !== 'object' || raw.settings === null) return {};
+    if (!raw || typeof raw !== 'object' || typeof raw.settings !== 'object' || raw.settings === null || Array.isArray(raw.settings)) return {};
     if (!Number.isInteger(raw.version)) return {};
     let settings = raw.settings;
     for (let v = raw.version; v < version; v++) {
@@ -530,7 +531,8 @@ const App = (() => {
     document.addEventListener('fullscreenchange', updateFullscreenButton);
     $('#btn-lang').addEventListener('click', () => updateSettings({ lang: Logic.toggleLang(settings.lang) }));
     $('#btn-settings').addEventListener('click', () => {
-      showTab($('[role="tab"][aria-selected="true"]').dataset.tab); // データタブの表示内容を最新に
+      const sel = $('[role="tab"][aria-selected="true"]') || $$('[role="tab"]')[0];
+      showTab(sel.dataset.tab); // データタブの表示内容を最新に
       $('#settings').showModal();
     });
   }
@@ -662,7 +664,7 @@ const App = (() => {
       const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
       a.download = `simplePages-${PAGE}-${ymd}.json`;
       a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 0);
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     });
     $('#btn-import').addEventListener('click', () => $('#import-file').click());
     $('#import-file').addEventListener('change', async (ev) => {

@@ -81,7 +81,7 @@
 
 1. ページ説明: i18n キー `about_description`。
 2. リンク: リポジトリ `https://github.com/ytx/simplePages`、ページディレクトリ `https://github.com/ytx/simplePages/tree/main/<page>`。`target="_blank" rel="noopener"`。
-3. ライセンス: 「MIT License / Copyright (c) 2026 ytx」とルート `LICENSE` への相対リンク `../LICENSE`。
+3. ライセンス: 「MIT License / Copyright (c) 2026 ytx」と`https://github.com/ytx/simplePages/blob/main/LICENSE` へのリンク。
 4. クレジット: 固定で「Icons: Material Icons (Google) — Apache License 2.0」。続けてページが宣言する API 一覧。
 
 ページ側は `app-ui` 先頭の定数だけを書き換える:
