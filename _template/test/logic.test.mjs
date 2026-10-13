@@ -111,3 +111,16 @@ test('zoom schema entry coerces URL strings and rejects out-of-range', () => {
   assert.equal(Logic.resolveSettings(zoomSchema, {}, { zoom: '999' }).zoom, 100);
   assert.equal(Logic.resolveSettings(zoomSchema, { zoom: 40 }, {}).zoom, 100);
 });
+
+test('i18n has toolbar, data and about keys in both languages', () => {
+  const keys = ['zoom_in', 'zoom_out', 'fullscreen', 'exit_fullscreen', 'toggle_theme', 'toggle_lang', 'tab_about',
+    'export_file', 'import_file', 'import_text', 'data_hint', 'import_ok', 'import_failed_json', 'import_failed_format',
+    'about_description', 'about_links', 'about_repo', 'about_page', 'about_license', 'about_credits', 'credit_icons'];
+  for (const k of keys) {
+    assert.equal(typeof Logic.I18N.ja[k], 'string', `ja.${k}`);
+    assert.equal(typeof Logic.I18N.en[k], 'string', `en.${k}`);
+  }
+  assert.equal(Logic.I18N.ja.export_json, undefined);
+  assert.equal(Logic.I18N.ja.import_json, undefined);
+  assert.equal(Logic.I18N.ja.import_failed, undefined);
+});
