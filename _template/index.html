@@ -529,7 +529,10 @@ const App = (() => {
     $('#btn-fullscreen').addEventListener('click', toggleFullscreen);
     document.addEventListener('fullscreenchange', updateFullscreenButton);
     $('#btn-lang').addEventListener('click', () => updateSettings({ lang: Logic.toggleLang(settings.lang) }));
-    $('#btn-settings').addEventListener('click', () => $('#settings').showModal());
+    $('#btn-settings').addEventListener('click', () => {
+      showTab($('[role="tab"][aria-selected="true"]').dataset.tab); // データタブの表示内容を最新に
+      $('#settings').showModal();
+    });
   }
 
   function setStatus(state, message) {
@@ -623,7 +626,7 @@ const App = (() => {
     $('#about-page').href = `${REPO_URL}/tree/main/${ABOUT.page}`;
     const list = $('#about-credits');
     const icons = list.firstElementChild; // credit_icons の li は残す
-    list.replaceChildren(icons);
+    list.replaceChildren(...(icons ? [icons] : []));
     for (const c of ABOUT.credits) {
       const li = document.createElement('li');
       const a = document.createElement('a');
@@ -643,7 +646,10 @@ const App = (() => {
     // 背景クリックで閉じる。テキスト選択などで内側から押して背景で離した場合は閉じない。
     let downOnBackdrop = false;
     dlg.addEventListener('pointerdown', (ev) => { downOnBackdrop = ev.target === dlg; });
-    dlg.addEventListener('click', (ev) => { if (downOnBackdrop && ev.target === dlg) dlg.close(); });
+    dlg.addEventListener('click', (ev) => {
+      if (downOnBackdrop && ev.target === dlg) dlg.close();
+      downOnBackdrop = false;
+    });
     for (const tab of $$('[role="tab"]')) tab.addEventListener('click', () => showTab(tab.dataset.tab));
     for (const el of $$('[data-setting]')) {
       el.addEventListener('change', () => updateSettings({ [el.dataset.setting]: el.value }));
