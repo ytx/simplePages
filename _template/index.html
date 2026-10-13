@@ -517,6 +517,7 @@ const App = (() => {
 
   // ページ側が true にすると減光せず、設定ボタンを強調する(例: 必須設定が未入力)。
   function setToolbarAttention(on) {
+    if (!!on === toolbarAttention) return; // 状態が変わらないときは何もしない — 定期更新で減光を解除しないため
     toolbarAttention = !!on;
     $('#btn-settings').classList.toggle('attention', toolbarAttention);
     if (toolbarAttention) $('#toolbar').classList.remove('idle');
