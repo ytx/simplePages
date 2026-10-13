@@ -80,13 +80,16 @@ test('monthCells: all-day first, overflow count', () => {
   const cells = Logic.monthCells(events, days, 2);
   assert.equal(cells.length, 42);
   const tue = cells.find((c) => c.date.getTime() === d(2026, 10, 13).getTime());
-  assert.equal(tue.items.length, 2);
-  assert.equal(tue.more, 2);
-  assert.deepEqual(tue.items.map((i) => i.event.id), ['e1', 'e2']);
+  assert.deepEqual(tue.items.map((i) => i.event.id), ['e1']); // max - 1 shown so the +N line fits
+  assert.equal(tue.more, 3); // 4 items on Tuesday
   const mon = cells.find((c) => c.date.getTime() === d(2026, 10, 12).getTime());
   assert.deepEqual(mon.items.map((i) => [i.event.id, i.allDay]), [['e6', true]]);
   assert.equal(mon.more, 0);
   const fri = cells.find((c) => c.date.getTime() === d(2026, 10, 16).getTime());
-  assert.deepEqual(fri.items.map((i) => i.event.id), ['e7', 'e9']); // all-day sorted by start
-  assert.equal(fri.more, 3); // e8, e10, e11
+  assert.deepEqual(fri.items.map((i) => i.event.id), ['e7']);
+  assert.equal(fri.more, 4);
+  // exactly max items: all shown, no +N
+  const exact = Logic.monthCells(events, days, 5).find((c) => c.date.getTime() === d(2026, 10, 16).getTime());
+  assert.equal(exact.items.length, 5);
+  assert.equal(exact.more, 0);
 });

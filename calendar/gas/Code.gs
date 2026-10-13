@@ -3,7 +3,7 @@
 // 設定を変えたら「デプロイを管理」から同じデプロイを新バージョンで更新する(URL は変わらない)。
 
 const TOKEN = ''; // 空なら認証なし。値を入れたら calendar ページの「トークン」にも同じ値を入れる
-const MAX_DAYS = 100;
+const MAX_DAYS = 120;
 
 // CalendarEvent.getColor() は色番号("1"〜"11")を返すので 16 進に変換する
 const EVENT_COLORS = {
@@ -22,7 +22,9 @@ function doGet(e) {
     if (Math.round((to - from) / 86400000) > MAX_DAYS) return json({ ok: false, error: 'range_too_large' });
     const wanted = p.cal ? String(p.cal).split(',').map(function (s) { return s.trim(); }).filter(Boolean) : null;
     const calendars = wanted
-      ? wanted.map(function (id) { return CalendarApp.getCalendarById(id) || { missing: id }; })
+      ? wanted.map(function (id) {
+          try { return CalendarApp.getCalendarById(id) || { missing: id }; } catch (err) { return { missing: id }; }
+        })
       : CalendarApp.getAllCalendars();
     const outCals = [], events = [], errors = [];
     calendars.forEach(function (c) {
@@ -65,7 +67,8 @@ function hex(c) { const m = /^#?([0-9a-fA-F]{6})$/.exec(String(c || '')); return
 // 説明は HTML で返ることがあるのでタグを落として改行だけ残す
 function plainText(s) {
   return String(s).replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+    .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#(\d+);/g, function (_, n) { return String.fromCharCode(Number(n)); }).replace(/&#x([0-9a-f]+);/gi, function (_, h) { return String.fromCharCode(parseInt(h, 16)); })
+    .replace(/&amp;/g, '&')
     .replace(/\n{3,}/g, '\n\n').trim();
 }
 function json(obj) {

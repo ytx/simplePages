@@ -51,8 +51,9 @@ test('normalizeResponse: failures', () => {
   assert.deepEqual(Logic.normalizeResponse('<html>'), { ok: false, error: 'invalid_response' });
   assert.deepEqual(Logic.normalizeResponse([1]), { ok: false, error: 'invalid_response' });
   assert.deepEqual(Logic.normalizeResponse({ foo: 1 }), { ok: false, error: 'invalid_response' });
-  assert.deepEqual(Logic.normalizeResponse({ ok: false, error: 'unauthorized' }), { ok: false, error: 'unauthorized' });
-  assert.deepEqual(Logic.normalizeResponse({ ok: false }), { ok: false, error: 'unknown' });
+  assert.deepEqual(Logic.normalizeResponse({ ok: false, error: 'unauthorized' }), { ok: false, error: 'unauthorized', detail: '' });
+  assert.deepEqual(Logic.normalizeResponse({ ok: false }), { ok: false, error: 'unknown', detail: '' });
+  assert.equal(Logic.normalizeResponse({ ok: false, error: 'internal', detail: 'x'.repeat(200) }).detail.length, 120);
 });
 
 test('validCalendars / mergeCalendarList', () => {

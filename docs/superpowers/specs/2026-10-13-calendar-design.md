@@ -25,7 +25,7 @@ calendar/
 - `doGet(e)` のみ。`ContentService` で `application/json` を返す。GET の単純リクエストに限る(ページ側は `fetch(url)` にヘッダを付けない。Apps Script のリダイレクト先が `Access-Control-Allow-Origin: *` を返す)。
 - デプロイ条件: 「ウェブアプリ」「次のユーザーとして実行: 自分」「アクセスできるユーザー: 全員」。
 - 先頭の定数 `const TOKEN = '';`。空でなければ `?token=` が一致しないリクエストを `{ ok: false, error: 'unauthorized' }` で拒否する。
-- `const MAX_DAYS = 100;` 期間がこれを超えたら `{ ok: false, error: 'range_too_large' }`。
+- `const MAX_DAYS = 120;` 期間がこれを超えたら `{ ok: false, error: 'range_too_large' }`。
 
 ### リクエスト
 

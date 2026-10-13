@@ -20,6 +20,7 @@ test('i18n has calendar keys in both languages', () => {
     assert.equal(typeof Logic.I18N.en[k], 'string', `en.${k}`);
   }
   assert.equal(Logic.I18N.ja.placeholder_content, undefined);
+  assert.equal(Logic.I18N.ja.page_title, undefined);
 });
 
 test('app-ui schema declares the calendar settings and display-only keys', () => {

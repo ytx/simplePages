@@ -139,6 +139,7 @@ button.btn.danger { color: var(--error); }
   position: relative; border-left: 1px solid var(--border); min-width: 0;
   background-image: linear-gradient(to bottom, var(--border) 1px, transparent 1px);
   background-size: 100% calc(100% / var(--hours, 17));
+  overflow: hidden;
 }
 .day-col.today { background-color: color-mix(in srgb, var(--accent) 6%, transparent); }
 .ev {
@@ -159,7 +160,7 @@ button.btn.danger { color: var(--error); }
 .mitem { line-height: 1.35; padding: 0 0.3em; border-radius: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
 .mitem:not(.allday)::before { content: ''; display: inline-block; width: 0.6em; height: 0.6em; border-radius: 50%; background: var(--dot, var(--accent)); margin-right: 0.3em; vertical-align: middle; }
 .mitem.more { color: var(--fg-muted); cursor: default; }
-#nav { display: flex; justify-content: space-between; align-items: center; gap: var(--gap); padding-top: calc(var(--gap) / 2); }
+#nav { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--gap); padding-top: calc(var(--gap) / 2); }
 .nav-group { display: flex; gap: var(--gap); }
 .nav-btn {
   min-height: calc(48px * var(--zoom)); min-width: calc(48px * var(--zoom)); padding: 0 1.2em;
@@ -278,7 +279,7 @@ textarea#gas-code { width: 100%; min-height: 12em; font-family: ui-monospace, Me
 // 設定を変えたら「デプロイを管理」から同じデプロイを新バージョンで更新する(URL は変わらない)。
 
 const TOKEN = ''; // 空なら認証なし。値を入れたら calendar ページの「トークン」にも同じ値を入れる
-const MAX_DAYS = 100;
+const MAX_DAYS = 120;
 
 // CalendarEvent.getColor() は色番号("1"〜"11")を返すので 16 進に変換する
 const EVENT_COLORS = {
@@ -297,7 +298,9 @@ function doGet(e) {
     if (Math.round((to - from) / 86400000) &gt; MAX_DAYS) return json({ ok: false, error: 'range_too_large' });
     const wanted = p.cal ? String(p.cal).split(',').map(function (s) { return s.trim(); }).filter(Boolean) : null;
     const calendars = wanted
-      ? wanted.map(function (id) { return CalendarApp.getCalendarById(id) || { missing: id }; })
+      ? wanted.map(function (id) {
+          try { return CalendarApp.getCalendarById(id) || { missing: id }; } catch (err) { return { missing: id }; }
+        })
       : CalendarApp.getAllCalendars();
     const outCals = [], events = [], errors = [];
     calendars.forEach(function (c) {
@@ -340,7 +343,8 @@ function hex(c) { const m = /^#?([0-9a-fA-F]{6})$/.exec(String(c || '')); return
 // 説明は HTML で返ることがあるのでタグを落として改行だけ残す
 function plainText(s) {
   return String(s).replace(/&lt;br\s*\/?&gt;/gi, '\n').replace(/&lt;\/p&gt;/gi, '\n').replace(/&lt;[^&gt;]+&gt;/g, '')
-    .replace(/&amp;nbsp;/g, ' ').replace(/&amp;lt;/g, '&lt;').replace(/&amp;gt;/g, '&gt;').replace(/&amp;quot;/g, '"').replace(/&amp;#39;/g, "'").replace(/&amp;amp;/g, '&amp;')
+    .replace(/&amp;nbsp;/g, ' ').replace(/&amp;lt;/g, '&lt;').replace(/&amp;gt;/g, '&gt;').replace(/&amp;quot;/g, '"').replace(/&amp;#39;/g, "'").replace(/&amp;#(\d+);/g, function (_, n) { return String.fromCharCode(Number(n)); }).replace(/&amp;#x([0-9a-f]+);/gi, function (_, h) { return String.fromCharCode(parseInt(h, 16)); })
+    .replace(/&amp;amp;/g, '&amp;')
     .replace(/\n{3,}/g, '\n\n').trim();
 }
 function json(obj) {
@@ -522,7 +526,6 @@ const Logic = (() => {
       updating: '更新中',
       never_updated: '未取得',
       error_fetch: '取得失敗: {reason}',
-      page_title: 'カレンダー',
       tab_connection: '接続',
       gas_url: 'GAS ウェブアプリの URL',
       token: 'トークン(任意)',
@@ -602,7 +605,6 @@ const Logic = (() => {
       updating: 'Updating',
       never_updated: 'Not fetched yet',
       error_fetch: 'Fetch failed: {reason}',
-      page_title: 'Calendar',
       tab_connection: 'Connection',
       gas_url: 'GAS web app URL',
       token: 'Token (optional)',
@@ -788,7 +790,7 @@ const Logic = (() => {
   }
   function normalizeResponse(json) {
     if (!json || typeof json !== 'object' || Array.isArray(json)) return { ok: false, error: 'invalid_response' };
-    if (json.ok === false) return { ok: false, error: typeof json.error === 'string' && json.error ? json.error : 'unknown' };
+    if (json.ok === false) return { ok: false, error: typeof json.error === 'string' && json.error ? json.error : 'unknown', detail: typeof json.detail === 'string' ? json.detail.slice(0, 120) : '' };
     if (json.ok !== true) return { ok: false, error: 'invalid_response' };
     const calendars = (Array.isArray(json.calendars) ? json.calendars : [])
       .filter((c) => c && typeof c.id === 'string' && c.id)
@@ -962,7 +964,9 @@ const Logic = (() => {
         ...d.allDay.map((ev) => ({ event: ev, allDay: true })),
         ...d.timed.map((seg) => ({ event: seg.event, allDay: false, start: seg.start })),
       ];
-      return { date: d.date, items: items.slice(0, max), more: Math.max(0, items.length - max) };
+      // +N 行もセルに収めるため、あふれるときは max - 1 件だけ見せる
+      const shown = items.length > max ? Math.max(0, max - 1) : items.length;
+      return { date: d.date, items: items.slice(0, shown), more: items.length - shown };
     });
   }
 
@@ -1179,7 +1183,8 @@ const App = (() => {
   function okText() {
     return lastOkAt ? Logic.t(settings.lang, 'updated_at', { time: formatTime(lastOkAt) }) : Logic.t(settings.lang, 'never_updated');
   }
-  function reasonText(code) {
+  function reasonText(code, detail) {
+    if (code === 'internal' && detail) return `${code}: ${detail}`;
     if (code === 'unauthorized') return Logic.t(settings.lang, 'err_unauthorized');
     // Chrome "Unexpected token '<'…", Firefox "JSON.parse: …", Safari "The string did not match the expected pattern", 旧 WebKit "JSON Parse error"
     if (code === 'invalid_response' || /JSON|Unexpected token|Unexpected end|did not match the expected pattern/i.test(code)) return Logic.t(settings.lang, 'invalid_response');
@@ -1200,6 +1205,13 @@ const App = (() => {
   async function fetchWindow(range) {
     const seq = ++refreshSeq;
     const win = Logic.windowFor(range);
+    if (settings.calendars.length > 0 && enabledIds().length === 0) {
+      lastOkAt = new Date();
+      cache = { from: win.from, to: win.to, events: [], calendars: settings.calendars.map((c) => ({ id: c.id, name: c.name, color: c.color })), errors: [], fetchedAt: lastOkAt };
+      render();
+      setStatus('ok', okText());
+      return;
+    }
     const url = Logic.gasRequestUrl(settings.gasUrl, { from: Logic.ymd(win.from), to: Logic.ymd(win.to), cal: enabledIds().join(','), token: settings.token });
     if (!url) return;
     setStatus('busy', Logic.t(settings.lang, 'updating'));
@@ -1207,8 +1219,10 @@ const App = (() => {
     if (seq !== refreshSeq) return;
     const norm = res.ok ? Logic.normalizeResponse(res.data) : { ok: false, error: res.error };
     if (!norm.ok) {
-      setStatus('error', `${okText()} / ${Logic.t(settings.lang, 'error_fetch', { reason: reasonText(norm.error) })}`);
+      setStatus('error', `${okText()} / ${Logic.t(settings.lang, 'error_fetch', { reason: reasonText(norm.error, norm.detail) })}`);
       render();
+      // 失敗時は 1 分後に再試行。定期更新の予約は上書きされる
+      scheduleRefresh(60000);
       return;
     }
     lastOkAt = new Date();
@@ -1415,7 +1429,9 @@ const App = (() => {
       if (Logic.isSwipe(dx, dy)) navigate(dx < 0 ? 1 : -1);
     });
     cal.addEventListener('pointercancel', () => { down = null; });
-    for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, scheduleReturnToToday, { passive: true });
+    let lastActivity = 0;
+    const onActivity = () => { const now = Date.now(); if (now - lastActivity < 500) return; lastActivity = now; scheduleReturnToToday(); };
+    for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, onActivity, { passive: true });
     document.addEventListener('pointerdown', (e) => {
       const pop = $('#popover');
       if (!pop.hidden && !pop.contains(e.target)) hidePopover();
@@ -1497,7 +1513,7 @@ const App = (() => {
       } finally { btn.disabled = false; }
       if (key !== settings.gasUrl + '\n' + settings.token) return;
       const norm = res.ok ? Logic.normalizeResponse(res.data) : { ok: false, error: res.error };
-      if (!norm.ok) { setConnMessage('error', Logic.t(settings.lang, 'conn_failed', { reason: reasonText(norm.error) })); return; }
+      if (!norm.ok) { setConnMessage('error', Logic.t(settings.lang, 'conn_failed', { reason: reasonText(norm.error, norm.detail) })); return; }
       rawUrl = '';
       updateSettings({ calendars: Logic.mergeCalendarList(settings.calendars, norm.calendars) });
       setConnMessage('ok', Logic.t(settings.lang, 'conn_ok', { n: norm.calendars.length }));
