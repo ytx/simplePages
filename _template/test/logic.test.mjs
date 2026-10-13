@@ -73,3 +73,41 @@ test('effectiveTheme', () => {
 test('t: parameter values containing $ patterns are inserted literally', () => {
   assert.equal(Logic.t('en', 'error_fetch', { reason: 'cost $$ and $& ok' }), 'Fetch failed: cost $$ and $& ok');
 });
+
+test('stepZoom: 10 steps, clamped 50..200, rounds odd values first', () => {
+  assert.equal(Logic.stepZoom(100, 1), 110);
+  assert.equal(Logic.stepZoom(100, -1), 90);
+  assert.equal(Logic.stepZoom(200, 1), 200);
+  assert.equal(Logic.stepZoom(50, -1), 50);
+  assert.equal(Logic.stepZoom(195, 1), 200);
+  assert.equal(Logic.stepZoom(155, 1), 170);
+  assert.equal(Logic.stepZoom(155, -1), 150);
+  assert.equal(Logic.stepZoom(154, 1), 160);
+  assert.equal(Logic.stepZoom(NaN, 1), 110);
+});
+
+test('toggleTheme / toggleLang flip between the two concrete values', () => {
+  assert.equal(Logic.toggleTheme('dark'), 'light');
+  assert.equal(Logic.toggleTheme('light'), 'dark');
+  assert.equal(Logic.toggleTheme(undefined), 'dark');
+  assert.equal(Logic.toggleLang('ja'), 'en');
+  assert.equal(Logic.toggleLang('en'), 'ja');
+  assert.equal(Logic.toggleLang('fr'), 'ja');
+});
+
+test('parseImport: valid, broken JSON, wrong shape, blank', () => {
+  assert.deepEqual(Logic.parseImport('{"version":1,"settings":{"lang":"en"}}', 1), { ok: true, settings: { lang: 'en' } });
+  assert.deepEqual(Logic.parseImport('{bad json', 1), { ok: false, reason: 'invalid_json' });
+  assert.deepEqual(Logic.parseImport('   \n', 1), { ok: false, reason: 'invalid_json' });
+  assert.deepEqual(Logic.parseImport('{"lang":"en"}', 1), { ok: false, reason: 'unrecognized_format' });
+  assert.deepEqual(Logic.parseImport('{"version":99,"settings":{"lang":"en"}}', 1), { ok: false, reason: 'unrecognized_format' });
+  assert.deepEqual(Logic.parseImport('[1,2]', 1), { ok: false, reason: 'unrecognized_format' });
+});
+
+test('zoom schema entry coerces URL strings and rejects out-of-range', () => {
+  const zoomSchema = { zoom: { type: 'int', min: 50, max: 200, default: 100 } };
+  assert.equal(Logic.resolveSettings(zoomSchema, {}, { zoom: '120' }).zoom, 120);
+  assert.equal(Logic.resolveSettings(zoomSchema, {}, { zoom: 'abc' }).zoom, 100);
+  assert.equal(Logic.resolveSettings(zoomSchema, {}, { zoom: '999' }).zoom, 100);
+  assert.equal(Logic.resolveSettings(zoomSchema, { zoom: 40 }, {}).zoom, 100);
+});

@@ -283,7 +283,39 @@ const Logic = (() => {
     return prefersDark ? 'dark' : 'light';
   }
 
-  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme };
+  const ZOOM_MIN = 50;
+  const ZOOM_MAX = 200;
+  const ZOOM_STEP = 10;
+
+  function stepZoom(current, dir) {
+    const base = Number.isFinite(current) ? Math.round(current / ZOOM_STEP) * ZOOM_STEP : 100;
+    const next = base + (dir < 0 ? -ZOOM_STEP : ZOOM_STEP);
+    return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
+  }
+
+  function toggleTheme(effective) {
+    return effective === 'dark' ? 'light' : 'dark';
+  }
+
+  function toggleLang(lang) {
+    return lang === 'ja' ? 'en' : 'ja';
+  }
+
+  // ファイル/テキストエリア共用のインポート解析。DOM に触らない。
+  function parseImport(text, version) {
+    let raw;
+    try {
+      raw = JSON.parse(String(text));
+    } catch {
+      return { ok: false, reason: 'invalid_json' };
+    }
+    if (raw && typeof raw === 'object' && raw.version > version) return { ok: false, reason: 'unrecognized_format' };
+    const settings = migrateStored(raw, version);
+    if (Object.keys(settings).length === 0) return { ok: false, reason: 'unrecognized_format' };
+    return { ok: true, settings };
+  }
+
+  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport };
 })();
 </script>
 <script id="app-ui">
