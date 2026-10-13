@@ -1008,6 +1008,31 @@ const App = (() => {
   let idleTimer = null;
   let toolbarAttention = false;
 
+  // ---- ページ状態 ----
+  let cache = null; // { from, to, events, calendars, errors, fetchedAt }
+  let anchor = Logic.startOfDay(new Date()); // 表示の基準日(保存しない)
+  let refreshSeq = 0; // 古い応答を捨てるための世代
+  let lastOkAt = null;
+  let rawUrl = ''; // 接続タブに入力中の URL(形式エラー表示用)
+
+  function locale() { return settings.lang === 'ja' ? 'ja-JP' : 'en-US'; }
+  function timeFmt() { return new Intl.DateTimeFormat(locale(), { hour: '2-digit', minute: '2-digit', hour12: false }); }
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+  function accentColor() { return getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#2b7de9'; }
+
+  // スキーマで表せない検証。loadSettings / updateSettings の両方で通す。
+  function sanitize(s) {
+    s.gasUrl = Logic.validGasUrl(s.gasUrl);
+    s.calendars = Logic.validCalendars(s.calendars);
+    [s.dayStart, s.dayEnd] = Logic.normalizeHours(s.dayStart, s.dayEnd);
+    return s;
+  }
+
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
@@ -1026,7 +1051,7 @@ const App = (() => {
   function loadSettings() {
     const query = Object.fromEntries(new URLSearchParams(location.search));
     const stored = Logic.migrateStored(storage.read(), Logic.VERSION);
-    settings = Logic.resolveSettings(SCHEMA, stored, query);
+    settings = sanitize(Logic.resolveSettings(SCHEMA, stored, query));
     if (query.save === '1') storage.write(settings);
   }
 
@@ -1034,10 +1059,12 @@ const App = (() => {
 
   function updateSettings(patch) {
     const prev = settings;
-    settings = Logic.resolveSettings(SCHEMA, { ...settings, ...patch }, {});
+    settings = sanitize(Logic.resolveSettings(SCHEMA, { ...settings, ...patch }, {}));
+    const changed = (k) => JSON.stringify(prev[k]) !== JSON.stringify(settings[k]);
+    // 接続先やカレンダーが変わったら古いデータと取得中の応答を捨てる
+    if (changed('gasUrl') || changed('token') || changed('calendars')) { cache = null; lastOkAt = null; refreshSeq++; }
     storage.write(settings);
     applySettings();
-    const changed = (k) => JSON.stringify(prev[k]) !== JSON.stringify(settings[k]);
     if (Object.keys(patch).some((k) => !DISPLAY_ONLY_KEYS.has(k) && changed(k))) scheduleRefresh(0);
   }
 
@@ -1143,15 +1170,117 @@ const App = (() => {
     }
   }
 
-  // ページ固有: ここでデータを取得して描画する。ひな形は更新時刻を表示するだけ。
+  function currentRange() { return Logic.rangeForView(settings.view, anchor, settings.weekStart); }
+  function enabledIds() { return settings.calendars.filter((c) => c.enabled).map((c) => c.id); }
+  function okText() {
+    return lastOkAt ? Logic.t(settings.lang, 'updated_at', { time: formatTime(lastOkAt) }) : Logic.t(settings.lang, 'never_updated');
+  }
+  function reasonText(code) {
+    if (code === 'unauthorized') return Logic.t(settings.lang, 'err_unauthorized');
+    if (code === 'invalid_response' || /JSON|Unexpected token|Unexpected end/i.test(code)) return Logic.t(settings.lang, 'invalid_response');
+    return code;
+  }
+
   async function refresh() {
+    const connected = !!settings.gasUrl;
+    $('#no-connection').hidden = connected;
+    $('#cal').hidden = !connected;
+    $('#range-title').hidden = !connected;
+    setToolbarAttention(!connected);
+    if (!connected) { setStatus('error', Logic.t(settings.lang, 'set_connection_hint')); return; }
+    await fetchWindow(currentRange());
+  }
+
+  // 表示範囲の前後 31 日を一括取得してキャッシュする。失敗時は前回のキャッシュを残す。
+  async function fetchWindow(range) {
+    const seq = ++refreshSeq;
+    const win = Logic.windowFor(range);
+    const url = Logic.gasRequestUrl(settings.gasUrl, { from: Logic.ymd(win.from), to: Logic.ymd(win.to), cal: enabledIds().join(','), token: settings.token });
+    if (!url) return;
     setStatus('busy', Logic.t(settings.lang, 'updating'));
-    await Promise.resolve();
-    setStatus('ok', Logic.t(settings.lang, 'updated_at', { time: formatTime(new Date()) }));
+    const res = await fetchJson(url);
+    if (seq !== refreshSeq) return;
+    const norm = res.ok ? Logic.normalizeResponse(res.data) : { ok: false, error: res.error };
+    if (!norm.ok) {
+      setStatus('error', `${okText()} / ${Logic.t(settings.lang, 'error_fetch', { reason: reasonText(norm.error) })}`);
+      render();
+      return;
+    }
+    lastOkAt = new Date();
+    cache = { from: win.from, to: win.to, events: norm.events, calendars: norm.calendars, errors: norm.errors, fetchedAt: lastOkAt };
+    render();
+    if (norm.errors.length) setStatus('warn', `${okText()} / ${Logic.t(settings.lang, 'partial_errors', { n: norm.errors.length })}`);
+    else setStatus('ok', okText());
+  }
+
+  // 手動確認用: GAS なしで応答 JSON を流し込む(現在の表示範囲の窓として保存)
+  function injectResponse(json) {
+    const norm = Logic.normalizeResponse(json);
+    if (!norm.ok) return norm;
+    const win = Logic.windowFor(currentRange());
+    lastOkAt = new Date();
+    cache = { from: win.from, to: win.to, events: norm.events, calendars: norm.calendars, errors: norm.errors, fetchedAt: lastOkAt };
+    render();
+    setStatus('ok', okText());
+    return norm;
+  }
+
+  // Task 8 で本実装に置き換える。ここではビューの表示切替だけ。
+  function render() {
+    const month = settings.view === 'month';
+    $('#timegrid').hidden = month;
+    $('#month').hidden = !month;
   }
 
   // ページ固有: 設定タブに項目を追加する。
-  function renderSettingsExtra(_settings) {}
+  function setConnMessage(state, text) {
+    const m = $('#conn-message');
+    m.dataset.state = state;
+    m.textContent = text;
+  }
+
+  function renderConnectionTab() {
+    const typed = rawUrl.trim();
+    if (typed && !Logic.validGasUrl(typed)) setConnMessage('error', Logic.t(settings.lang, 'invalid_url'));
+    const list = $('#cal-list');
+    list.replaceChildren();
+    if (settings.calendars.length === 0) { list.appendChild(el('p', 'hint', Logic.t(settings.lang, 'no_calendars'))); return; }
+    for (const c of settings.calendars) {
+      const label = el('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = c.enabled; cb.dataset.id = c.id; cb.dataset.field = 'enabled';
+      const color = document.createElement('input');
+      color.type = 'color'; color.value = c.color || accentColor(); color.dataset.id = c.id; color.dataset.field = 'color';
+      label.append(cb, color, el('span', null, c.name));
+      list.appendChild(label);
+    }
+  }
+
+  function bindConnectionTab() {
+    $('#set-gas-url').addEventListener('input', (e) => { rawUrl = e.target.value; });
+    $('#btn-conn-list').addEventListener('click', async () => {
+      const url = Logic.gasRequestUrl(settings.gasUrl, { action: 'list', token: settings.token });
+      if (!url) { setConnMessage('error', Logic.t(settings.lang, 'invalid_url')); return; }
+      setConnMessage('none', Logic.t(settings.lang, 'updating'));
+      const res = await fetchJson(url);
+      const norm = res.ok ? Logic.normalizeResponse(res.data) : { ok: false, error: res.error };
+      if (!norm.ok) { setConnMessage('error', Logic.t(settings.lang, 'conn_failed', { reason: reasonText(norm.error) })); return; }
+      rawUrl = '';
+      updateSettings({ calendars: Logic.mergeCalendarList(settings.calendars, norm.calendars) });
+      setConnMessage('ok', Logic.t(settings.lang, 'conn_ok', { n: norm.calendars.length }));
+    });
+    $('#cal-list').addEventListener('change', (e) => {
+      const t = e.target;
+      if (!t.dataset || !t.dataset.id) return;
+      const calendars = settings.calendars.map((c) => {
+        if (c.id !== t.dataset.id) return c;
+        return t.dataset.field === 'enabled' ? { ...c, enabled: t.checked } : { ...c, color: Logic.normalizeHex(t.value) };
+      });
+      updateSettings({ calendars });
+    });
+  }
+
+  function renderSettingsExtra(_settings) { renderConnectionTab(); }
 
   function scheduleRefresh(delayMs) {
     clearTimeout(refreshTimer);
@@ -1263,6 +1392,7 @@ const App = (() => {
     loadSettings();
     bindSettingsDialog();
     bindToolbar();
+    bindConnectionTab();
     applySettings();
     scheduleRefresh(0);
     tickClock();
@@ -1275,7 +1405,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh, fetchJson, applyZoom, setToolbarAttention };
+  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh, fetchJson, applyZoom, setToolbarAttention, getCache: () => cache, injectResponse };
 })();
 </script>
 </body>
