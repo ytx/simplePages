@@ -182,15 +182,15 @@ button.btn.danger { color: var(--error); }
     </section>
     <section class="tab-panel" data-panel="data">
       <div class="row">
-        <button class="btn" id="btn-export" data-i18n="export_file"></button>
-        <button class="btn" id="btn-import" data-i18n="import_file"></button>
+        <button type="button" class="btn" id="btn-export" data-i18n="export_file"></button>
+        <button type="button" class="btn" id="btn-import" data-i18n="import_file"></button>
         <input id="import-file" type="file" accept="application/json" hidden>
-        <button class="btn danger" id="btn-clear" data-i18n="clear_all"></button>
+        <button type="button" class="btn danger" id="btn-clear" data-i18n="clear_all"></button>
       </div>
       <p class="hint" data-i18n="data_hint"></p>
       <textarea id="data-text" spellcheck="false"></textarea>
       <div class="row">
-        <button class="btn" id="btn-import-text" data-i18n="import_text"></button>
+        <button type="button" class="btn" id="btn-import-text" data-i18n="import_text"></button>
       </div>
       <div id="data-message" data-state="none"></div>
     </section>
@@ -408,6 +408,13 @@ const Logic = (() => {
 const App = (() => {
   const PAGE = 'template';
   const STORAGE_KEY = `simplePages.${PAGE}`;
+  const REPO_URL = 'https://github.com/ytx/simplePages';
+  // ページごとに書き換える: About タブの「このページのソース」リンクとクレジット一覧。
+  // page はこのページのディレクトリ名(コピーしたら '_template' を書き換えること)。
+  const ABOUT = {
+    page: '_template',
+    credits: [],
+  };
   const SCHEMA = {
     lang: { type: 'enum', values: ['ja', 'en'], default: Logic.detectLang(navigator.language) },
     theme: { type: 'enum', values: ['auto', 'light', 'dark'], default: 'auto' },
@@ -584,15 +591,60 @@ const App = (() => {
     idleTimer = setTimeout(() => { if (!toolbarAttention) $('#toolbar').classList.add('idle'); }, IDLE_MS);
   }
 
+  function showTab(name) {
+    for (const t2 of $$('[role="tab"]')) t2.setAttribute('aria-selected', String(t2.dataset.tab === name));
+    for (const p of $$('.tab-panel')) p.classList.toggle('active', p.dataset.panel === name);
+    if (name === 'data') refreshDataText();
+  }
+
+  function refreshDataText() {
+    $('#data-text').value = JSON.stringify({ version: Logic.VERSION, settings }, null, 2);
+    setDataMessage('none', '');
+  }
+
+  function setDataMessage(state, text) {
+    const el = $('#data-message');
+    el.dataset.state = state;
+    el.textContent = text;
+  }
+
+  function importText(text) {
+    const result = Logic.parseImport(text, Logic.VERSION);
+    if (!result.ok) {
+      setDataMessage('error', Logic.t(settings.lang, result.reason === 'invalid_json' ? 'import_failed_json' : 'import_failed_format'));
+      return;
+    }
+    updateSettings(result.settings);
+    refreshDataText();
+    setDataMessage('ok', Logic.t(settings.lang, 'import_ok'));
+  }
+
+  function renderAbout() {
+    $('#about-page').href = `${REPO_URL}/tree/main/${ABOUT.page}`;
+    const list = $('#about-credits');
+    const icons = list.firstElementChild; // credit_icons の li は残す
+    list.replaceChildren(icons);
+    for (const c of ABOUT.credits) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = c.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = c.name;
+      li.appendChild(a);
+      if (c.note) li.appendChild(document.createTextNode(` — ${c.note}`));
+      list.appendChild(li);
+    }
+  }
+
   function bindSettingsDialog() {
     const dlg = $('#settings');
     $('#settings-close').addEventListener('click', () => dlg.close());
-    for (const tab of $$('[role="tab"]')) {
-      tab.addEventListener('click', () => {
-        for (const t2 of $$('[role="tab"]')) t2.setAttribute('aria-selected', String(t2 === tab));
-        for (const p of $$('.tab-panel')) p.classList.toggle('active', p.dataset.panel === tab.dataset.tab);
-      });
-    }
+    // 背景クリックで閉じる。テキスト選択などで内側から押して背景で離した場合は閉じない。
+    let downOnBackdrop = false;
+    dlg.addEventListener('pointerdown', (ev) => { downOnBackdrop = ev.target === dlg; });
+    dlg.addEventListener('click', (ev) => { if (downOnBackdrop && ev.target === dlg) dlg.close(); });
+    for (const tab of $$('[role="tab"]')) tab.addEventListener('click', () => showTab(tab.dataset.tab));
     for (const el of $$('[data-setting]')) {
       el.addEventListener('change', () => updateSettings({ [el.dataset.setting]: el.value }));
     }
@@ -600,29 +652,25 @@ const App = (() => {
       const blob = new Blob([JSON.stringify({ version: Logic.VERSION, settings }, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `${PAGE}-settings.json`;
+      const d = new Date();
+      const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      a.download = `simplePages-${PAGE}-${ymd}.json`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 0);
     });
     $('#btn-import').addEventListener('click', () => $('#import-file').click());
     $('#import-file').addEventListener('change', async (ev) => {
       const file = ev.target.files[0];
-      if (!file) return;
-      try {
-        const raw = JSON.parse(await file.text());
-        const imported = Logic.migrateStored(raw, Logic.VERSION);
-        if (Object.keys(imported).length === 0) throw new Error('unrecognized format');
-        updateSettings(imported);
-      } catch (e) {
-        setStatus('error', Logic.t(settings.lang, 'import_failed', { reason: e.message }));
-      }
+      if (file) importText(await file.text());
       ev.target.value = '';
     });
+    $('#btn-import-text').addEventListener('click', () => importText($('#data-text').value));
     $('#btn-clear').addEventListener('click', () => {
       if (!confirm(Logic.t(settings.lang, 'confirm_clear'))) return;
       storage.clear();
       location.href = location.pathname;
     });
+    renderAbout();
   }
 
   function init() {
