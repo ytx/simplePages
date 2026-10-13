@@ -32,9 +32,9 @@
 
 ## アイコンボタン
 
-アイコンは Google Fonts の Material Symbols(Apache License 2.0)から選び、SVG パス(24×24 viewBox)を `<svg style="display:none">` 内の `<symbol>` として埋め込み `<use href="#icon-...">` で参照する。ネットワーク読込はしない。
+アイコンは Google Fonts の Material Icons(Apache License 2.0)から選び、SVG パス(24×24 viewBox)を `<svg style="display:none">` 内の `<symbol>` として埋め込み `<use href="#icon-...">` で参照する。ネットワーク読込はしない。
 
-| id | Material Symbols 名 | 動作 | 永続化 |
+| id | Material Icons 名 | 動作 | 永続化 |
 |---|---|---|---|
 | `#btn-theme` | `dark_mode` / `light_mode` | 実効テーマ(`Logic.effectiveTheme(settings.theme, prefersDark)`)を反転し、`theme` に `'light'`/`'dark'` を明示保存。アイコンは「切替先」のモードを表す(ライト表示中は ☾) | 設定 `theme` |
 | `#btn-zoom-in` / `#btn-zoom-out` | `zoom_in` / `zoom_out` | `zoom` を 10 刻みで 50〜200 の範囲で増減。端では `disabled` | 設定 `zoom`、URL `?zoom=` |
@@ -82,7 +82,7 @@
 1. ページ説明: i18n キー `about_description`。
 2. リンク: リポジトリ `https://github.com/ytx/simplePages`、ページディレクトリ `https://github.com/ytx/simplePages/tree/main/<page>`。`target="_blank" rel="noopener"`。
 3. ライセンス: 「MIT License / Copyright (c) 2026 ytx」とルート `LICENSE` への相対リンク `../LICENSE`。
-4. クレジット: 固定で「Icons: Material Symbols (Google) — Apache License 2.0」。続けてページが宣言する API 一覧。
+4. クレジット: 固定で「Icons: Material Icons (Google) — Apache License 2.0」。続けてページが宣言する API 一覧。
 
 ページ側は `app-ui` 先頭の定数だけを書き換える:
 
