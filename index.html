@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>simplePages</title>
+<style>
+:root {
+  --bg: #f6f7f9;
+  --bg-panel: #ffffff;
+  --fg: #1c1f26;
+  --fg-muted: #5c6370;
+  --border: #d9dde3;
+  --accent: #2b7de9;
+  --radius: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151b; --bg-panel: #1b1f27; --fg: #e7eaf0; --fg-muted: #9aa3b2; --border: #2d333f; --accent: #5b9cf5;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font); line-height: 1.6; }
+main { max-width: 40em; margin: 0 auto; padding: 8vh 16px 4vh; }
+h1 { margin: 0 0 0.25em; font-size: 2em; }
+.lead { margin: 0 0 2em; color: var(--fg-muted); }
+ul.pages { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+ul.pages a {
+  display: block; padding: 1em 1.25em; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-panel); color: inherit; text-decoration: none;
+}
+ul.pages a:hover, ul.pages a:focus-visible { border-color: var(--accent); outline: none; }
+ul.pages strong { color: var(--accent); font-size: 1.15em; }
+ul.pages span { display: block; color: var(--fg-muted); font-size: 0.95em; }
+footer { margin-top: 3em; color: var(--fg-muted); font-size: 0.9em; }
+footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>simplePages</h1>
+  <p class="lead">index.html 1 ファイルで動く、常時表示向けの小さな Web ページ集。</p>
+  <ul class="pages">
+    <li><a href="weather/"><strong>weather</strong><span>1 地点の天気予報を横長 1 画面に常時表示</span></a></li>
+    <li><a href="calendar/"><strong>calendar</strong><span>Google カレンダーの予定を日・週・月で常時表示</span></a></li>
+  </ul>
+  <footer>
+    各ページは右上のアイコンでダーク/ライト、拡大/縮小、フルスクリーン、日英、設定を切り替えられます。<br>
+    <a href="https://github.com/ytx/simplePages">GitHub</a> · MIT License · Copyright (c) 2026 ytx
+  </footer>
+</main>
+</body>
+</html>

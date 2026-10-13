@@ -2,6 +2,8 @@
 
 index.html だけで動くシンプルなページの集まりです。各ディレクトリの `index.html` をブラウザで開くか、静的ホスティングに置いて使います。
 
+公開ページ: <https://xpenguin.biz/simplePages/>(ルートの `index.html` が各ページへの入口です)
+
 | ページ | 説明 |
 |---|---|
 | `_template/` | 新しいページのひな形 |
