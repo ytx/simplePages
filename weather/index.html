@@ -15,9 +15,10 @@
   --ok: #2fa84f;
   --busy: #e6a700;
   --error: #d64545;
+  --zoom: 1;
   --radius: 10px;
-  --gap: clamp(8px, 1vw, 16px);
-  --fs-base: clamp(14px, 1.2vw, 20px);
+  --gap: calc(clamp(8px, 1vw, 16px) * var(--zoom));
+  --fs-base: calc(clamp(14px, 1.2vw, 20px) * var(--zoom));
   --fs-small: calc(var(--fs-base) * 0.8);
   --fs-large: calc(var(--fs-base) * 1.6);
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
@@ -41,17 +42,28 @@ body {
   flex-direction: column;
   overflow: hidden;
 }
-#status-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--gap);
+#toolbar {
+  display: flex; justify-content: flex-end; align-items: center; gap: calc(var(--gap) / 2);
   padding: calc(var(--gap) / 2) var(--gap);
-  border-bottom: 1px solid var(--border);
-  font-size: var(--fs-small);
-  color: var(--fg-muted);
+  transition: opacity 0.6s;
 }
-#status-bar .title { color: var(--fg); font-weight: 600; }
-#status-bar .spacer { flex: 1; }
+#toolbar.idle { opacity: 0.15; }
+.icon-btn {
+  width: 2.2em; height: 2.2em; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--bg-panel); color: var(--fg);
+  cursor: pointer; display: grid; place-items: center; padding: 0; font: inherit;
+}
+.icon-btn:disabled { opacity: 0.35; cursor: default; }
+.icon-btn[hidden] { display: none; }
+.icon-btn svg { width: 1.3em; height: 1.3em; fill: currentColor; }
+.icon-btn.attention { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+#content { flex: 1; min-height: 0; padding: 0 var(--gap) var(--gap); }
+#status-bar {
+  display: flex; justify-content: center; align-items: center; gap: var(--gap);
+  padding: calc(var(--gap) / 2) var(--gap);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-small); color: var(--fg-muted);
+}
 #status-dot {
   width: 0.7em; height: 0.7em; border-radius: 50%;
   background: var(--fg-muted);
@@ -60,49 +72,48 @@ body {
 #status-dot[data-state="busy"] { background: var(--busy); }
 #status-dot[data-state="error"] { background: var(--error); }
 #status-message[data-state="error"] { color: var(--error); }
-#content { flex: 1; min-height: 0; padding: var(--gap); }
-#settings-btn {
-  position: fixed; left: var(--gap); bottom: var(--gap);
-  width: 2.6em; height: 2.6em; border-radius: 50%;
-  border: 1px solid var(--border); background: var(--bg-panel); color: var(--fg);
-  cursor: pointer; display: grid; place-items: center;
-  transition: opacity 0.6s;
-}
-#settings-btn.idle { opacity: 0.15; }
-#settings-btn.attention { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); opacity: 1; }
-#settings-btn svg { width: 1.3em; height: 1.3em; fill: currentColor; }
 dialog#settings {
   background: var(--bg-panel); color: var(--fg);
   border: 1px solid var(--border); border-radius: var(--radius);
-  width: min(90vw, 36em); padding: 0;
+  width: min(90vw, 36em); height: min(85vh, 32em); padding: 0;
+  display: none; grid-template-rows: auto auto 1fr; overflow: hidden;
 }
+dialog#settings[open] { display: grid; }
 dialog#settings::backdrop { background: rgba(0,0,0,0.5); }
-.dlg-header { display: flex; align-items: center; padding: var(--gap); border-bottom: 1px solid var(--border); }
+.dlg-header { display: flex; align-items: center; padding: calc(var(--gap) / 2) var(--gap); border-bottom: 1px solid var(--border); }
 .dlg-header h2 { margin: 0; font-size: var(--fs-base); flex: 1; }
-.tabs { display: flex; gap: 2px; padding: 0 var(--gap); border-bottom: 1px solid var(--border); }
+.tabs { display: flex; gap: 2px; padding: 0 var(--gap); border-bottom: 1px solid var(--border); overflow-x: auto; }
 .tabs button {
   background: none; border: none; color: var(--fg-muted); padding: 0.6em 1em;
-  cursor: pointer; border-bottom: 2px solid transparent; font: inherit;
+  cursor: pointer; border-bottom: 2px solid transparent; font: inherit; white-space: nowrap;
 }
 .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.tab-body { overflow: auto; min-height: 0; }
 .tab-panel { display: none; padding: var(--gap); }
 .tab-panel.active { display: block; }
 .field { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); align-items: center; margin-bottom: var(--gap); }
 .field label { color: var(--fg-muted); }
-select, input, button.btn {
+select, input, textarea, button.btn {
   font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border);
   border-radius: 6px; padding: 0.4em 0.6em;
 }
+textarea#data-text { width: 100%; min-height: 10em; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: var(--fs-small); resize: vertical; }
 button.btn { cursor: pointer; }
 button.btn.danger { color: var(--error); }
 .row { display: flex; gap: var(--gap); flex-wrap: wrap; }
+.hint { color: var(--fg-muted); font-size: var(--fs-small); margin: calc(var(--gap) / 2) 0; }
+#data-message { min-height: 1.4em; margin-top: calc(var(--gap) / 2); }
+#data-message[data-state="error"] { color: var(--error); }
+.about h3 { margin: var(--gap) 0 calc(var(--gap) / 3); font-size: var(--fs-base); }
+.about ul { margin: 0; padding-left: 1.2em; }
+.about a { color: var(--accent); }
 :root {
   --sun: #f5a623;
   --cloud: #8b96a8;
   --rain: #3b8ee6;
   --snow: #7fc4ff;
   --bolt: #e8b400;
-  --fs-temp: clamp(48px, 7vw, 120px);
+  --fs-temp: calc(clamp(48px, 7vw, 120px) * var(--zoom));
 }
 html[data-theme="dark"] { --cloud: #a7b0bf; }
 @media (prefers-color-scheme: dark) {
@@ -113,16 +124,17 @@ html[data-theme="dark"] { --cloud: #a7b0bf; }
 #content {
   display: grid;
   grid-template-columns: 28fr 72fr;
-  grid-template-rows: 55fr 45fr;
+  grid-template-rows: auto 55fr 45fr;
   gap: var(--gap);
 }
+#page-title { grid-column: 1 / 3; margin: 0; text-align: center; font-size: var(--fs-large); font-weight: 600; line-height: 1.2; min-height: 1.2em; }
 .panel {
   background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius);
   padding: var(--gap); min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column;
 }
 .panel h2 { margin: 0 0 calc(var(--gap) / 2); font-size: var(--fs-small); color: var(--fg-muted); font-weight: 600; }
-#panel-current { grid-row: 1 / 3; align-items: center; text-align: center; justify-content: center; }
-#cur-icon { width: clamp(80px, 12vw, 220px); height: clamp(80px, 12vw, 220px); }
+#panel-current { grid-row: 2 / 4; align-items: center; text-align: center; justify-content: center; }
+#cur-icon { width: calc(clamp(80px, 12vw, 220px) * var(--zoom)); height: calc(clamp(80px, 12vw, 220px) * var(--zoom)); }
 #cur-temp { font-size: var(--fs-temp); font-weight: 300; line-height: 1; }
 #cur-temp small { font-size: 0.4em; vertical-align: top; }
 #cur-text { font-size: var(--fs-large); margin: calc(var(--gap) / 2) 0; }
@@ -156,7 +168,7 @@ html[data-theme="dark"] { --cloud: #a7b0bf; }
 #weekly-grid .temps b { color: var(--error); }
 #weekly-grid .temps i { color: var(--accent); font-style: normal; }
 .fallback { opacity: 0.55; }
-#no-location { grid-column: 1 / 3; grid-row: 1 / 3; display: grid; place-items: center; font-size: var(--fs-large); color: var(--fg-muted); }
+#no-location { grid-column: 1 / 3; grid-row: 2 / 4; display: grid; place-items: center; font-size: var(--fs-large); color: var(--fg-muted); }
 #no-location[hidden], .panel[hidden] { display: none; }
 #jma-report { font-size: var(--fs-small); color: var(--fg-muted); }
 #loc-results { width: 100%; min-height: 6em; }
@@ -189,15 +201,26 @@ html[data-theme="dark"] { --cloud: #a7b0bf; }
   <symbol id="icon-snow" viewBox="0 0 24 24"><g transform="translate(0 -3)"><use href="#sym-cloud"/></g><use href="#sym-flakes"/></symbol>
   <symbol id="icon-thunder" viewBox="0 0 24 24"><g transform="translate(0 -3)"><use href="#sym-cloud"/></g><g transform="translate(-4 0)"><use href="#sym-drops"/></g><g transform="translate(3 -1)"><use href="#sym-bolt"/></g></symbol>
   <symbol id="icon-unknown" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="var(--cloud)" stroke-width="1.6"/><text x="12" y="16.5" text-anchor="middle" font-size="12" fill="var(--cloud)" font-family="system-ui">?</text></symbol>
+  <symbol id="icon-dark-mode" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></symbol>
+  <symbol id="icon-light-mode" viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/></symbol>
+  <symbol id="icon-zoom-in" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm2.5-4h-2v2H9v-2H7V9h2V7h1v2h2v1z"/></symbol>
+  <symbol id="icon-zoom-out" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z"/></symbol>
+  <symbol id="icon-fullscreen" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></symbol>
+  <symbol id="icon-fullscreen-exit" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></symbol>
+  <symbol id="icon-translate" viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></symbol>
+  <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M19.4 13a7.9 7.9 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a8 8 0 0 0-1.7-1L15 3.3H9l-.3 2.6a8 8 0 0 0-1.7 1l-2.5-1-2 3.5L4.6 11a7.9 7.9 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a8 8 0 0 0 1.7 1l.3 2.6h6l.3-2.6a8 8 0 0 0 1.7-1l2.5 1 2-3.5L19.4 13zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></symbol>
+  <symbol id="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
 </svg>
-<header id="status-bar">
-  <span class="title" id="page-title"></span>
-  <span class="spacer"></span>
-  <span id="clock"></span>
-  <span id="status-message"></span>
-  <span id="status-dot" data-state="none"></span>
+<header id="toolbar">
+  <button id="btn-theme" class="icon-btn" type="button" data-i18n-label="toggle_theme"><svg aria-hidden="true"><use href="#icon-dark-mode"></use></svg></button>
+  <button id="btn-zoom-in" class="icon-btn" type="button" data-i18n-label="zoom_in"><svg aria-hidden="true"><use href="#icon-zoom-in"></use></svg></button>
+  <button id="btn-zoom-out" class="icon-btn" type="button" data-i18n-label="zoom_out"><svg aria-hidden="true"><use href="#icon-zoom-out"></use></svg></button>
+  <button id="btn-fullscreen" class="icon-btn" type="button" data-i18n-label="fullscreen"><svg aria-hidden="true"><use href="#icon-fullscreen"></use></svg></button>
+  <button id="btn-lang" class="icon-btn" type="button" data-i18n-label="toggle_lang"><svg aria-hidden="true"><use href="#icon-translate"></use></svg></button>
+  <button id="btn-settings" class="icon-btn" type="button" data-i18n-label="settings"><svg aria-hidden="true"><use href="#icon-settings"></use></svg></button>
 </header>
 <main id="content">
+  <h1 id="page-title"></h1>
   <div id="no-location" hidden><span data-i18n="set_location_hint"></span></div>
   <section class="panel" id="panel-current">
     <h2 data-i18n="current"></h2>
@@ -222,81 +245,107 @@ html[data-theme="dark"] { --cloud: #a7b0bf; }
     <div id="weekly-grid" class="cols"></div>
   </section>
 </main>
-<button id="settings-btn" type="button" aria-label="Settings">
-  <svg viewBox="0 0 24 24"><path d="M19.4 13a7.9 7.9 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a8 8 0 0 0-1.7-1L15 3.3H9l-.3 2.6a8 8 0 0 0-1.7 1l-2.5-1-2 3.5L4.6 11a7.9 7.9 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a8 8 0 0 0 1.7 1l.3 2.6h6l.3-2.6a8 8 0 0 0 1.7-1l2.5 1 2-3.5L19.4 13zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
-</button>
+<footer id="status-bar">
+  <span id="clock"></span>
+  <span id="status-message"></span>
+  <span id="status-dot" data-state="none"></span>
+</footer>
 <dialog id="settings">
   <div class="dlg-header">
     <h2 data-i18n="settings"></h2>
-    <button class="btn" id="settings-close" data-i18n="close"></button>
+    <button id="settings-close" class="icon-btn" type="button" data-i18n-label="close"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button>
   </div>
   <div class="tabs" role="tablist">
     <button role="tab" data-tab="location" data-i18n="tab_location"></button>
     <button role="tab" data-tab="general" aria-selected="true" data-i18n="tab_general"></button>
     <button role="tab" data-tab="display" data-i18n="tab_display"></button>
     <button role="tab" data-tab="data" data-i18n="tab_data"></button>
+    <button role="tab" data-tab="about" data-i18n="tab_about"></button>
   </div>
-  <section class="tab-panel" data-panel="location">
-    <div class="row">
-      <input id="loc-query" type="search" style="flex:1">
-      <button class="btn" id="loc-search" data-i18n="search"></button>
-    </div>
-    <p id="loc-hint" class="muted" hidden></p>
-    <select id="loc-results" size="5"></select>
-    <div class="field">
-      <label for="loc-office" data-i18n="office"></label>
-      <select id="loc-office"></select>
-    </div>
-    <div class="field">
-      <label for="loc-area" data-i18n="area"></label>
-      <select id="loc-area"></select>
-    </div>
-    <p id="loc-current"></p>
-  </section>
-  <section class="tab-panel active" data-panel="general">
-    <div class="field">
-      <label for="set-refresh" data-i18n="refresh_minutes"></label>
-      <input id="set-refresh" type="number" min="1" max="120" data-setting="refreshMinutes">
-    </div>
-    <div id="settings-extra-general"></div>
-  </section>
-  <section class="tab-panel" data-panel="display">
-    <div class="field">
-      <label for="set-lang" data-i18n="language"></label>
-      <select id="set-lang" data-setting="lang">
-        <option value="ja">日本語</option>
-        <option value="en">English</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="set-theme" data-i18n="theme"></label>
-      <select id="set-theme" data-setting="theme">
-        <option value="auto" data-i18n="theme_auto"></option>
-        <option value="light" data-i18n="theme_light"></option>
-        <option value="dark" data-i18n="theme_dark"></option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="set-step" data-i18n="hourly_step"></label>
-      <select id="set-step" data-setting="hourlyStep"><option value="1">1</option><option value="3">3</option></select>
-    </div>
-    <div class="field">
-      <label for="set-count" data-i18n="hourly_count"></label>
-      <input id="set-count" type="number" min="6" max="24" data-setting="hourlyCount">
-    </div>
-    <div class="field">
-      <label for="set-days" data-i18n="daily_days"></label>
-      <input id="set-days" type="number" min="5" max="7" data-setting="dailyDays">
-    </div>
-  </section>
-  <section class="tab-panel" data-panel="data">
-    <div class="row">
-      <button class="btn" id="btn-export" data-i18n="export_json"></button>
-      <button class="btn" id="btn-import" data-i18n="import_json"></button>
-      <input id="import-file" type="file" accept="application/json" hidden>
-      <button class="btn danger" id="btn-clear" data-i18n="clear_all"></button>
-    </div>
-  </section>
+  <div class="tab-body">
+    <section class="tab-panel" data-panel="location">
+      <div class="row">
+        <input id="loc-query" type="search" style="flex:1">
+        <button class="btn" id="loc-search" data-i18n="search"></button>
+      </div>
+      <p id="loc-hint" class="muted" hidden></p>
+      <select id="loc-results" size="5"></select>
+      <div class="field">
+        <label for="loc-office" data-i18n="office"></label>
+        <select id="loc-office"></select>
+      </div>
+      <div class="field">
+        <label for="loc-area" data-i18n="area"></label>
+        <select id="loc-area"></select>
+      </div>
+      <p id="loc-current"></p>
+    </section>
+    <section class="tab-panel active" data-panel="general">
+      <div class="field">
+        <label for="set-refresh" data-i18n="refresh_minutes"></label>
+        <input id="set-refresh" type="number" min="1" max="120" data-setting="refreshMinutes">
+      </div>
+      <div id="settings-extra-general"></div>
+    </section>
+    <section class="tab-panel" data-panel="display">
+      <div class="field">
+        <label for="set-lang" data-i18n="language"></label>
+        <select id="set-lang" data-setting="lang">
+          <option value="ja">日本語</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="set-theme" data-i18n="theme"></label>
+        <select id="set-theme" data-setting="theme">
+          <option value="auto" data-i18n="theme_auto"></option>
+          <option value="light" data-i18n="theme_light"></option>
+          <option value="dark" data-i18n="theme_dark"></option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="set-step" data-i18n="hourly_step"></label>
+        <select id="set-step" data-setting="hourlyStep"><option value="1">1</option><option value="3">3</option></select>
+      </div>
+      <div class="field">
+        <label for="set-count" data-i18n="hourly_count"></label>
+        <input id="set-count" type="number" min="6" max="24" data-setting="hourlyCount">
+      </div>
+      <div class="field">
+        <label for="set-days" data-i18n="daily_days"></label>
+        <input id="set-days" type="number" min="5" max="7" data-setting="dailyDays">
+      </div>
+      <div id="settings-extra-display"></div>
+    </section>
+    <section class="tab-panel" data-panel="data">
+      <div class="row">
+        <button type="button" class="btn" id="btn-export" data-i18n="export_file"></button>
+        <button type="button" class="btn" id="btn-import" data-i18n="import_file"></button>
+        <input id="import-file" type="file" accept="application/json,.json" hidden>
+        <button type="button" class="btn danger" id="btn-clear" data-i18n="clear_all"></button>
+      </div>
+      <p class="hint" data-i18n="data_hint"></p>
+      <textarea id="data-text" spellcheck="false"></textarea>
+      <div class="row">
+        <button type="button" class="btn" id="btn-import-text" data-i18n="import_text"></button>
+      </div>
+      <div id="data-message" data-state="none"></div>
+    </section>
+    <section class="tab-panel about" data-panel="about">
+      <p id="about-description" data-i18n="about_description"></p>
+      <h3 data-i18n="about_links"></h3>
+      <ul>
+        <li><a id="about-repo" href="https://github.com/ytx/simplePages" target="_blank" rel="noopener" data-i18n="about_repo"></a></li>
+        <li><a id="about-page" href="https://github.com/ytx/simplePages" target="_blank" rel="noopener" data-i18n="about_page"></a></li>
+      </ul>
+      <h3 data-i18n="about_license"></h3>
+      <p id="about-license"><a href="https://github.com/ytx/simplePages/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a> — Copyright (c) 2026 ytx</p>
+      <h3 data-i18n="about_credits"></h3>
+      <ul id="about-credits">
+        <li data-i18n="credit_icons"></li>
+      </ul>
+    </section>
+  </div>
 </dialog>
 <script id="app-logic">
 const Logic = (() => {
@@ -1045,7 +1094,7 @@ const App = (() => {
   async function refresh() {
     const loc = settings.location;
     $('#no-location').hidden = !!loc;
-    $('#settings-btn').classList.toggle('attention', !loc);
+    $('#btn-settings').classList.toggle('attention', !loc);
     for (const p of $$('.panel')) p.hidden = !loc;
     if (!loc) { setStatus('error', Logic.t(settings.lang, 'set_location_hint')); return; }
 
@@ -1358,14 +1407,14 @@ const App = (() => {
   }
 
   function resetIdle() {
-    $('#settings-btn').classList.remove('idle');
+    $('#btn-settings').classList.remove('idle');
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => { if (settings.location) $('#settings-btn').classList.add('idle'); }, IDLE_MS);
+    idleTimer = setTimeout(() => { if (settings.location) $('#btn-settings').classList.add('idle'); }, IDLE_MS);
   }
 
   function bindSettingsDialog() {
     const dlg = $('#settings');
-    $('#settings-btn').addEventListener('click', () => dlg.showModal());
+    $('#btn-settings').addEventListener('click', () => dlg.showModal());
     $('#settings-close').addEventListener('click', () => dlg.close());
     for (const tab of $$('[role="tab"]')) {
       tab.addEventListener('click', () => {
