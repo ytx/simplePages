@@ -983,9 +983,18 @@ const Logic = (() => {
 const App = (() => {
   const PAGE = 'weather';
   const STORAGE_KEY = `simplePages.${PAGE}`;
+  const REPO_URL = 'https://github.com/ytx/simplePages';
+  const ABOUT = {
+    page: PAGE,
+    credits: [
+      { name: '気象庁 天気予報 JSON (bosai)', url: 'https://www.jma.go.jp/bosai/' },
+      { name: 'Open-Meteo', url: 'https://open-meteo.com/', note: 'CC BY 4.0' },
+    ],
+  };
   const SCHEMA = {
     lang: { type: 'enum', values: ['ja', 'en'], default: Logic.detectLang(navigator.language) },
     theme: { type: 'enum', values: ['auto', 'light', 'dark'], default: 'auto' },
+    zoom: { type: 'int', min: 50, max: 200, default: 100 },
     refreshMinutes: { type: 'int', min: 1, max: 120, default: 10 },
     hourlyStep: { type: 'enum', values: [1, 3], default: 3 },
     hourlyCount: { type: 'int', min: 6, max: 24, default: 16 },
@@ -993,11 +1002,16 @@ const App = (() => {
     location: { type: 'object', default: null },
   };
   const IDLE_MS = 10000;
+  // 表示だけに影響する設定。変更しても再取得しない。
+  // ページ側で追加する表示専用の設定キーもここに足す。
+  const DISPLAY_ONLY_KEYS = new Set(['theme', 'zoom', 'lang']);
 
   let settings = {};
   let nextRefreshAt = 0;
   let refreshTimer = null;
   let idleTimer = null;
+  let toolbarAttention = false;
+  let refreshSeq = 0;
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -1025,31 +1039,86 @@ const App = (() => {
   function getSettings() { return { ...settings }; }
 
   function updateSettings(patch) {
-    const prevLoc = settings.location;
+    const prev = settings;
     settings = Logic.resolveSettings(SCHEMA, { ...settings, ...patch }, {});
     settings.location = Logic.validLocation(settings.location);
-    if (JSON.stringify(prevLoc) !== JSON.stringify(settings.location)) lastModel = null;
+    if (JSON.stringify(prev.location) !== JSON.stringify(settings.location)) lastModel = null;
     storage.write(settings);
     applySettings();
+    const changed = (k) => JSON.stringify(prev[k]) !== JSON.stringify(settings[k]);
+    if (Object.keys(patch).some((k) => !DISPLAY_ONLY_KEYS.has(k) && changed(k))) scheduleRefresh(0);
   }
 
   function applyI18n() {
     document.documentElement.lang = settings.lang;
     for (const el of $$('[data-i18n]')) el.textContent = Logic.t(settings.lang, el.dataset.i18n);
+    for (const el of $$('[data-i18n-label]')) el.setAttribute('aria-label', Logic.t(settings.lang, el.dataset.i18nLabel));
+    // data-i18n-label ループの後に実行する: 全画面ボタンのラベルを状態に合った値で上書きするため。
+    updateFullscreenButton();
+  }
+
+  function currentTheme() {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return Logic.effectiveTheme(settings.theme, prefersDark);
   }
 
   function applyTheme() {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.dataset.theme = Logic.effectiveTheme(settings.theme, prefersDark);
+    const theme = currentTheme();
+    document.documentElement.dataset.theme = theme;
+    // アイコンは「切替先」を表す: ライト表示中は月、ダーク表示中は太陽。
+    $('#btn-theme use').setAttribute('href', theme === 'dark' ? '#icon-light-mode' : '#icon-dark-mode');
+  }
+
+  function applyZoom(zoom) {
+    document.documentElement.style.setProperty('--zoom', String(zoom / 100));
+    $('#btn-zoom-in').disabled = Logic.stepZoom(zoom, 1) === zoom;
+    $('#btn-zoom-out').disabled = Logic.stepZoom(zoom, -1) === zoom;
   }
 
   function applySettings() {
     applyI18n();
     applyTheme();
+    applyZoom(settings.zoom);
     for (const el of $$('[data-setting]')) el.value = settings[el.dataset.setting];
     renderSettingsExtra(settings);
     if (lastModel) render(lastModel);
-    scheduleRefresh(0);
+  }
+
+  function updateFullscreenButton() {
+    const btn = $('#btn-fullscreen');
+    if (!document.fullscreenEnabled) { btn.hidden = true; return; }
+    const on = !!document.fullscreenElement;
+    btn.querySelector('use').setAttribute('href', on ? '#icon-fullscreen-exit' : '#icon-fullscreen');
+    btn.setAttribute('aria-label', Logic.t(settings.lang, on ? 'exit_fullscreen' : 'fullscreen'));
+  }
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch { /* ユーザー操作なしで拒否された場合など。無視して現状維持 */ }
+  }
+
+  // ページ側が true にすると減光せず、設定ボタンを強調する(例: 必須設定が未入力)。
+  function setToolbarAttention(on) {
+    toolbarAttention = !!on;
+    $('#btn-settings').classList.toggle('attention', toolbarAttention);
+    if (toolbarAttention) $('#toolbar').classList.remove('idle');
+    else resetIdle();
+  }
+
+  function bindToolbar() {
+    $('#btn-theme').addEventListener('click', () => updateSettings({ theme: Logic.toggleTheme(currentTheme()) }));
+    $('#btn-zoom-in').addEventListener('click', () => updateSettings({ zoom: Logic.stepZoom(settings.zoom, 1) }));
+    $('#btn-zoom-out').addEventListener('click', () => updateSettings({ zoom: Logic.stepZoom(settings.zoom, -1) }));
+    $('#btn-fullscreen').addEventListener('click', toggleFullscreen);
+    document.addEventListener('fullscreenchange', updateFullscreenButton);
+    $('#btn-lang').addEventListener('click', () => updateSettings({ lang: Logic.toggleLang(settings.lang) }));
+    $('#btn-settings').addEventListener('click', () => {
+      const sel = $('[role="tab"][aria-selected="true"]') || $$('[role="tab"]')[0];
+      showTab(sel.dataset.tab); // データタブの表示内容を最新に
+      $('#settings').showModal();
+    });
   }
 
   function setStatus(state, message) {
@@ -1092,9 +1161,10 @@ const App = (() => {
   }
 
   async function refresh() {
+    const seq = ++refreshSeq;
     const loc = settings.location;
     $('#no-location').hidden = !!loc;
-    $('#btn-settings').classList.toggle('attention', !loc);
+    setToolbarAttention(!loc);
     for (const p of $$('.panel')) p.hidden = !loc;
     if (!loc) { setStatus('error', Logic.t(settings.lang, 'set_location_hint')); return; }
 
@@ -1102,6 +1172,7 @@ const App = (() => {
     const tasks = [fetchJson(Logic.openMeteoUrl(loc.lat, loc.lon))];
     if (loc.jmaOffice) tasks.push(fetchJson(Logic.jmaForecastUrl(loc.jmaOffice)));
     const [omRes, jmaRes] = await Promise.all(tasks);
+    if (seq !== refreshSeq) return; // 地点変更などで新しい更新が始まっていれば古い結果は捨てる
     const jmaFailed = !!loc.jmaOffice && !jmaRes.ok;
     const allFailed = !omRes.ok && (!loc.jmaOffice || jmaFailed);
 
@@ -1407,21 +1478,68 @@ const App = (() => {
   }
 
   function resetIdle() {
-    $('#btn-settings').classList.remove('idle');
+    $('#toolbar').classList.remove('idle');
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => { if (settings.location) $('#btn-settings').classList.add('idle'); }, IDLE_MS);
+    idleTimer = setTimeout(() => { if (!toolbarAttention) $('#toolbar').classList.add('idle'); }, IDLE_MS);
+  }
+
+  function showTab(name) {
+    for (const t2 of $$('[role="tab"]')) t2.setAttribute('aria-selected', String(t2.dataset.tab === name));
+    for (const p of $$('.tab-panel')) p.classList.toggle('active', p.dataset.panel === name);
+    if (name === 'data') refreshDataText();
+  }
+
+  function refreshDataText() {
+    $('#data-text').value = JSON.stringify({ version: Logic.VERSION, settings }, null, 2);
+    setDataMessage('none', '');
+  }
+
+  function setDataMessage(state, text) {
+    const el = $('#data-message');
+    el.dataset.state = state;
+    el.textContent = text;
+  }
+
+  function importText(text) {
+    const result = Logic.parseImport(text, Logic.VERSION);
+    if (!result.ok) {
+      setDataMessage('error', Logic.t(settings.lang, result.reason === 'invalid_json' ? 'import_failed_json' : 'import_failed_format'));
+      return;
+    }
+    updateSettings(result.settings);
+    refreshDataText();
+    setDataMessage('ok', Logic.t(settings.lang, 'import_ok'));
+  }
+
+  function renderAbout() {
+    $('#about-page').href = `${REPO_URL}/tree/main/${ABOUT.page}`;
+    const list = $('#about-credits');
+    const icons = list.firstElementChild; // credit_icons の li は残す
+    list.replaceChildren(...(icons ? [icons] : []));
+    for (const c of ABOUT.credits) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = c.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = c.name;
+      li.appendChild(a);
+      if (c.note) li.appendChild(document.createTextNode(` — ${c.note}`));
+      list.appendChild(li);
+    }
   }
 
   function bindSettingsDialog() {
     const dlg = $('#settings');
-    $('#btn-settings').addEventListener('click', () => dlg.showModal());
     $('#settings-close').addEventListener('click', () => dlg.close());
-    for (const tab of $$('[role="tab"]')) {
-      tab.addEventListener('click', () => {
-        for (const t2 of $$('[role="tab"]')) t2.setAttribute('aria-selected', String(t2 === tab));
-        for (const p of $$('.tab-panel')) p.classList.toggle('active', p.dataset.panel === tab.dataset.tab);
-      });
-    }
+    // 背景クリックで閉じる。テキスト選択などで内側から押して背景で離した場合は閉じない。
+    let downOnBackdrop = false;
+    dlg.addEventListener('pointerdown', (ev) => { downOnBackdrop = ev.target === dlg; });
+    dlg.addEventListener('click', (ev) => {
+      if (downOnBackdrop && ev.target === dlg) dlg.close();
+      downOnBackdrop = false;
+    });
+    for (const tab of $$('[role="tab"]')) tab.addEventListener('click', () => showTab(tab.dataset.tab));
     for (const el of $$('[data-setting]')) {
       el.addEventListener('change', () => updateSettings({ [el.dataset.setting]: el.value }));
     }
@@ -1429,41 +1547,39 @@ const App = (() => {
       const blob = new Blob([JSON.stringify({ version: Logic.VERSION, settings }, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `${PAGE}-settings.json`;
+      const d = new Date();
+      const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      a.download = `simplePages-${PAGE}-${ymd}.json`;
       a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 0);
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     });
     $('#btn-import').addEventListener('click', () => $('#import-file').click());
     $('#import-file').addEventListener('change', async (ev) => {
       const file = ev.target.files[0];
-      if (!file) return;
-      try {
-        const raw = JSON.parse(await file.text());
-        const imported = Logic.migrateStored(raw, Logic.VERSION);
-        if (Object.keys(imported).length === 0) throw new Error('unrecognized format');
-        updateSettings(imported);
-      } catch (e) {
-        setStatus('error', Logic.t(settings.lang, 'import_failed', { reason: e.message }));
-      }
+      if (file) importText(await file.text());
       ev.target.value = '';
     });
+    $('#btn-import-text').addEventListener('click', () => importText($('#data-text').value));
     $('#btn-clear').addEventListener('click', () => {
       if (!confirm(Logic.t(settings.lang, 'confirm_clear'))) return;
       storage.clear();
       location.href = location.pathname;
     });
+    renderAbout();
   }
 
   function init() {
     loadSettings();
     bindSettingsDialog();
+    bindToolbar();
     bindLocationTab();
     applySettings();
+    scheduleRefresh(0);
     tickClock();
     setInterval(tickClock, 1000);
     document.addEventListener('visibilitychange', onVisibility);
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-    for (const ev of ['mousemove', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
+    for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
     resetIdle();
     let resizeTimer = null;
     let lastHourlyCount = hourlyCount();
@@ -1478,7 +1594,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh, render, getLastModel };
+  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh, render, getLastModel, applyZoom, setToolbarAttention };
 })();
 </script>
 </body>
