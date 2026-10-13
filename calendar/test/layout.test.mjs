@@ -87,6 +87,6 @@ test('monthCells: all-day first, overflow count', () => {
   assert.deepEqual(mon.items.map((i) => [i.event.id, i.allDay]), [['e6', true]]);
   assert.equal(mon.more, 0);
   const fri = cells.find((c) => c.date.getTime() === d(2026, 10, 16).getTime());
-  assert.deepEqual(fri.items.map((i) => i.event.id), ['e7', 'e8']);
-  assert.equal(fri.more, 3); // e9 (all-day-like), e10, e11
+  assert.deepEqual(fri.items.map((i) => i.event.id), ['e7', 'e9']); // all-day sorted by start
+  assert.equal(fri.more, 3); // e8, e10, e11
 });

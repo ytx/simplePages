@@ -80,6 +80,9 @@ test('eventColor priority and textColorFor', () => {
   assert.equal(Logic.textColorFor('#fbd75b'), '#000');
   assert.equal(Logic.textColorFor('#5484ed'), '#fff');
   assert.equal(Logic.textColorFor(''), '#fff');
+  assert.equal(Logic.textColorFor('#33b679'), '#000');
+  assert.equal(Logic.textColorFor('#e67c73'), '#000');
+  assert.equal(Logic.textColorFor('#039be5'), '#fff');
 });
 
 test('validGasUrl / gasRequestUrl', () => {
@@ -109,4 +112,13 @@ test('isSwipe / normalizeHours / nowLinePct', () => {
   assert.equal(Logic.nowLinePct(new Date(2026, 9, 13, 14, 30), 6, 23), 50);
   assert.equal(Logic.nowLinePct(new Date(2026, 9, 13, 5, 59), 6, 23), null);
   assert.equal(Logic.nowLinePct(new Date(2026, 9, 13, 23, 1), 6, 23), null);
+});
+
+test('normalizeResponse: tolerates mixed all-day formats', () => {
+  const a = Logic.normalizeResponse({ ok: true, events: [{ id: 'm1', calendarId: 'a', allDay: true, start: '2026-10-13T00:00:00+09:00', end: '2026-10-14T00:00:00+09:00' }] });
+  assert.equal(a.events.length, 1);
+  assert.deepEqual(a.events[0].start, new Date(2026, 9, 13));
+  assert.deepEqual(a.events[0].end, new Date(2026, 9, 14));
+  const b = Logic.normalizeResponse({ ok: true, events: [{ id: 'm2', calendarId: 'a', allDay: false, start: '2026-10-13', end: '2026-10-14' }] });
+  assert.deepEqual(b.events[0].start, new Date(2026, 9, 13));
 });
