@@ -19,7 +19,7 @@ function doGet(e) {
     if (p.action === 'list') return json({ ok: true, tz: tz, generatedAt: iso(new Date(), tz), calendars: listCalendars() });
     const from = parseYmd(p.from), to = parseYmd(p.to);
     if (!from || !to || to <= from) return json({ ok: false, error: 'bad_request' });
-    if ((to - from) / 86400000 > MAX_DAYS) return json({ ok: false, error: 'range_too_large' });
+    if (Math.round((to - from) / 86400000) > MAX_DAYS) return json({ ok: false, error: 'range_too_large' });
     const wanted = p.cal ? String(p.cal).split(',').map(function (s) { return s.trim(); }).filter(Boolean) : null;
     const calendars = wanted
       ? wanted.map(function (id) { return CalendarApp.getCalendarById(id) || { missing: id }; })
@@ -33,7 +33,7 @@ function doGet(e) {
         c.getEvents(from, to).forEach(function (ev) {
           const allDay = ev.isAllDayEvent();
           events.push({
-            id: ev.getId(), calendarId: id, title: ev.getTitle(),
+            id: ev.getId() + '_' + Utilities.formatDate(ev.getStartTime(), 'UTC', "yyyyMMdd'T'HHmmss'Z'"), calendarId: id, title: ev.getTitle(),
             start: allDay ? ymd(ev.getAllDayStartDate(), tz) : iso(ev.getStartTime(), tz),
             end: allDay ? ymd(ev.getAllDayEndDate(), tz) : iso(ev.getEndTime(), tz),
             allDay: allDay,
