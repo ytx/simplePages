@@ -54,7 +54,7 @@ simplePages/
   初期値は `prefers-color-scheme` に従い、ユーザーが切り替えた場合は設定に保存して優先する。
 - フォントはシステムフォントスタック(`system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif`)。Web フォントは使わない。
 - 常時表示ページは `clamp()` と `vw`/`vh` で文字サイズを画面に追従させ、スクロールなしで収める。
-- アイコンはインライン SVG(`<symbol>` を `<svg style="display:none">` に定義し `<use href="#id">` で参照)。`fill="currentColor"` でテーマ色に追従させる。共通ボタンのアイコンは Material Symbols(Apache 2.0)のパスを埋め込む。
+- アイコンはインライン SVG(`<symbol>` を `<svg style="display:none">` に定義し `<use href="#id">` で参照)。`fill="currentColor"` でテーマ色に追従させる。共通ボタンのアイコンは Material Icons(Apache 2.0)のパスを埋め込む。
 - サイズ系の変数(`--gap`、`--fs-*`)は `calc(... * var(--zoom))` の形にし、拡縮ボタンで `--zoom` を変える。
 
 ## 設定ストア
@@ -82,7 +82,7 @@ simplePages/
 - モーダルは固定サイズ(タブを切り替えても外形不変)。ヘッダ / タブ帯 / 本文の 3 行で、本文だけスクロールする。右上に × ボタン。
 - タブは「一般」「表示」(ページ固有)「データ」「About」。About は常に最後。
 - 「データ」タブはファイルによるエクスポート/インポート、テキストエリアによる表示/インポート、全消去(確認付き)。形式は localStorage の値そのもの(`{ version, settings }`)。インポートは `Logic.parseImport` を通す。
-- 「About」タブはページ説明、GitHub リンク、ライセンス(MIT)、クレジット(Material Symbols と使用 API)。
+- 「About」タブはページ説明、GitHub リンク、ライセンス(MIT)、クレジット(Material Icons と使用 API)。
 - 設定変更は即時反映し、即時保存する。「保存」ボタンは置かない。
 
 ## i18n
