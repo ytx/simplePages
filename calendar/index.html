@@ -1013,6 +1013,7 @@ const App = (() => {
   let anchor = Logic.startOfDay(new Date()); // 表示の基準日(保存しない)
   let refreshSeq = 0; // 古い応答を捨てるための世代
   let lastOkAt = null;
+  let urlErrorShown = false;
   let rawUrl = ''; // 接続タブに入力中の URL(形式エラー表示用)
 
   function locale() { return settings.lang === 'ja' ? 'ja-JP' : 'en-US'; }
@@ -1062,10 +1063,12 @@ const App = (() => {
     settings = sanitize(Logic.resolveSettings(SCHEMA, { ...settings, ...patch }, {}));
     const changed = (k) => JSON.stringify(prev[k]) !== JSON.stringify(settings[k]);
     // 接続先やカレンダーが変わったら古いデータと取得中の応答を捨てる
-    if (changed('gasUrl') || changed('token') || changed('calendars')) { cache = null; lastOkAt = null; refreshSeq++; }
+    const ids = (s) => s.calendars.filter((c) => c.enabled).map((c) => c.id).join(',');
+    const dataChanged = changed('gasUrl') || changed('token') || ids(prev) !== ids(settings);
+    if (dataChanged) { cache = null; lastOkAt = null; refreshSeq++; }
     storage.write(settings);
     applySettings();
-    if (Object.keys(patch).some((k) => !DISPLAY_ONLY_KEYS.has(k) && changed(k))) scheduleRefresh(0);
+    if (dataChanged || Object.keys(patch).some((k) => k !== 'calendars' && !DISPLAY_ONLY_KEYS.has(k) && changed(k))) scheduleRefresh(0);
   }
 
   function applyI18n() {
@@ -1177,7 +1180,8 @@ const App = (() => {
   }
   function reasonText(code) {
     if (code === 'unauthorized') return Logic.t(settings.lang, 'err_unauthorized');
-    if (code === 'invalid_response' || /JSON|Unexpected token|Unexpected end/i.test(code)) return Logic.t(settings.lang, 'invalid_response');
+    // Chrome "Unexpected token '<'…", Firefox "JSON.parse: …", Safari "The string did not match the expected pattern", 旧 WebKit "JSON Parse error"
+    if (code === 'invalid_response' || /JSON|Unexpected token|Unexpected end|did not match the expected pattern/i.test(code)) return Logic.t(settings.lang, 'invalid_response');
     return code;
   }
 
@@ -1241,7 +1245,8 @@ const App = (() => {
 
   function renderConnectionTab() {
     const typed = rawUrl.trim();
-    if (typed && !Logic.validGasUrl(typed)) setConnMessage('error', Logic.t(settings.lang, 'invalid_url'));
+    if (typed && !Logic.validGasUrl(typed)) { setConnMessage('error', Logic.t(settings.lang, 'invalid_url')); urlErrorShown = true; }
+    else if (urlErrorShown) { setConnMessage('none', ''); urlErrorShown = false; }
     const list = $('#cal-list');
     list.replaceChildren();
     if (settings.calendars.length === 0) { list.appendChild(el('p', 'hint', Logic.t(settings.lang, 'no_calendars'))); return; }
@@ -1261,8 +1266,15 @@ const App = (() => {
     $('#btn-conn-list').addEventListener('click', async () => {
       const url = Logic.gasRequestUrl(settings.gasUrl, { action: 'list', token: settings.token });
       if (!url) { setConnMessage('error', Logic.t(settings.lang, 'invalid_url')); return; }
-      setConnMessage('none', Logic.t(settings.lang, 'updating'));
-      const res = await fetchJson(url);
+      const key = settings.gasUrl + '\n' + settings.token;
+      const btn = $('#btn-conn-list');
+      btn.disabled = true;
+      let res;
+      try {
+        setConnMessage('none', Logic.t(settings.lang, 'updating'));
+        res = await fetchJson(url);
+      } finally { btn.disabled = false; }
+      if (key !== settings.gasUrl + '\n' + settings.token) return;
       const norm = res.ok ? Logic.normalizeResponse(res.data) : { ok: false, error: res.error };
       if (!norm.ok) { setConnMessage('error', Logic.t(settings.lang, 'conn_failed', { reason: reasonText(norm.error) })); return; }
       rawUrl = '';
