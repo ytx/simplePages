@@ -1240,6 +1240,7 @@ const App = (() => {
     if (req !== areaReq) return; // 古い応答は捨てる
     if (!res.ok) {
       sel.replaceChildren();
+      sel.dataset.office = '';
       const hint = $('#loc-hint');
       hint.textContent = Logic.t(settings.lang, 'error_fetch', { reason: `JMA: ${res.error}` });
       hint.hidden = false;
@@ -1289,12 +1290,13 @@ const App = (() => {
       if (!q) return;
       const req = ++searchReq;
       hint.hidden = true;
+      areaErrorShown = false;
       const res = await fetchJson(Logic.geocodingUrl(q));
       if (req !== searchReq) return;
       results.replaceChildren();
       geoResults = res.ok ? (res.data.results || []) : [];
-      if (!res.ok) { hint.textContent = Logic.t(settings.lang, 'error_fetch', { reason: res.error }); hint.hidden = false; return; }
-      if (geoResults.length === 0) { hint.textContent = `${Logic.t(settings.lang, 'no_results')} — ${Logic.t(settings.lang, 'search_hint')}`; hint.hidden = false; return; }
+      if (!res.ok) { hint.textContent = Logic.t(settings.lang, 'error_fetch', { reason: res.error }); hint.hidden = false; areaErrorShown = false; return; }
+      if (geoResults.length === 0) { hint.textContent = `${Logic.t(settings.lang, 'no_results')} — ${Logic.t(settings.lang, 'search_hint')}`; hint.hidden = false; areaErrorShown = false; return; }
       geoResults.forEach((r, i) => {
         const parts = [r.name, r.admin1, r.country_code !== 'JP' ? r.country : null].filter(Boolean);
         const op = el('option', null, parts.join(' / '));
