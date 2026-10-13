@@ -63,7 +63,6 @@ body {
 .icon-btn svg { width: 1.3em; height: 1.3em; fill: currentColor; }
 .icon-btn.attention { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
 #content { flex: 1; min-height: 0; padding: 0 var(--gap) var(--gap); }
-#page-title { margin: 0 0 var(--gap); text-align: center; font-size: var(--fs-large); font-weight: 600; }
 #status-bar {
   display: flex; justify-content: center; align-items: center; gap: var(--gap);
   padding: calc(var(--gap) / 2) var(--gap);
@@ -113,6 +112,77 @@ button.btn.danger { color: var(--error); }
 .about h3 { margin: var(--gap) 0 calc(var(--gap) / 3); font-size: var(--fs-base); }
 .about ul { margin: 0; padding-left: 1.2em; }
 .about a { color: var(--accent); }
+/* ---- calendar ---- */
+#status-dot[data-state="warn"] { background: var(--busy); }
+#content { display: flex; flex-direction: column; gap: calc(var(--gap) / 2); }
+#no-connection { flex: 1; display: grid; place-items: center; font-size: var(--fs-large); color: var(--fg-muted); text-align: center; }
+#no-connection[hidden], #cal[hidden], #range-title[hidden], #month[hidden], #timegrid[hidden], #popover[hidden] { display: none; }
+#range-title { margin: 0; text-align: center; font-size: var(--fs-large); font-weight: 600; line-height: 1.2; }
+#cal { flex: 1; min-height: 0; display: flex; flex-direction: column; touch-action: none; user-select: none; }
+#timegrid { flex: 1; min-height: 0; display: flex; flex-direction: column; --hour-col: 3.6em; }
+#day-headers, #allday { display: grid; grid-template-columns: var(--hour-col) repeat(var(--cols, 7), 1fr); }
+#day-headers { border-bottom: 1px solid var(--border); }
+.day-head { text-align: center; padding: 0.2em 0; font-size: var(--fs-small); color: var(--fg-muted); }
+.day-head .dnum { display: inline-block; min-width: 1.6em; padding: 0.1em 0.3em; border-radius: 1em; font-size: var(--fs-base); color: var(--fg); font-weight: 600; }
+.day-head.today .dnum { background: var(--accent); color: #fff; }
+.day-head .wd { margin-left: 0.3em; }
+#allday { grid-auto-rows: 1.5em; gap: 2px 0; padding: 2px 0; border-bottom: 1px solid var(--border); min-height: calc(1.5em + 4px); }
+#allday .corner { grid-column: 1; grid-row: 1; font-size: var(--fs-small); color: var(--fg-muted); padding-right: 0.4em; text-align: right; align-self: center; }
+.bar { font-size: var(--fs-small); line-height: 1.5em; padding: 0 0.4em; margin: 0 1px; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+.bar.cont-left { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.bar.cont-right { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.bar.more { background: none; color: var(--fg-muted); cursor: default; }
+#grid { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--hour-col) repeat(var(--cols, 7), 1fr); }
+.hours { position: relative; }
+.hour-label { position: absolute; right: 0.4em; transform: translateY(-50%); font-size: var(--fs-small); color: var(--fg-muted); }
+.day-col {
+  position: relative; border-left: 1px solid var(--border); min-width: 0;
+  background-image: linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 100% calc(100% / var(--hours, 17));
+}
+.day-col.today { background-color: color-mix(in srgb, var(--accent) 6%, transparent); }
+.ev {
+  position: absolute; box-sizing: border-box; border-radius: 4px; padding: 0.1em 0.3em; overflow: hidden;
+  font-size: var(--fs-small); line-height: 1.25; min-height: 1.25em; cursor: pointer; border: 1px solid rgba(0,0,0,0.15);
+}
+.ev.clip-top { border-top-left-radius: 0; border-top-right-radius: 0; }
+.ev.clip-bottom { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.ev .ev-time { opacity: 0.85; margin-right: 0.3em; }
+.now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--error); pointer-events: none; z-index: 2; }
+.now-line::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--error); }
+#month { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+.mhead { background: var(--bg-panel); text-align: center; font-size: var(--fs-small); color: var(--fg-muted); padding: 0.2em 0; }
+.cell { background: var(--bg-panel); min-height: 0; overflow: hidden; padding: 2px 3px; font-size: var(--fs-small); }
+.cell.out { background: var(--bg); color: var(--fg-muted); }
+.cell .dnum { font-weight: 600; display: inline-block; min-width: 1.6em; text-align: center; border-radius: 1em; padding: 0 0.3em; }
+.cell.today .dnum { background: var(--accent); color: #fff; }
+.mitem { line-height: 1.35; padding: 0 0.3em; border-radius: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+.mitem:not(.allday)::before { content: ''; display: inline-block; width: 0.6em; height: 0.6em; border-radius: 50%; background: var(--dot, var(--accent)); margin-right: 0.3em; vertical-align: middle; }
+.mitem.more { color: var(--fg-muted); cursor: default; }
+#nav { display: flex; justify-content: space-between; align-items: center; gap: var(--gap); padding-top: calc(var(--gap) / 2); }
+.nav-group { display: flex; gap: var(--gap); }
+.nav-btn {
+  min-height: calc(48px * var(--zoom)); min-width: calc(48px * var(--zoom)); padding: 0 1.2em;
+  font: inherit; font-size: var(--fs-base); color: var(--fg); background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+}
+.nav-btn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+#popover {
+  position: fixed; z-index: 20; background: var(--bg-panel); color: var(--fg); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: 0 6px 20px rgba(0,0,0,0.25); padding: var(--gap); max-width: min(90vw, 26em); max-height: 60vh; overflow: auto;
+}
+.pop-title { font-weight: 600; font-size: var(--fs-base); margin-bottom: 0.3em; }
+.pop-line { font-size: var(--fs-small); margin: 0.15em 0; }
+.pop-line.muted { color: var(--fg-muted); }
+.pop-desc { font-size: var(--fs-small); margin-top: 0.5em; white-space: pre-wrap; }
+#cal-list { display: grid; gap: 0.3em; margin: 0.5em 0; }
+#cal-list label { display: flex; align-items: center; gap: 0.5em; }
+#cal-list input[type="color"] { width: 2.2em; height: 1.6em; padding: 0; border: 1px solid var(--border); }
+#conn-message { min-height: 1.4em; margin: 0.3em 0; }
+#conn-message[data-state="error"] { color: var(--error); }
+textarea#gas-code { width: 100%; min-height: 12em; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: var(--fs-small); }
+.steps { padding-left: 1.4em; font-size: var(--fs-small); }
+.steps li { margin: 0.3em 0; }
 </style>
 </head>
 <body>
@@ -136,8 +206,30 @@ button.btn.danger { color: var(--error); }
   <button id="btn-settings" class="icon-btn" type="button" data-i18n-label="settings"><svg aria-hidden="true"><use href="#icon-settings"></use></svg></button>
 </header>
 <main id="content">
-  <h1 id="page-title" data-i18n="page_title"></h1>
+  <div id="no-connection" hidden><span data-i18n="set_connection_hint"></span></div>
+  <h1 id="range-title"></h1>
+  <div id="cal">
+    <div id="timegrid">
+      <div id="day-headers"></div>
+      <div id="allday"></div>
+      <div id="grid"></div>
+    </div>
+    <div id="month" hidden></div>
+  </div>
+  <nav id="nav">
+    <div class="nav-group">
+      <button class="nav-btn" id="btn-prev" type="button" data-i18n="prev"></button>
+      <button class="nav-btn" id="btn-today" type="button" data-i18n="today"></button>
+      <button class="nav-btn" id="btn-next" type="button" data-i18n="next"></button>
+    </div>
+    <div class="nav-group" role="group">
+      <button class="nav-btn view-btn" type="button" data-view="day" aria-pressed="false" data-i18n="view_day"></button>
+      <button class="nav-btn view-btn" type="button" data-view="week" aria-pressed="false" data-i18n="view_week"></button>
+      <button class="nav-btn view-btn" type="button" data-view="month" aria-pressed="false" data-i18n="view_month"></button>
+    </div>
+  </nav>
 </main>
+<div id="popover" hidden role="dialog" aria-live="polite"></div>
 <footer id="status-bar">
   <span id="clock"></span>
   <span id="status-message"></span>
@@ -149,18 +241,122 @@ button.btn.danger { color: var(--error); }
     <button id="settings-close" class="icon-btn" type="button" data-i18n-label="close"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button>
   </div>
   <div class="tabs" role="tablist">
+    <button role="tab" data-tab="connection" data-i18n="tab_connection"></button>
     <button role="tab" data-tab="general" aria-selected="true" data-i18n="tab_general"></button>
     <button role="tab" data-tab="display" data-i18n="tab_display"></button>
     <button role="tab" data-tab="data" data-i18n="tab_data"></button>
     <button role="tab" data-tab="about" data-i18n="tab_about"></button>
   </div>
   <div class="tab-body">
+    <section class="tab-panel" data-panel="connection">
+      <div class="field">
+        <label for="set-gas-url" data-i18n="gas_url"></label>
+        <input id="set-gas-url" type="url" data-setting="gasUrl" placeholder="https://script.google.com/macros/s/…/exec" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="set-token" data-i18n="token"></label>
+        <input id="set-token" type="text" data-setting="token" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="row">
+        <button type="button" class="btn" id="btn-conn-list" data-i18n="conn_list"></button>
+      </div>
+      <div id="conn-message" data-state="none"></div>
+      <h3 data-i18n="calendars_label"></h3>
+      <div id="cal-list"></div>
+      <p class="hint" data-i18n="storage_note"></p>
+      <h3 data-i18n="gas_steps_title"></h3>
+      <ol class="steps">
+        <li data-i18n="gas_step1"></li>
+        <li data-i18n="gas_step2"></li>
+        <li data-i18n="gas_step3"></li>
+        <li data-i18n="gas_step4"></li>
+        <li data-i18n="gas_step5"></li>
+      </ol>
+      <p class="hint" data-i18n="gas_code_label"></p>
+      <textarea id="gas-code" readonly spellcheck="false">// simplePages calendar — Google Apps Script ウェブアプリ
+// デプロイ: 種類「ウェブアプリ」/ 次のユーザーとして実行「自分」/ アクセスできるユーザー「全員」
+// 設定を変えたら「デプロイを管理」から同じデプロイを新バージョンで更新する(URL は変わらない)。
+
+const TOKEN = ''; // 空なら認証なし。値を入れたら calendar ページの「トークン」にも同じ値を入れる
+const MAX_DAYS = 100;
+
+// CalendarEvent.getColor() は色番号("1"〜"11")を返すので 16 進に変換する
+const EVENT_COLORS = {
+  '1': '#a4bdfc', '2': '#7ae7bf', '3': '#dbadff', '4': '#ff887c', '5': '#fbd75b', '6': '#ffb878',
+  '7': '#46d6db', '8': '#e1e1e1', '9': '#5484ed', '10': '#51b749', '11': '#dc2127',
+};
+
+function doGet(e) {
+  const p = (e &amp;&amp; e.parameter) || {};
+  try {
+    if (TOKEN &amp;&amp; p.token !== TOKEN) return json({ ok: false, error: 'unauthorized' });
+    const tz = Session.getScriptTimeZone();
+    if (p.action === 'list') return json({ ok: true, tz: tz, generatedAt: iso(new Date(), tz), calendars: listCalendars() });
+    const from = parseYmd(p.from), to = parseYmd(p.to);
+    if (!from || !to || to &lt;= from) return json({ ok: false, error: 'bad_request' });
+    if (Math.round((to - from) / 86400000) &gt; MAX_DAYS) return json({ ok: false, error: 'range_too_large' });
+    const wanted = p.cal ? String(p.cal).split(',').map(function (s) { return s.trim(); }).filter(Boolean) : null;
+    const calendars = wanted
+      ? wanted.map(function (id) { return CalendarApp.getCalendarById(id) || { missing: id }; })
+      : CalendarApp.getAllCalendars();
+    const outCals = [], events = [], errors = [];
+    calendars.forEach(function (c) {
+      if (c.missing) { errors.push({ calendarId: c.missing, error: 'not_found' }); return; }
+      const id = c.getId(), calColor = hex(c.getColor());
+      outCals.push({ id: id, name: c.getName(), color: calColor });
+      try {
+        c.getEvents(from, to).forEach(function (ev) {
+          const allDay = ev.isAllDayEvent();
+          events.push({
+            id: ev.getId() + '_' + Utilities.formatDate(ev.getStartTime(), 'UTC', "yyyyMMdd'T'HHmmss'Z'"), calendarId: id, title: ev.getTitle(),
+            start: allDay ? ymd(ev.getAllDayStartDate(), tz) : iso(ev.getStartTime(), tz),
+            end: allDay ? ymd(ev.getAllDayEndDate(), tz) : iso(ev.getEndTime(), tz),
+            allDay: allDay,
+            location: ev.getLocation() || '',
+            description: plainText(ev.getDescription() || ''),
+            color: EVENT_COLORS[ev.getColor()] || calColor,
+          });
+        });
+      } catch (err) {
+        errors.push({ calendarId: id, error: String((err &amp;&amp; err.message) || err) });
+      }
+    });
+    return json({ ok: true, tz: tz, generatedAt: iso(new Date(), tz), calendars: outCals, events: events, errors: errors });
+  } catch (err) {
+    return json({ ok: false, error: 'internal', detail: String((err &amp;&amp; err.message) || err) });
+  }
+}
+
+function listCalendars() {
+  return CalendarApp.getAllCalendars().map(function (c) { return { id: c.getId(), name: c.getName(), color: hex(c.getColor()) }; });
+}
+function parseYmd(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+}
+function iso(d, tz) { return Utilities.formatDate(d, tz, "yyyy-MM-dd'T'HH:mm:ssXXX"); }
+function ymd(d, tz) { return Utilities.formatDate(d, tz, 'yyyy-MM-dd'); }
+function hex(c) { const m = /^#?([0-9a-fA-F]{6})$/.exec(String(c || '')); return m ? '#' + m[1].toLowerCase() : ''; }
+// 説明は HTML で返ることがあるのでタグを落として改行だけ残す
+function plainText(s) {
+  return String(s).replace(/&lt;br\s*\/?&gt;/gi, '\n').replace(/&lt;\/p&gt;/gi, '\n').replace(/&lt;[^&gt;]+&gt;/g, '')
+    .replace(/&amp;nbsp;/g, ' ').replace(/&amp;lt;/g, '&lt;').replace(/&amp;gt;/g, '&gt;').replace(/&amp;quot;/g, '"').replace(/&amp;#39;/g, "'").replace(/&amp;amp;/g, '&amp;')
+    .replace(/\n{3,}/g, '\n\n').trim();
+}
+function json(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+</textarea>
+    </section>
     <section class="tab-panel active" data-panel="general">
       <div class="field">
         <label for="set-refresh" data-i18n="refresh_minutes"></label>
         <input id="set-refresh" type="number" min="1" max="120" data-setting="refreshMinutes">
       </div>
-      <div id="settings-extra-general"></div>
+      <div class="field">
+        <label for="set-return" data-i18n="return_minutes"></label>
+        <input id="set-return" type="number" min="0" max="60" data-setting="returnToTodayMinutes">
+      </div>
     </section>
     <section class="tab-panel" data-panel="display">
       <div class="field">
@@ -178,7 +374,29 @@ button.btn.danger { color: var(--error); }
           <option value="dark" data-i18n="theme_dark"></option>
         </select>
       </div>
-      <div id="settings-extra-display"></div>
+      <div class="field">
+        <label for="set-view" data-i18n="default_view"></label>
+        <select id="set-view" data-setting="view">
+          <option value="day" data-i18n="view_day"></option>
+          <option value="week" data-i18n="view_week"></option>
+          <option value="month" data-i18n="view_month"></option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="set-week-start" data-i18n="week_start"></label>
+        <select id="set-week-start" data-setting="weekStart">
+          <option value="0" data-i18n="week_start_sun"></option>
+          <option value="1" data-i18n="week_start_mon"></option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="set-day-start" data-i18n="day_start"></label>
+        <input id="set-day-start" type="number" min="0" max="23" data-setting="dayStart">
+      </div>
+      <div class="field">
+        <label for="set-day-end" data-i18n="day_end"></label>
+        <input id="set-day-end" type="number" min="1" max="24" data-setting="dayEnd">
+      </div>
     </section>
     <section class="tab-panel" data-panel="data">
       <div class="row">
