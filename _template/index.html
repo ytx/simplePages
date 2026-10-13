@@ -411,6 +411,7 @@ const App = (() => {
   const SCHEMA = {
     lang: { type: 'enum', values: ['ja', 'en'], default: Logic.detectLang(navigator.language) },
     theme: { type: 'enum', values: ['auto', 'light', 'dark'], default: 'auto' },
+    zoom: { type: 'int', min: 50, max: 200, default: 100 },
     refreshMinutes: { type: 'int', min: 1, max: 120, default: 10 },
   };
   const IDLE_MS = 10000;
@@ -419,6 +420,7 @@ const App = (() => {
   let nextRefreshAt = 0;
   let refreshTimer = null;
   let idleTimer = null;
+  let toolbarAttention = false;
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -453,19 +455,67 @@ const App = (() => {
   function applyI18n() {
     document.documentElement.lang = settings.lang;
     for (const el of $$('[data-i18n]')) el.textContent = Logic.t(settings.lang, el.dataset.i18n);
+    for (const el of $$('[data-i18n-label]')) el.setAttribute('aria-label', Logic.t(settings.lang, el.dataset.i18nLabel));
+    updateFullscreenButton();
+  }
+
+  function currentTheme() {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return Logic.effectiveTheme(settings.theme, prefersDark);
   }
 
   function applyTheme() {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    document.documentElement.dataset.theme = Logic.effectiveTheme(settings.theme, prefersDark);
+    const theme = currentTheme();
+    document.documentElement.dataset.theme = theme;
+    // アイコンは「切替先」を表す: ライト表示中は月、ダーク表示中は太陽。
+    $('#btn-theme use').setAttribute('href', theme === 'dark' ? '#icon-light-mode' : '#icon-dark-mode');
+  }
+
+  function applyZoom(zoom) {
+    document.documentElement.style.setProperty('--zoom', String(zoom / 100));
+    $('#btn-zoom-in').disabled = Logic.stepZoom(zoom, 1) === zoom;
+    $('#btn-zoom-out').disabled = Logic.stepZoom(zoom, -1) === zoom;
   }
 
   function applySettings() {
     applyI18n();
     applyTheme();
+    applyZoom(settings.zoom);
     for (const el of $$('[data-setting]')) el.value = settings[el.dataset.setting];
     renderSettingsExtra(settings);
     scheduleRefresh(0);
+  }
+
+  function updateFullscreenButton() {
+    const btn = $('#btn-fullscreen');
+    if (!document.fullscreenEnabled) { btn.hidden = true; return; }
+    const on = !!document.fullscreenElement;
+    btn.querySelector('use').setAttribute('href', on ? '#icon-fullscreen-exit' : '#icon-fullscreen');
+    btn.setAttribute('aria-label', Logic.t(settings.lang, on ? 'exit_fullscreen' : 'fullscreen'));
+  }
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch { /* ユーザー操作なしで拒否された場合など。無視して現状維持 */ }
+  }
+
+  // ページ側が true にすると減光せず、設定ボタンを強調する(例: 必須設定が未入力)。
+  function setToolbarAttention(on) {
+    toolbarAttention = !!on;
+    $('#btn-settings').classList.toggle('attention', toolbarAttention);
+    if (toolbarAttention) $('#toolbar').classList.remove('idle');
+  }
+
+  function bindToolbar() {
+    $('#btn-theme').addEventListener('click', () => updateSettings({ theme: Logic.toggleTheme(currentTheme()) }));
+    $('#btn-zoom-in').addEventListener('click', () => updateSettings({ zoom: Logic.stepZoom(settings.zoom, 1) }));
+    $('#btn-zoom-out').addEventListener('click', () => updateSettings({ zoom: Logic.stepZoom(settings.zoom, -1) }));
+    $('#btn-fullscreen').addEventListener('click', toggleFullscreen);
+    document.addEventListener('fullscreenchange', updateFullscreenButton);
+    $('#btn-lang').addEventListener('click', () => updateSettings({ lang: Logic.toggleLang(settings.lang) }));
+    $('#btn-settings').addEventListener('click', () => $('#settings').showModal());
   }
 
   function setStatus(state, message) {
@@ -522,14 +572,13 @@ const App = (() => {
   }
 
   function resetIdle() {
-    $('#btn-settings').classList.remove('idle');
+    $('#toolbar').classList.remove('idle');
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => $('#btn-settings').classList.add('idle'), IDLE_MS);
+    idleTimer = setTimeout(() => { if (!toolbarAttention) $('#toolbar').classList.add('idle'); }, IDLE_MS);
   }
 
   function bindSettingsDialog() {
     const dlg = $('#settings');
-    $('#btn-settings').addEventListener('click', () => dlg.showModal());
     $('#settings-close').addEventListener('click', () => dlg.close());
     for (const tab of $$('[role="tab"]')) {
       tab.addEventListener('click', () => {
@@ -572,18 +621,19 @@ const App = (() => {
   function init() {
     loadSettings();
     bindSettingsDialog();
+    bindToolbar();
     applySettings();
     tickClock();
     setInterval(tickClock, 1000);
     document.addEventListener('visibilitychange', onVisibility);
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-    for (const ev of ['mousemove', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
+    for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
     resetIdle();
   }
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh, fetchJson };
+  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh, fetchJson, applyZoom, setToolbarAttention };
 })();
 </script>
 </body>
