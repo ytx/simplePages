@@ -47,7 +47,7 @@ localStorage キー `simplePages.weather`:
 {
   "version": 1,
   "settings": {
-    "lang": "ja", "theme": "auto", "refreshMinutes": 10,
+    "lang": "ja", "theme": "auto", "zoom": 100, "refreshMinutes": 10,
     "hourlyStep": 3, "hourlyCount": 16, "dailyDays": 7,
     "location": { "name": "千葉市", "lat": 35.6, "lon": 140.11667, "jmaOffice": "120000", "jmaClass10": "120010", "jmaClass10Name": "北西部" }
   }

@@ -1042,7 +1042,7 @@ const App = (() => {
     const prev = settings;
     settings = Logic.resolveSettings(SCHEMA, { ...settings, ...patch }, {});
     settings.location = Logic.validLocation(settings.location);
-    if (JSON.stringify(prev.location) !== JSON.stringify(settings.location)) { lastModel = null; refreshSeq++; }
+    if (JSON.stringify(prev.location) !== JSON.stringify(settings.location)) { lastModel = null; lastOkAt = null; refreshSeq++; }
     storage.write(settings);
     applySettings();
     const changed = (k) => JSON.stringify(prev[k]) !== JSON.stringify(settings[k]);
@@ -1143,6 +1143,7 @@ const App = (() => {
   let lastOkAt = null;
   let jmaCache = null; // { office, json } 気象庁は更新が少ないので同一地点なら失敗時に再利用
 
+  // API 呼び出しはすべてこの fetchJson を使う(タイムアウトと失敗理由の整形を共通化)。
   const FETCH_TIMEOUT_MS = 20000;
   async function fetchJson(url) {
     try {
@@ -1229,6 +1230,7 @@ const App = (() => {
   }
 
   let areaReq = 0;
+  let areaErrorShown = false; // #loc-hint がエリア取得エラーを表示中か
   async function fillAreaSelect(officeCode, selectedCode) {
     const sel = $('#loc-area');
     const req = ++areaReq;
@@ -1236,7 +1238,15 @@ const App = (() => {
     if (!officeCode) { sel.replaceChildren(); sel.dataset.office = ''; return; }
     const res = await fetchJson(Logic.jmaForecastUrl(officeCode));
     if (req !== areaReq) return; // 古い応答は捨てる
-    if (!res.ok) { sel.replaceChildren(); setStatus('error', Logic.t(settings.lang, 'error_fetch', { reason: `JMA: ${res.error}` })); return; }
+    if (!res.ok) {
+      sel.replaceChildren();
+      const hint = $('#loc-hint');
+      hint.textContent = Logic.t(settings.lang, 'error_fetch', { reason: `JMA: ${res.error}` });
+      hint.hidden = false;
+      areaErrorShown = true;
+      return;
+    }
+    if (areaErrorShown) { const hint = $('#loc-hint'); hint.hidden = true; hint.textContent = ''; areaErrorShown = false; }
     const areas = res.data?.[0]?.timeSeries?.[0]?.areas ?? [];
     const opts = areas.map((a) => { const op = el('option', null, a.area.name); op.value = a.area.code; op.dataset.name = a.area.name; return op; });
     sel.replaceChildren(...opts);
@@ -1249,7 +1259,7 @@ const App = (() => {
     $('#loc-query').placeholder = Logic.t(settings.lang, 'search_placeholder');
     fillOfficeSelect(loc?.jmaOffice);
     const areaSel = $('#loc-area');
-    if ((loc?.jmaOffice || '') !== (areaSel.dataset.office || '') || areaSel.options.length === 0) {
+    if ((loc?.jmaOffice || '') !== (areaSel.dataset.office || '')) {
       fillAreaSelect(loc?.jmaOffice, loc?.jmaClass10);
     } else if (loc?.jmaClass10) {
       areaSel.value = loc.jmaClass10;
@@ -1469,9 +1479,11 @@ const App = (() => {
     clearTimeout(refreshTimer);
     const delay = delayMs ?? settings.refreshMinutes * 60000;
     nextRefreshAt = Date.now() + delay;
-    refreshTimer = setTimeout(async () => {
-      try { await refresh(); } finally { scheduleRefresh(); }
+    // 古い更新の finally が新しい予約を消さないように、自分のタイマーが現役のときだけ再予約する
+    const mine = setTimeout(async () => {
+      try { await refresh(); } finally { if (refreshTimer === mine) scheduleRefresh(); }
     }, delay);
+    refreshTimer = mine;
   }
 
   function onVisibility() {

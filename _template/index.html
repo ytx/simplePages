@@ -582,9 +582,11 @@ const App = (() => {
     clearTimeout(refreshTimer);
     const delay = delayMs ?? settings.refreshMinutes * 60000;
     nextRefreshAt = Date.now() + delay;
-    refreshTimer = setTimeout(async () => {
-      try { await refresh(); } finally { scheduleRefresh(); }
+    // 古い更新の finally が新しい予約を消さないように、自分のタイマーが現役のときだけ再予約する
+    const mine = setTimeout(async () => {
+      try { await refresh(); } finally { if (refreshTimer === mine) scheduleRefresh(); }
     }, delay);
+    refreshTimer = mine;
   }
 
   function onVisibility() {
