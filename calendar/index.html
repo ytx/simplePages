@@ -1393,10 +1393,11 @@ const App = (() => {
     showRange();
   }
   // 今日以外を見ているときだけ、無操作 returnToTodayMinutes 分で今日へ戻す
+  function rangeContainsNow() { const now = new Date(); const r = currentRange(); return r.from <= now && now < r.to; }
   function scheduleReturnToToday() {
     clearTimeout(returnTimer);
     const mins = settings.returnToTodayMinutes;
-    if (mins > 0 && !Logic.isToday(anchor, new Date())) returnTimer = setTimeout(goToday, mins * 60000);
+    if (mins > 0 && !rangeContainsNow()) returnTimer = setTimeout(goToday, mins * 60000);
   }
 
   function bindNav() {
@@ -1414,6 +1415,7 @@ const App = (() => {
       if (Logic.isSwipe(dx, dy)) navigate(dx < 0 ? 1 : -1);
     });
     cal.addEventListener('pointercancel', () => { down = null; });
+    for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, scheduleReturnToToday, { passive: true });
     document.addEventListener('pointerdown', (e) => {
       const pop = $('#popover');
       if (!pop.hidden && !pop.contains(e.target)) hidePopover();
@@ -1444,6 +1446,7 @@ const App = (() => {
     if (ev.location) pop.appendChild(el('div', 'pop-line', `${Logic.t(settings.lang, 'location_label')}: ${ev.location}`));
     if (ev.description) pop.appendChild(el('div', 'pop-desc', ev.description));
     pop.hidden = false;
+    pop.style.left = '0px'; pop.style.top = '0px';
     const r = anchorEl.getBoundingClientRect();
     const pw = pop.offsetWidth, ph = pop.offsetHeight, gap = 6;
     const left = Math.min(Math.max(gap, r.left), window.innerWidth - pw - gap);
@@ -1636,7 +1639,7 @@ const App = (() => {
     setInterval(updateNowLine, 60000);
     // 日付が変わったら今日の列と月グリッドを更新する
     let dayKey = Logic.ymd(new Date());
-    setInterval(() => { const k = Logic.ymd(new Date()); if (k !== dayKey) { dayKey = k; showRange(); } }, 30000);
+    setInterval(() => { const k = Logic.ymd(new Date()); if (k !== dayKey) { if (Logic.ymd(anchor) === dayKey) anchor = Logic.startOfDay(new Date()); dayKey = k; showRange(); } }, 30000);
     let resizeTimer = null;
     window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 300); });
     resetIdle();
