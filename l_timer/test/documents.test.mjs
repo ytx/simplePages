@@ -77,7 +77,7 @@ test('importLegacyHtml: headings, lists, bold, entities, blank paragraphs, unkno
     { type: 'li', runs: [{ text: 'one', bold: false }] },
     { type: 'li', runs: [{ text: 'two', bold: false }] },
     { type: 'li', runs: [{ text: 'three', bold: false }] },
-    { type: 'p', runs: [{ text: "red text 'q'", bold: false }] },
+    { type: 'p', runs: [{ text: "red text\u00a0'q'", bold: false }] },
   ]);
   assert.deepEqual(Logic.importLegacyHtml(''), Logic.emptyBlocks());
   assert.deepEqual(Logic.importLegacyHtml(null), Logic.emptyBlocks());
@@ -85,6 +85,7 @@ test('importLegacyHtml: headings, lists, bold, entities, blank paragraphs, unkno
   assert.deepEqual(Logic.importLegacyHtml('<h2>T</h2>\n  <p>x</p>'), [{ type: 'h', runs: [{ text: 'T', bold: false }] }, P('x')]);
   assert.deepEqual(Logic.importLegacyHtml('<p><b>a</b><strong>b</strong>c &lt;tag&gt; &#x41;</p>'), [{ type: 'p', runs: [{ text: 'ab', bold: true }, { text: 'c <tag> A', bold: false }] }]);
   assert.deepEqual(Logic.importLegacyHtml('loose text'), [P('loose text')]);
+  assert.deepEqual(Logic.importLegacyHtml('<p>a\u00a0b</p>'), [P('a\u00a0b')]);
 });
 
 test('isLegacyExport / parseLegacyExport map the old keys', () => {

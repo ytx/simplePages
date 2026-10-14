@@ -826,7 +826,7 @@ const Logic = (() => {
   }
 
   // ---- 旧 l_timerからの取り込み。DOM を使わない簡易トークナイザ ----
-  const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+  const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' };
   function decodeEntities(s) {
     return s.replace(/&(#x([0-9a-f]+)|#(\d+)|([a-z]+));/gi, (m, _g, hex, dec, name) => {
       if (hex) return String.fromCodePoint(parseInt(hex, 16));
@@ -853,7 +853,7 @@ const Logic = (() => {
       else cur.runs.push({ text: txt, bold: b });
     };
     for (const m of String(html ?? '').matchAll(/<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>|[^<]+/g)) {
-      if (m[1] === undefined) { addText(decodeEntities(m[0].replace(/\s+/g, ' '))); continue; }
+      if (m[1] === undefined) { addText(decodeEntities(m[0].replace(/[ \t\r\n\f]+/g, ' '))); continue; }
       const tag = m[1].toLowerCase();
       const closing = m[0].startsWith('</');
       if (tag === 'br') { ensure(); flush(); continue; }
