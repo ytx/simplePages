@@ -1786,28 +1786,48 @@ const App = (() => {
       return false;
     };
     const isList = (n) => n.nodeType === 1 && (n.tagName === 'UL' || n.tagName === 'OL');
-    const pushBlock = (type, el) => {
-      const runs = [];
-      const walk = (node) => {
-        for (const c of node.childNodes) {
-          if (c.nodeType === 3) {
-            if (!c.nodeValue) continue;
-            const b = isBold(c);
-            const last = runs[runs.length - 1];
-            if (last && last.bold === b) last.text += c.nodeValue;
-            else runs.push({ text: c.nodeValue, bold: b });
-          } else if (c.nodeType === 1 && c.tagName !== 'BR' && !isList(c)) {
-            walk(c);
-          }
+    // 要素内の text を emit(text, bold) で流し、BR で onBreak() を呼ぶ。リストは辿らない。
+    const collectRuns = (node, emit, onBreak) => {
+      for (const c of node.childNodes) {
+        if (c.nodeType === 3) {
+          if (c.nodeValue) emit(c.nodeValue, isBold(c));
+        } else if (c.nodeType === 1 && !isList(c)) {
+          if (c.tagName === 'BR') onBreak();
+          else collectRuns(c, emit, onBreak);
         }
-      };
-      walk(el);
-      blocks.push({ type, runs });
+      }
+    };
+    const addRun = (runs, text, bold) => {
+      const last = runs[runs.length - 1];
+      if (last && last.bold === bold) last.text += text;
+      else runs.push({ text, bold });
+    };
+    // BR は同じ種類の新しいブロックを始める。末尾の BR(プレースホルダ)は空ブロックを増やさない。
+    const pushBlock = (type, el) => {
+      let runs = [];
+      let pushed = 0;
+      collectRuns(el, (t, b) => addRun(runs, t, b), () => { blocks.push({ type, runs }); runs = []; pushed++; });
+      if (runs.length || !pushed) blocks.push({ type, runs });
+    };
+    const INLINE = /^(STRONG|B|EM|I|U|S|SPAN|FONT|A|CODE|MARK|SMALL|SUB|SUP)$/;
+    let pending = [];
+    const flushPending = (force) => {
+      if (pending.length || force) blocks.push({ type: 'p', runs: pending });
+      pending = [];
     };
     const visit = (node) => {
       for (const c of node.childNodes) {
-        if (c.nodeType === 3) { if (c.nodeValue.trim()) blocks.push({ type: 'p', runs: [{ text: c.nodeValue, bold: false }] }); continue; }
+        if (c.nodeType === 3) {
+          if (c.nodeValue && (pending.length || c.nodeValue.trim())) addRun(pending, c.nodeValue, isBold(c));
+          continue;
+        }
         if (c.nodeType !== 1) continue;
+        if (c.tagName === 'BR') { flushPending(true); continue; }
+        if (INLINE.test(c.tagName)) {
+          collectRuns({ childNodes: [c] }, (t, b) => addRun(pending, t, b), () => flushPending(true));
+          continue;
+        }
+        flushPending(false);
         if (isList(c)) {
           for (const li of c.children) {
             if (li.tagName !== 'LI') continue;
@@ -1816,11 +1836,11 @@ const App = (() => {
           }
         } else if (/^H[1-6]$/.test(c.tagName)) pushBlock('h', c);
         else if (c.tagName === 'LI') pushBlock('li', c);
-        else if (c.tagName === 'BR') blocks.push({ type: 'p', runs: [] });
         else pushBlock('p', c);
       }
     };
     visit(root);
+    flushPending(false);
     return Logic.normalizeBlocks(blocks);
   }
 
