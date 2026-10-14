@@ -826,6 +826,7 @@ const App = (() => {
   let timer = null;        // Logic の TimerState
   let tickTimer = null;
   let endTimer = null;
+  let armedEndAt = null;
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   function buildClockFace() {
@@ -881,11 +882,15 @@ const App = (() => {
     renderTimer(now);
   }
 
-  // 背景タブでは setInterval が間引かれるので、終了時刻ちょうどに 1 回だけ鳴らすタイマーも持つ
+  // 背景タブでは setInterval が間引かれるので、終了時刻ちょうどに 1 回だけ鳴らすタイマーも持つ。
+  // ユーザー操作から作り、250 ms の tick では触らない(tick 内で作り直すと連鎖タイマー扱いで間引かれる)。
   function armEndTimer(now) {
+    if (timer.phase === 'running' && timer.endAt === armedEndAt && endTimer !== null) return;
     clearTimeout(endTimer);
     endTimer = null;
+    armedEndAt = null;
     if (timer.phase !== 'running') return;
+    armedEndAt = timer.endAt;
     endTimer = setTimeout(tick, Math.max(0, timer.endAt - now));
   }
 
@@ -1023,7 +1028,7 @@ const App = (() => {
     a.play().catch((e) => {
       const name = e && e.name;
       if (name === 'AbortError') return;          // 鳴り始める前に止められた
-      if (name === 'NotAllowedError') { startBeep(); return; } // 自動再生拒否: ビープ(AudioContext があれば)と点滅
+      if (name === 'NotAllowedError') { if (timer && timer.phase === 'alarm') startBeep(); return; } // 自動再生拒否: ビープ(AudioContext があれば)と点滅
       markAudioBroken();
     });
   }
@@ -1086,6 +1091,7 @@ const App = (() => {
     document.addEventListener('pointerdown', onAnyInput, true);
     document.addEventListener('keydown', onAnyInput, true);
     document.addEventListener('keyup', onKeyUp, true);
+    window.addEventListener('blur', onKeyUp);
     document.addEventListener('click', swallowClickAfterStop, true);
     $('#btn-start').addEventListener('click', unlockAudio, true); // 状態変更(bubble)より先に capture で
     $('#btn-preview').addEventListener('click', togglePreview);
