@@ -7,6 +7,7 @@
 
 simplePages は、独立した小さな Web ページを `<page>/index.html` として集めるリポジトリである。
 各ページは index.html 単体で動作し、ビルド工程も外部読込も持たない。
+例外: 同じページディレクトリ内のメディアファイル(音声・画像)は相対パスで読み込んでよい(例: `k_timer/audio/*.wav`)。`src` に入れるパスは index.html 内の定数リストに限り、設定値や URL クエリの文字列をそのまま `src` に渡さない。CDN・他ドメイン・他ページディレクトリの参照は引き続き禁止。
 本書は全ページが従う共通規約と、新ページの起点となるひな形を定める。
 
 参考にした既存プロジェクト: ../mqtt_p(Bootstrap CDN + 単一 HTML)、../l_timer(js/css 分離、i18n)、../b_report(単一 HTML + script.js)。

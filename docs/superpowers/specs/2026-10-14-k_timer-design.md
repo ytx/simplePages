@@ -89,7 +89,7 @@ k_timer/
 | `preset(s, minutes)` | `startMs = remainingMs = minutes*60000`、idle | 同左(停止する) | 同左 | 同左、音停止 |
 | `adjust(s, deltaMs, now)` | `remainingMs = clamp(remainingMs + delta, 0, MAX)`、`startMs = remainingMs` | `endAt += delta`。`endAt - now <= 0` なら alarm(`endAt = now`) | idle と同じ(`startMs` も更新) | 無視 |
 | `zero(s, now)` | `remainingMs = floor(remainingMs / 60000) * 60000`、`startMs` も同じ | `endAt` を分単位に切り下げ(`endAt` の秒・ミリ秒を 00 に)。結果が `now` 以下なら alarm | idle と同じ | 無視 |
-| `tick(s, now)` | 変化なし | `endAt - now <= 0` なら alarm | 変化なし | 変化なし |
+| `tick(s, now)` | 変化なし | `endAt - now <= 0` なら alarm(endAt はそのまま。超過は予定の終了時刻から数える) | 変化なし | 変化なし |
 
 - `MAX = 180 * 60000`(3 時間)。
 - `adjust` の delta は `-600000, -60000, -30000, +30000, +60000, +600000`。
@@ -111,6 +111,7 @@ k_timer/
 - `<audio id="alarm-audio" loop preload="auto">` 1 要素。`src` は `SOUNDS = { 'sound2-1': 'audio/sound2-1.wav', ... }` から `settings.sound` で選ぶ(キーが辞書にないときは既定)。
 - `alarm` 開始で `audio.currentTime = 0; audio.volume = settings.volume / 100; audio.play()`。
 - **停止条件**(いずれか): `document` の `pointerdown`、`keydown`、ストップ/リセット/プリセット押下。設定モーダル内の操作や右上ツールバーの操作も `pointerdown` として止める(どこを触っても止まる)。止めたら `start(s)` の alarm 遷移と同じく idle(`remainingMs = startMs`)。
+- 止めた直後の click は飲み込む(ボタンを叩いて止めたとき、そのボタンを作動させない)。長押しや Enter の自動リピートでも作動しない。
 - 自動再生制限: スタート押下(ユーザー操作)時に `audio.load()` し、`audio.play().then(() => audio.pause())` を一度実行して再生許可を得る(`volume` は 0 にして無音で)。これが reject されても無視し、alarm 時の `play()` で再試行する。
 - 読込失敗(`audio` の `error` イベント、または `play()` が `NotSupportedError`/`NotAllowedError` 以外で reject): ステータス赤 `error_audio`、Web Audio API で 880 Hz 0.2 s のビープを 0.6 s 周期で鳴らすフォールバック(`AudioContext` はスタート押下時に生成)。
 - 試聴ボタン(設定 → タイマー タブ): 選択中の音を 1 回(loop なし)再生、もう一度押すか音の変更で停止。alarm 中は試聴しない。
@@ -135,7 +136,7 @@ localStorage キー `simplePages.k_timer`、`version: 1`。
 
 - 全キーが表示専用なので `DISPLAY_ONLY_KEYS` に全部入れる(`refresh()` は空)。
 - `coerce` に `type: 'bool'` を追加する(テンプレートにはまだない)。受理する値は `true`/`false`(boolean)と文字列 `'1'`/`'0'`/`'true'`/`'false'`。それ以外は `undefined`(既定値へ)。`_template/index.html` と weather / calendar の共通 Logic にも同じ実装を入れ、テンプレートのテストに追加する。
-- 設定モーダルのタブ: 一般 / 表示 / タイマー / データ / About。
+- 設定モーダルのタブ: 表示 / タイマー / データ / About(一般タブは更新間隔がないため置かない)。
   - 表示タブに「秒針を表示」。
   - タイマータブ: プリセット 1〜3(number)、終了音(select)+「試聴」ボタン、音量(range 0〜100 と数値表示)、「終了時に画面を点滅」(checkbox)。
 - プリセット変更は即座にボタン表記へ反映。idle のときは `startMs`/`remainingMs` も `preset1` に追従させない(ユーザーがプリセットを押すまで現在値を保つ)。
