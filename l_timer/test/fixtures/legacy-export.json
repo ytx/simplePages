@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "exportDate": "2026-04-20T05:00:00.000Z",
+  "settings": {
+    "timerSettings": {
+      "volume": 0.7,
+      "lectureTime": 90,
+      "break1Time": 15,
+      "break2Time": 45,
+      "selectedBreakType": 1,
+      "warningTime": 5,
+      "tickInterval": 30,
+      "sound1Src": "audio/sound1-2.wav",
+      "sound2Src": "audio/sound2-3.wav",
+      "sound3Src": "audio/sound9-9.wav",
+      "isMuted": true,
+      "defaultExerciseTime": 20,
+      "defaultNextExerciseTime": 10
+    },
+    "editorSettings": { "isVisible": true, "zoomLevel": 125, "currentZoomIndex": 3 },
+    "layoutLeftWidth": "40",
+    "timerTheme": "dark"
+  },
+  "documents": {
+    "documents": [
+      {
+        "id": "doc_1700000000000",
+        "title": "第 1 回",
+        "content": {
+          "delta": { "ops": [{ "insert": "Intro\n" }] },
+          "html": "<h1>Intro</h1><p>Hello <strong>world</strong> &amp; <em>friends</em></p><p><br></p><ul><li>one</li><li>two<ul><li>three</li></ul></li></ul><p class=\"ql-align-center\"><span style=\"color: red;\">red</span> text&nbsp;&#39;q&#39;</p>"
+        },
+        "createdAt": "2026-04-01T00:00:00.000Z",
+        "updatedAt": "2026-04-02T00:00:00.000Z"
+      },
+      { "id": "", "title": "", "content": { "html": "" } },
+      "garbage"
+    ],
+    "currentDocumentId": "doc_1700000000000"
+  }
+}

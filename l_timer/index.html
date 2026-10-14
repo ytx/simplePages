@@ -753,6 +753,195 @@ const Logic = (() => {
     const next = Math.min(EDITOR_ZOOM_LEVELS.length - 1, Math.max(0, idx + (dir < 0 ? -1 : 1)));
     return EDITOR_ZOOM_LEVELS[next];
   }
+  // ---- 文書モデル: ブロック構造の JSON。表示は DOM 生成だけで行い HTML 文字列の挿入は使わない ----
+  const BLOCK_TYPES = ['p', 'h', 'li'];
+  const emptyRun = () => ({ text: '', bold: false });
+  function emptyBlocks() { return [{ type: 'p', runs: [emptyRun()] }]; }
+
+  function normalizeRun(r) {
+    if (typeof r === 'string') return { text: r, bold: false };
+    if (!r || typeof r !== 'object') return null;
+    return { text: typeof r.text === 'string' ? r.text : String(r.text ?? ''), bold: r.bold === true };
+  }
+
+  function normalizeBlock(b) {
+    if (typeof b === 'string') return { type: 'p', runs: [{ text: b, bold: false }] };
+    const type = b && BLOCK_TYPES.includes(b.type) ? b.type : 'p';
+    const runs = Array.isArray(b && b.runs) ? b.runs.map(normalizeRun).filter(Boolean) : [];
+    return { type, runs: runs.length ? runs : [emptyRun()] };
+  }
+
+  function normalizeBlocks(value) {
+    if (!Array.isArray(value) || value.length === 0) return emptyBlocks();
+    return value.map(normalizeBlock);
+  }
+
+  function blocksToPlainText(blocks) {
+    return blocks.map((b) => b.runs.map((r) => r.text).join('')).join('\n');
+  }
+
+  function firstLine(blocks, max = 50) {
+    for (const line of blocksToPlainText(blocks).split('\n')) {
+      const s = line.trim();
+      if (s) return s.slice(0, max);
+    }
+    return '';
+  }
+
+  const isoOr = (v, fallback) => (typeof v === 'string' && v ? v : fallback);
+
+  function normalizeDocument(d, now) {
+    if (!d || typeof d !== 'object') return null;
+    const iso = new Date(now).toISOString();
+    return {
+      id: typeof d.id === 'string' && d.id ? d.id : `doc_${now}`,
+      title: String(d.title ?? ''),
+      blocks: normalizeBlocks(d.blocks),
+      createdAt: isoOr(d.createdAt, iso),
+      updatedAt: isoOr(d.updatedAt, iso),
+    };
+  }
+
+  function normalizeTitles(list) {
+    if (!Array.isArray(list)) return [];
+    const out = [];
+    for (const t2 of list) {
+      if (typeof t2 !== 'string' || !t2.trim() || out.includes(t2)) continue;
+      out.push(t2);
+      if (out.length >= MAX_TITLES) break;
+    }
+    return out;
+  }
+
+  // localStorage `simplePages.l_timer.data` の正規化。壊れていても落ちない。
+  function normalizeData(raw, now = Date.now()) {
+    const r = raw && typeof raw === 'object' ? raw : {};
+    const documents = Array.isArray(r.documents) ? r.documents.map((d) => normalizeDocument(d, now)).filter(Boolean) : [];
+    let draft = null;
+    if (r.draft && typeof r.draft === 'object' && Array.isArray(r.draft.blocks)) {
+      const id = typeof r.draft.documentId === 'string' && documents.some((d) => d.id === r.draft.documentId) ? r.draft.documentId : null;
+      draft = { documentId: id, blocks: normalizeBlocks(r.draft.blocks), updatedAt: isoOr(r.draft.updatedAt, new Date(now).toISOString()) };
+    }
+    return { version: DATA_VERSION, documents, draft, exerciseTitles: normalizeTitles(r.exerciseTitles) };
+  }
+
+  // ---- 旧 l_timerからの取り込み。DOM を使わない簡易トークナイザ ----
+  const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+  function decodeEntities(s) {
+    return s.replace(/&(#x([0-9a-f]+)|#(\d+)|([a-z]+));/gi, (m, _g, hex, dec, name) => {
+      if (hex) return String.fromCodePoint(parseInt(hex, 16));
+      if (dec) return String.fromCodePoint(parseInt(dec, 10));
+      const v = ENTITIES[name.toLowerCase()];
+      return v === undefined ? m : v;
+    });
+  }
+
+  function importLegacyHtml(html) {
+    const blocks = [];
+    let cur = null;
+    let type = 'p';
+    let bold = 0;
+    const flush = () => { if (cur) blocks.push(cur); cur = null; };
+    const ensure = () => { if (!cur) cur = { type, runs: [] }; };
+    const addText = (txt) => {
+      if (!txt) return;
+      if (!cur && !txt.trim()) return; // ブロック間の空白は捨てる
+      ensure();
+      const b = bold > 0;
+      const last = cur.runs[cur.runs.length - 1];
+      if (last && last.bold === b) last.text += txt;
+      else cur.runs.push({ text: txt, bold: b });
+    };
+    for (const m of String(html ?? '').matchAll(/<\/?([a-zA-Z][a-zA-Z0-9]*)[^>]*>|[^<]+/g)) {
+      if (m[1] === undefined) { addText(decodeEntities(m[0].replace(/\s+/g, ' '))); continue; }
+      const tag = m[1].toLowerCase();
+      const closing = m[0].startsWith('</');
+      if (tag === 'br') { ensure(); flush(); continue; }
+      if (tag === 'strong' || tag === 'b') { bold = Math.max(0, bold + (closing ? -1 : 1)); continue; }
+      if (/^h[1-6]$/.test(tag) || tag === 'li') {
+        flush();
+        type = closing ? 'p' : (tag === 'li' ? 'li' : 'h');
+        if (!closing) ensure();
+        continue;
+      }
+      if (tag === 'p' || tag === 'div' || tag === 'blockquote' || tag === 'pre') {
+        flush();
+        if (!closing) { type = 'p'; ensure(); }
+        continue;
+      }
+      // ul / ol / span / em / その他: タグだけ捨てる
+    }
+    flush();
+    return blocks.length ? blocks.map(normalizeBlock) : emptyBlocks();
+  }
+
+  function isLegacyExport(obj) {
+    return !!(obj && typeof obj === 'object' && typeof obj.version === 'string' && obj.settings && typeof obj.settings === 'object');
+  }
+
+  const LEGACY_INT_KEYS = [['lectureTime', 'lecture'], ['break1Time', 'break1'], ['break2Time', 'break2'], ['warningTime', 'warning'], ['tickInterval', 'tick'], ['defaultExerciseTime', 'exercise'], ['defaultNextExerciseTime', 'nextExercise']];
+  const LEGACY_ZOOM = { 50: 75, 125: 100 };
+
+  // 旧エクスポート JSON → { settings(新キー), documents }。範囲チェックは resolveSettings に任せる。
+  function parseLegacyExport(obj, now = Date.now()) {
+    const ts = (obj.settings && obj.settings.timerSettings) || {};
+    const es = (obj.settings && obj.settings.editorSettings) || {};
+    const settings = {};
+    for (const [from, to] of LEGACY_INT_KEYS) if (Number.isFinite(ts[from])) settings[to] = Math.round(ts[from]);
+    if (Number.isFinite(ts.volume)) settings.volume = Math.round(ts.volume * 100);
+    if (typeof ts.isMuted === 'boolean') settings.muted = ts.isMuted;
+    for (const [from, to] of [['sound1Src', 'sound1'], ['sound2Src', 'sound2'], ['sound3Src', 'sound3']]) {
+      const mm = /(sound\d-\d)\.wav$/.exec(String(ts[from] ?? ''));
+      if (mm && SOUND_GROUPS[to].includes(mm[1])) settings[to] = mm[1];
+    }
+    if (obj.settings.timerTheme === 'light' || obj.settings.timerTheme === 'dark') settings.theme = obj.settings.timerTheme;
+    if (typeof es.isVisible === 'boolean') settings.editor = es.isVisible;
+    if (Number.isFinite(es.zoomLevel)) {
+      const z = LEGACY_ZOOM[es.zoomLevel] ?? es.zoomLevel;
+      if (EDITOR_ZOOM_LEVELS.includes(z)) settings.editorZoom = z;
+    }
+    const w = Number.parseInt(String(obj.settings.layoutLeftWidth ?? ''), 10);
+    if (Number.isInteger(w)) settings.editorWidth = w;
+    const raw = obj.documents && Array.isArray(obj.documents.documents) ? obj.documents.documents : [];
+    const documents = raw.filter((d) => d && typeof d === 'object').map((d) => normalizeDocument({
+      id: d.id,
+      title: String(d.title ?? '') || 'Untitled',
+      blocks: importLegacyHtml(d.content && d.content.html),
+      createdAt: d.createdAt,
+      updatedAt: d.updatedAt,
+    }, now));
+    return { settings, documents };
+  }
+
+  // データタブ共用のインポート解析。新形式 { version, settings, data } と旧 l_timer 形式の両方。
+  function parseImportAll(text, version, now = Date.now()) {
+    let raw;
+    try { raw = JSON.parse(String(text)); } catch { return { ok: false, reason: 'invalid_json' }; }
+    if (isLegacyExport(raw)) {
+      const { settings, documents } = parseLegacyExport(raw, now);
+      return { ok: true, settings, documents, exerciseTitles: [] };
+    }
+    if (raw && typeof raw === 'object' && raw.version > version) return { ok: false, reason: 'unrecognized_format' };
+    const settings = migrateStored(raw, version);
+    if (Object.keys(settings).length === 0) return { ok: false, reason: 'unrecognized_format' };
+    const data = normalizeData(raw.data, now);
+    return { ok: true, settings, documents: data.documents, exerciseTitles: data.exerciseTitles };
+  }
+
+  // 取り込み: 文書は追加(id 衝突は改名)、履歴は結合。既存は変えない。
+  function mergeImport(data, incoming, now = Date.now()) {
+    const ids = new Set(data.documents.map((d) => d.id));
+    const added = [];
+    (incoming.documents || []).forEach((d0, i) => {
+      const d = normalizeDocument(d0, now);
+      if (!d) return;
+      if (ids.has(d.id)) d.id = `${d.id}_${now}_${i}`;
+      ids.add(d.id);
+      added.push(d);
+    });
+    return { ...data, documents: [...data.documents, ...added], exerciseTitles: normalizeTitles([...(incoming.exerciseTitles || []), ...data.exerciseTitles]) };
+  }
+
 
   function coerce(spec, value) {
     if (value === undefined || value === null) return undefined;
@@ -925,7 +1114,8 @@ const Logic = (() => {
     SOUND_FILES, SOUND_GROUPS, EDITOR_ZOOM_LEVELS, formatDateTimeLine,
     ADJUST_STEPS, initialMain, startLecture, startBreak, stopMain, floorToMinute, adjustEnd, thresholdEvents, tickMain, remainingMain,
     EXERCISE_MIN, EXERCISE_MAX, MAX_TITLES, DEFAULT_EXERCISE_TITLE, initialExercise, exerciseOpenSetup, exerciseAdjustSetup, exerciseCancelSetup, exerciseStart, exerciseStop, exerciseAdjust, exercisePause, exerciseResume, exerciseSetNext, exerciseAdjustNext, exerciseToggleNext, tickExercise, remainingExercise, canStartExercise, buttonVisibility, pageTitleKey, addTitle,
-    formatClock, formatMinutes, formatEndAt, progress, stepEditorZoom };
+    formatClock, formatMinutes, formatEndAt, progress, stepEditorZoom,
+    emptyBlocks, normalizeBlocks, blocksToPlainText, firstLine, normalizeDocument, normalizeData, importLegacyHtml, isLegacyExport, parseLegacyExport, parseImportAll, mergeImport };
 })();
 </script>
 <script id="app-ui">
