@@ -139,7 +139,7 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 #page-title.warning { color: var(--c-exercise); animation: pulse 1s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { #page-title.warning { animation: none; } }
-#timer-pane { container-type: inline-size; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--gap); min-width: 0; min-height: 0; overflow: auto; padding: 0 var(--gap); }
+#timer-pane { container-type: inline-size; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: var(--gap); min-width: 0; min-height: 0; overflow: auto; padding: 0 var(--gap); }
 #main-remaining { font-size: var(--fs-timer); font-variant-numeric: tabular-nums; line-height: 1; font-weight: 700; color: var(--c-lecture); transition: font-size 0.3s, opacity 0.3s; }
 #main-remaining.break { color: var(--c-break); }
 #main-remaining.overtime { color: var(--c-overtime); }
@@ -183,7 +183,7 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 .ex-title-row input { flex: 1; min-width: 0; border-color: var(--c-exercise); }
 .ex-time { font-size: var(--fs-timer); font-variant-numeric: tabular-nums; line-height: 1; font-weight: 700; color: var(--c-exercise); }
 .ex-time.overtime { color: var(--c-overtime); }
-.ex-main { display: flex; align-items: flex-start; justify-content: center; gap: var(--gap); width: 100%; }
+.ex-main { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: var(--gap); width: 100%; }
 .ex-current { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 2); }
 #ex-title { font-size: var(--fs-large); font-weight: 600; color: var(--c-exercise); }
 #ex-paused { font-size: var(--fs-small); color: var(--fg-muted); margin-left: 0.5em; }
@@ -205,13 +205,13 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 .editor-tools .tbtn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 #ed-zoom-level { min-width: 3.5em; text-align: center; font-variant-numeric: tabular-nums; color: var(--fg-muted); }
 #editor {
-  flex: 1; min-height: 0; overflow: auto; padding: var(--gap); border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel);
+  position: relative; flex: 1; min-height: 0; overflow: auto; padding: var(--gap); border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel);
   font-size: calc(var(--fs-base) * var(--editor-zoom)); line-height: 1.6; outline: none; overflow-wrap: anywhere;
 }
 #editor p, #editor h2, #editor ul { margin: 0 0 0.4em; }
 #editor h2 { font-size: 1.4em; }
 #editor ul { padding-left: 1.4em; }
-#editor:empty::before { content: attr(data-placeholder); color: var(--fg-muted); }
+#editor:has(> p:only-child > br:only-child)::before, #editor:empty::before { content: attr(data-placeholder); color: var(--fg-muted); position: absolute; pointer-events: none; }
 .editor-docs { display: flex; align-items: center; gap: calc(var(--gap) / 2); }
 .editor-docs select { flex: 1; min-width: 0; }
 .editor-docs .icon-btn.saved { background: var(--ok); border-color: var(--ok); color: #fff; }
@@ -1508,6 +1508,8 @@ const App = (() => {
     const m = Logic.tickMain(main, at, settings.warning, settings.tick);
     const e = Logic.tickExercise(ex, at, settings.warning, settings.tick);
     setTimers(m.state, e.state, at, [...m.events, ...e.events]);
+    // 背景タブで break_end のタイマーが間引かれた/張られなかった場合の取りこぼし
+    if (breakEndTimer === null && autoLectureDue(at)) startLectureAt(main.endAt + 1000);
   }
 
   // ユーザー操作の前に、前回 tick 以降に跨いだ閾値(予鈴・終了)を処理しておく
@@ -1543,9 +1545,13 @@ const App = (() => {
     clearTimeout(breakEndTimer);
     breakEndTimer = setTimeout(() => {
       breakEndTimer = null;
-      if (main.mode === 'break') doStartLecture();
+      const at = Date.now();
+      if (autoLectureDue(at)) startLectureAt(main.endAt + 1000);
     }, 1000);
   }
+
+  // 休憩の終了から 1 秒以上経っていて、まだ休憩のままなら自動講義開始の期限切れ
+  function autoLectureDue(at) { return main.mode === 'break' && main.endAt !== null && at >= main.endAt + 1000; }
 
   function cancelAutoLecture() {
     clearTimeout(breakEndTimer);
@@ -1553,12 +1559,16 @@ const App = (() => {
   }
 
   // 講義開始(idle から、休憩中の「講義開始」、休憩の自動終了)。一時停止中の演習は再開する。
-  function doStartLecture() {
+  function startLectureAt(startAt) {
     cancelAutoLecture();
+    if (settings.muted) updateSettings({ muted: false });
+    setTimers(Logic.startLecture(main, startAt, settings.lecture), Logic.exerciseResume(ex, startAt), startAt, []);
+  }
+
+  function doStartLecture() {
     const at = Date.now();
     flushTick(at);
-    if (settings.muted) updateSettings({ muted: false });
-    setTimers(Logic.startLecture(main, at, settings.lecture), Logic.exerciseResume(ex, at), at, []);
+    startLectureAt(at);
   }
 
   // 休憩開始。設定中の演習は取りやめ、動いている演習は一時停止。
@@ -1675,6 +1685,7 @@ const App = (() => {
         if (d === null) return;
         const at = Date.now();
         flushTick(at);
+        cancelAutoLecture();
         setTimers(Logic.adjustEnd(main, d, at), ex, at, []);
       });
     }
@@ -2047,6 +2058,7 @@ const App = (() => {
   }
 
   function onVisibility() {
+    if (document.visibilityState === 'hidden') { if (draftTimer) saveDraft(); }
     if (document.visibilityState === 'visible') { tick(); tickClock(); }
   }
 
@@ -2170,6 +2182,14 @@ const App = (() => {
     setInterval(tickClock, 1000);
     setStatus('ok', '');
     document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', () => { if (draftTimer) saveDraft(); });
+    window.addEventListener('storage', (ev) => {
+      if (ev.key !== DATA_KEY) return;
+      const fresh = Logic.normalizeData(dataStorage.read());
+      data = { ...fresh, draft: data.draft };
+      renderTitleList();
+      updateDocUI();
+    });
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
     resetIdle();

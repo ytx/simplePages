@@ -25,7 +25,7 @@ test('timers: 250 ms tick, end timers armed on endAt change, break pauses and le
   assert.match(ui, /function armEndTimers\(at\)/);
   assert.match(ui, /function scheduleAutoLecture\(\)/);
   assert.match(ui, /Logic\.exercisePause\(ex, at\)/);
-  assert.match(ui, /Logic\.exerciseResume\(ex, at\)/);
+  assert.match(ui, /Logic\.exerciseResume\(ex, startAt\)/);
   assert.match(ui, /Logic\.exerciseStop\(ex\)/);
   assert.match(ui, /Logic\.exerciseCancelSetup\(ex\)/);
   assert.match(ui, /Logic\.buttonVisibility\(main, ex\)/);
@@ -56,4 +56,12 @@ test('both inline scripts parse as JavaScript', () => {
   const logic = src.match(/<script id="app-logic">([\s\S]*?)<\/script>/)[1];
   assert.doesNotThrow(() => new Function(logic), 'app-logic');
   assert.doesNotThrow(() => new Function(ui), 'app-ui');
+});
+
+test('final-fix guards: auto lecture anchor, storage sync, pagehide flush, safe center', () => {
+  assert.match(ui, /function autoLectureDue\(at\)/);
+  assert.match(ui, /startLectureAt\(main\.endAt \+ 1000\)/);
+  assert.match(ui, /addEventListener\('storage'/);
+  assert.match(ui, /addEventListener\('pagehide'/);
+  assert.match(src, /justify-content: safe center/);
 });

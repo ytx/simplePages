@@ -35,7 +35,7 @@
 
 ## URL パラメータ
 
-設定キーと同名のパラメータで指定できる(`?lecture=90&break1=15&warning=5&sound2=sound2-3&editor=1`)。`save=1` を付けると localStorage に保存する。真偽は `1`/`0`、`true`/`false`。範囲外の値は既定に戻る。
+設定キーと同名のパラメータで指定できる(`?lecture=90&break1=15&warning=5&sound2=sound2-3&editor=1`)。`save=1` を付けると localStorage に保存する。真偽は `1`/`0`、`true`/`false`。範囲外の値は無視される(保存値があればそれ、なければ既定値になる)。
 
 タイマーの状態は保存しない。再読込すると停止状態に戻る。文書と下書きは保存する。
 
