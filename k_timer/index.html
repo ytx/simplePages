@@ -400,8 +400,9 @@ const Logic = (() => {
 
   // 残り時間: 正は切り上げ(1 秒残っている間は 0:01)、超過は切り捨てで '-m:ss'。
   function formatRemaining(ms) {
-    const neg = ms < 0;
+    let neg = ms < 0;
     const sec = neg ? Math.floor(-ms / 1000) : Math.ceil(ms / 1000);
+    if (neg && sec === 0) neg = false; // 超過 1 秒未満は符号なし
     return `${neg ? '-' : ''}${Math.floor(sec / 60)}:${pad2(sec % 60)}`;
   }
 
@@ -745,6 +746,7 @@ const App = (() => {
 
   function applySettings() {
     applyI18n();
+    tickClock();
     applyTheme();
     applyZoom(settings.zoom);
     for (const el of $$('[data-setting]')) {
@@ -823,6 +825,7 @@ const App = (() => {
   // ---- タイマー ----
   let timer = null;        // Logic の TimerState
   let tickTimer = null;
+  let endTimer = null;
   const SVG_NS = 'http://www.w3.org/2000/svg';
 
   function buildClockFace() {
@@ -871,9 +874,6 @@ const App = (() => {
     $('#btn-start').textContent = Logic.t(settings.lang, START_LABEL[timer.phase]);
     $('#btn-start').disabled = timer.phase !== 'alarm' && timer.phase !== 'running' && timer.remainingMs <= 0;
     for (const b of $$('button.preset')) b.textContent = Logic.t(settings.lang, 'preset_minutes', { n: settings[`preset${b.dataset.preset}`] });
-    const adjustable = timer.phase !== 'alarm';
-    for (const b of $$('button.adj')) b.disabled = !adjustable;
-    $('#btn-zero').disabled = !adjustable;
   }
 
   function render(now = Date.now()) {
@@ -881,10 +881,19 @@ const App = (() => {
     renderTimer(now);
   }
 
+  // 背景タブでは setInterval が間引かれるので、終了時刻ちょうどに 1 回だけ鳴らすタイマーも持つ
+  function armEndTimer(now) {
+    clearTimeout(endTimer);
+    endTimer = null;
+    if (timer.phase !== 'running') return;
+    endTimer = setTimeout(tick, Math.max(0, timer.endAt - now));
+  }
+
   // 状態変更はすべてここを通す。alarm への出入りでフックを呼ぶ。
   function setState(next, now = Date.now()) {
     const was = timer && timer.phase === 'alarm';
     timer = next;
+    armEndTimer(now);
     const is = timer.phase === 'alarm';
     if (!was && is) onAlarmStart();
     if (was && !is) onAlarmStop();
@@ -936,6 +945,7 @@ const App = (() => {
   let audioCtx = null;
   let beepTimer = null;
   let swallowNextClick = false;
+  let holdKey = false;
   let previewAudio = null;
 
   function alarmAudio() { return $('#alarm-audio'); }
@@ -1009,8 +1019,11 @@ const App = (() => {
     const a = alarmAudio();
     a.volume = settings.volume / 100;
     a.currentTime = 0;
+    // 自動再生拒否と、鳴り始める前に止められた中断(AbortError)はどちらも読込失敗として扱わない
     a.play().catch((e) => {
-      if (e && (e.name === 'NotAllowedError' || e.name === 'AbortError')) return; // 自動再生拒否: 画面点滅だけ
+      const name = e && e.name;
+      if (name === 'AbortError') return;          // 鳴り始める前に止められた
+      if (name === 'NotAllowedError') { startBeep(); return; } // 自動再生拒否: ビープ(AudioContext があれば)と点滅
       markAudioBroken();
     });
   }
@@ -1024,13 +1037,21 @@ const App = (() => {
   }
 
   // 鳴っている間はどこを触っても止まる。止めた直後の click は飲み込み、押したボタンを誤って作動させない。
+  // 長押しやキーの自動リピート(Enter 押しっぱなし)で、フォーカス中のボタンが再度 click されないよう、
+  // 止めたキーが離されるまでは repeat の keydown を preventDefault する。
   function onAnyInput(ev) {
-    if (ev.type === 'keydown' && ev.repeat) return;
+    if (ev.type === 'keydown' && ev.repeat) {
+      if (holdKey) ev.preventDefault();
+      return;
+    }
     if (!timer || timer.phase !== 'alarm') { swallowNextClick = false; return; }
     swallowNextClick = true;
+    if (ev.type === 'keydown') holdKey = true;
     const now = Date.now();
     setState(Logic.start(timer, now), now);
   }
+
+  function onKeyUp() { holdKey = false; }
 
   function swallowClickAfterStop(ev) {
     if (swallowNextClick) {
@@ -1064,6 +1085,7 @@ const App = (() => {
     loadAlarmSound();
     document.addEventListener('pointerdown', onAnyInput, true);
     document.addEventListener('keydown', onAnyInput, true);
+    document.addEventListener('keyup', onKeyUp, true);
     document.addEventListener('click', swallowClickAfterStop, true);
     $('#btn-start').addEventListener('click', unlockAudio, true); // 状態変更(bubble)より先に capture で
     $('#btn-preview').addEventListener('click', togglePreview);

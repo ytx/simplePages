@@ -40,11 +40,12 @@ k_timer/
 │        └─────────┘          │  [-10][-1][-0.5][00][+0.5][+1][+10]   │
 │                             │        [ スタート ]  [ リセット ]      │
 │                             │                                      │
-│                       2026-10-14 (火) ●                            │
+│                       2026-10-14 (水) ●                            │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
 - `main` は `grid-template-columns: 1fr 1fr`。左カラム `section#clock`、右カラム `section#timer`。縦横ともに中央寄せ。
+- `main#content` は `overflow: auto`。高倍率で収まらないときはスクロールする。
 - **幅 700px 未満**(スマホ縦など)は `#clock` を `display: none` にして 1 カラム。縦積みはしない。
 - `h1#page-title` は規約どおり `main` 先頭に置くが `k_timer` では視覚的に非表示(`.visually-hidden`)。表題は不要なため。
 
@@ -53,13 +54,13 @@ k_timer/
 - `<svg viewBox="0 0 200 200">`。外周円、12 の数字(1〜12)、分目盛(60、5 分ごと太く)、時針・分針・秒針、中心点。
 - 針は `transform: rotate(deg 100 100)` を `Logic.handAngles(date)` の値で毎 tick 更新(秒針は 1 秒刻み、滑らかにしない)。
 - `settings.seconds` が false なら秒針を非表示。
-- 大きさは `min(90vw/2, 70vh)` 程度で、カラムに収まる最大。色は `--fg` / `--fg-muted` / 秒針 `--accent`。
+- 大きさは `min(44vw, 70vh)` 程度で、カラムに収まる最大。色は `--fg` / `--fg-muted` / 秒針 `--accent`。
 
 ### タイマー(`#timer`)
 
 上から順に:
 
-1. `#remaining`: 残り時間。`m:ss`(例 `4:37`、`12:00`、`0:05`)。alarm 中は超過を `-m:ss`(例 `-0:42`)で表示し点滅。フォントは `--fs-timer = calc(clamp(64px, 14vw, 180px) * var(--zoom))`、等幅数字(`font-variant-numeric: tabular-nums`)。
+1. `#remaining`: 残り時間。`m:ss`(例 `4:37`、`12:00`、`0:05`)。alarm 中は超過を `-m:ss`(例 `-0:42`)で表示し点滅。フォントは `--fs-timer = calc(clamp(64px, min(14vw, 20vh), 180px) * var(--zoom))`、等幅数字(`font-variant-numeric: tabular-nums`)。
 2. `#end-at`: 動作中のみ「終了 14:32」(`end_at` i18n: `終了 {time}` / `Ends {time}`)。`HH:MM` 24 時間。終了時刻が翌日なら「終了 翌 0:05」(`end_at_tomorrow`)。idle / paused / alarm では空(高さは確保し、レイアウトが跳ねないようにする)。
 3. `.row.presets`: ボタン 3 つ。表記は `{n} 分` / `{n} min`。設定 `preset1..3`。
 4. `.row.adjust`: ボタン 7 つ。表記は固定 `-10` `-1` `-0.5` `00` `+0.5` `+1` `+10`。単位は分(0.5 = 30 秒)。
@@ -69,7 +70,7 @@ k_timer/
 
 ### ステータス帯
 
-共通の `footer#status-bar` を使うが、現在時刻の代わりに**日付のみ**(`2026-10-14 (火)` / `Tue, Oct 14, 2026`)を表示する。「最終更新」は出さない。状態ドット: 緑 = 正常、赤 = 音声ファイル読込失敗(メッセージ `error_audio`)。黄は使わない。
+共通の `footer#status-bar` を使うが、現在時刻の代わりに**日付のみ**(`2026-10-14 (水)` / `Wed, Oct 14, 2026`)を表示する。「最終更新」は出さない。状態ドット: 緑 = 正常、赤 = 音声ファイル読込失敗(メッセージ `error_audio`)。黄は使わない。
 
 ## タイマーの状態機械(Logic)
 
@@ -92,10 +93,11 @@ k_timer/
 | `tick(s, now)` | 変化なし | `endAt - now <= 0` なら alarm(endAt はそのまま。超過は予定の終了時刻から数える) | 変化なし | 変化なし |
 
 - `MAX = 180 * 60000`(3 時間)。
+- alarm 中は ± / 00 は無視する(ボタンは無効化しない。タップは音を止める操作として扱う)。
 - `adjust` の delta は `-600000, -60000, -30000, +30000, +60000, +600000`。
 - 動作中の `adjust`/`zero` は `startMs` を変えない(リセットは元の開始値に戻る)。
 - `remainingFor(s, now)`: idle/paused → `remainingMs`、running → `endAt - now`、alarm → `endAt - now`(負)。
-- `formatRemaining(ms)`: `ms >= 0` は `ceil(ms/1000)` 秒を `m:ss`。負は `-` + `floor(-ms/1000)` 秒を `m:ss`。表示上 1 秒残っているうちは `0:01`、0 到達の瞬間 `0:00`。
+- `formatRemaining(ms)`: `ms >= 0` は `ceil(ms/1000)` 秒を `m:ss`。負は `-` + `floor(-ms/1000)` 秒を `m:ss`。表示上 1 秒残っているうちは `0:01`、0 到達の瞬間 `0:00`。超過 1 秒未満は `0:00`、以後 `-m:ss`。
 - `formatEndAt(endAt, now, lang)`: `HH:MM`。`endAt` の日付が `now` の翌日なら翌日表記。
 - `handAngles(date)`: `{ hour, minute, second }` 度。`hour = (h%12)*30 + m*0.5 + s/120`、`minute = m*6 + s*0.1`、`second = s*6`。
 - `formatDateLine(date, lang)`: ステータス帯の日付文字列。
@@ -108,12 +110,13 @@ k_timer/
 
 ## サウンド
 
-- `<audio id="alarm-audio" loop preload="auto">` 1 要素。`src` は `SOUNDS = { 'sound2-1': 'audio/sound2-1.wav', ... }` から `settings.sound` で選ぶ(キーが辞書にないときは既定)。
+- `<audio id="alarm-audio" loop preload="auto">` 1 要素。`src` は `SOUND_FILES = { 'sound2-1': 'audio/sound2-1.wav', ... }` から `settings.sound` で選ぶ(キーが辞書にないときは既定)。
 - `alarm` 開始で `audio.currentTime = 0; audio.volume = settings.volume / 100; audio.play()`。
 - **停止条件**(いずれか): `document` の `pointerdown`、`keydown`、ストップ/リセット/プリセット押下。設定モーダル内の操作や右上ツールバーの操作も `pointerdown` として止める(どこを触っても止まる)。止めたら `start(s)` の alarm 遷移と同じく idle(`remainingMs = startMs`)。
 - 止めた直後の click は飲み込む(ボタンを叩いて止めたとき、そのボタンを作動させない)。長押しや Enter の自動リピートでも作動しない。
-- 自動再生制限: スタート押下(ユーザー操作)時に `audio.load()` し、`audio.play().then(() => audio.pause())` を一度実行して再生許可を得る(`volume` は 0 にして無音で)。これが reject されても無視し、alarm 時の `play()` で再試行する。
-- 読込失敗(`audio` の `error` イベント、または `play()` が `NotSupportedError`/`NotAllowedError` 以外で reject): ステータス赤 `error_audio`、Web Audio API で 880 Hz 0.2 s のビープを 0.6 s 周期で鳴らすフォールバック(`AudioContext` はスタート押下時に生成)。
+- 自動再生制限: スタート押下(ユーザー操作)時に `muted` で一度 `play()` → `pause()` して再生許可を得る(`volume` は iOS で変更できないため `muted` を使う)。拒否されても無視し、alarm 時の `play()` で再試行する。
+- 背景タブでのタイマー間引き対策として、running 中は終了時刻ちょうどに `setTimeout` を 1 本張る(`setState` で張り直す)。
+- `play()` が `AbortError`(鳴る前に止められた)なら無視、`NotAllowedError`(自動再生拒否)なら点滅と、`AudioContext` があればビープ。それ以外の reject と `error` イベントは読込失敗として: ステータス赤 `error_audio`、Web Audio API で 880 Hz 0.2 s のビープを 0.6 s 周期で鳴らすフォールバック(`AudioContext` はスタート押下時に生成)。
 - 試聴ボタン(設定 → タイマー タブ): 選択中の音を 1 回(loop なし)再生、もう一度押すか音の変更で停止。alarm 中は試聴しない。
 - 画面点滅: `settings.flash` が true なら `html.alarm` クラスを付け、`body` 背景を `--bg` と `--error` 系の薄い色で 0.5 s ごとに交互(`@keyframes`)。`prefers-reduced-motion: reduce` では点滅せず薄い赤に固定。`#remaining` は flash と無関係に 1 s 周期で点滅。
 
@@ -140,7 +143,7 @@ localStorage キー `simplePages.k_timer`、`version: 1`。
   - 表示タブに「秒針を表示」。
   - タイマータブ: プリセット 1〜3(number)、終了音(select)+「試聴」ボタン、音量(range 0〜100 と数値表示)、「終了時に画面を点滅」(checkbox)。
 - プリセット変更は即座にボタン表記へ反映。idle のときは `startMs`/`remainingMs` も `preset1` に追従させない(ユーザーがプリセットを押すまで現在値を保つ)。
-- About: 説明、GitHub、MIT、クレジット(`ABOUT.credits`: 「終了音 sound2-1: mixkit.co(Mixkit License)」「Material Icons」)。
+- About: 説明、GitHub、MIT、クレジット(`ABOUT.credits` は Mixkit のみ: 「終了音 sound2-1: mixkit.co(Mixkit License)」。Material Icons は共通の `credit_icons` 文言で表示)。
 
 ## エラー処理
 
@@ -156,15 +159,15 @@ localStorage キー `simplePages.k_timer`、`version: 1`。
 - `start(s, now)`, `stop` は `start` に統合(トグル)、`reset(s)`, `preset(s, minutes)`, `adjust(s, deltaMs, now)`, `zero(s, now)`, `tick(s, now)`
 - `remainingFor(s, now)`, `formatRemaining(ms)`, `formatEndAt(endAt, now, lang)`, `formatDateLine(date, lang)`
 - `handAngles(date)`
-- `isDisplayOnly`、`MAX_MS`、`ADJUST_STEPS`、`SOUNDS`(キー一覧)
+- `MAX_MS`、`ADJUST_STEPS`、`SOUND_FILES`(キー→相対パス)
 
 ## テスト(`k_timer/test/`)
 
 - `logic.test.mjs`: 共通ヘルパー(テンプレート由来)。
 - `timer.test.mjs`: 状態遷移表の各セル、`adjust` のクランプ(0 と MAX)、動作中 `adjust` で 0 以下 → alarm、`zero` の切り下げ(idle: 4:37 → 4:00、running: endAt 14:32:37 → 14:32:00、now 以下なら alarm)、`tick` の alarm 遷移、alarm からの `start`/`reset`/`preset` が idle に戻し `remainingMs = startMs`。
-- `format.test.mjs`: `formatRemaining`(0、999 ms → `0:01`、60000 → `1:00`、-1500 → `-0:01`、180 分)、`formatEndAt`(同日、翌日、ja/en)、`formatDateLine`、`handAngles`(0:00:00、3:30:00、12:00 の 12 時間化)。
+- `format.test.mjs`: `formatRemaining`(0、999 ms → `0:01`、60000 → `1:00`、-1 / -999 → `0:00`、-1500 → `-0:01`、180 分)、`formatEndAt`(同日、翌日、ja/en)、`formatDateLine`、`handAngles`(0:00:00、3:30:00、12:00 の 12 時間化)。
 - `settings.test.mjs`: スキーマ(bool 型の URL 正規化、範囲外の既定化)、i18n キー網羅(index.html 内の全キー)、`DISPLAY_ONLY_KEYS` が全スキーマキーを含むことを index.html の文字列から確認。
-- `audio.test.mjs`: `SOUNDS` の各パスのファイルが `k_timer/` 配下に存在し、先頭 4 バイトが `RIFF`。
+- `audio.test.mjs`: `SOUND_FILES` の各パスのファイルが `k_timer/` 配下に存在し、先頭 4 バイトが `RIFF`。
 - `node --test k_timer/test/*.test.mjs`。ネットワーク不要。
 
 ## 手動確認

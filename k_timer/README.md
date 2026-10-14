@@ -13,6 +13,17 @@
 - 幅 700px 未満ではアナログ時計を隠しタイマーだけ表示
 - 右上のアイコンで ダーク/ライト、拡大/縮小、フルスクリーン、日英。設定は歯車
 
+## 設定項目
+
+| キー | 型/範囲 | 既定 | 説明 |
+|---|---|---|---|
+| `preset1`〜`preset3` | 整数 1〜180 | 3 / 5 / 12 | プリセットの分 |
+| `sound` | `sound2-1` / `sound2-2` / `sound2-3` | `sound2-1` | 終了音 |
+| `volume` | 整数 0〜100 | 80 | 音量 |
+| `flash` | 真偽 | true | 終了時に画面を点滅 |
+| `seconds` | 真偽 | true | 秒針を表示 |
+| `lang` / `theme` / `zoom` | 共通 | 共通 | 言語 / テーマ / 拡大率(共通設定) |
+
 ## URL パラメータ
 
 | パラメータ | 例 | 説明 |
@@ -20,8 +31,8 @@
 | `preset1`〜`preset3` | `preset1=4` | プリセットの分(1〜180) |
 | `sound` | `sound=sound2-2` | 終了音 `sound2-1` / `sound2-2` / `sound2-3` |
 | `volume` | `volume=50` | 音量 0〜100 |
-| `flash` | `flash=0` | 終了時の画面点滅(`1`/`0`) |
-| `seconds` | `seconds=0` | 秒針(`1`/`0`) |
+| `flash` | `flash=0` | 終了時の画面点滅(`1`/`0`、`true`/`false` も可) |
+| `seconds` | `seconds=0` | 秒針(`1`/`0`、`true`/`false` も可) |
 | `lang` / `theme` / `zoom` | `lang=en` | 共通 |
 | `save` | `save=1` | URL の設定を localStorage に保存 |
 
@@ -39,6 +50,8 @@ localStorage キー `simplePages.k_timer`:
 ## 音声
 
 `audio/sound2-1.wav`(ロングトーン、mixkit.co `mixkit-happy-bells-notification-937`、Mixkit License)、`sound2-2.wav`(ダブルビープ)、`sound2-3.wav`(下降トーン)。読み込めないときはステータスが赤になり、Web Audio の 880 Hz ビープで代替する。
+
+iOS Safari は `<audio>` の音量変更を受け付けないため、音量設定は終了音には効かず、ビープ代替にのみ効く。
 
 ブラウザの自動再生制限のため、音はスタートを押した(ユーザー操作があった)あとにだけ鳴る。
 

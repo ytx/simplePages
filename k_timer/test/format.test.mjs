@@ -14,7 +14,8 @@ test('formatRemaining: ceiling for positive, floor for overrun, m:ss', () => {
   assert.equal(Logic.formatRemaining(60000), '1:00');
   assert.equal(Logic.formatRemaining(277000), '4:37');
   assert.equal(Logic.formatRemaining(180 * 60000), '180:00');
-  assert.equal(Logic.formatRemaining(-1), '-0:00');
+  assert.equal(Logic.formatRemaining(-1), '0:00');
+  assert.equal(Logic.formatRemaining(-999), '0:00');
   assert.equal(Logic.formatRemaining(-1500), '-0:01');
   assert.equal(Logic.formatRemaining(-42000), '-0:42');
   assert.equal(Logic.formatRemaining(-61000), '-1:01');
