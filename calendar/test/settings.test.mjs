@@ -50,3 +50,10 @@ test('settings schema coerces as the spec says', () => {
   assert.deepEqual(s.calendars, [{ id: 'a' }]);
   assert.equal(Logic.resolveSettings(schema, {}, { view: 'year' }).view, 'week');
 });
+
+test('bool schema entry is shared with the template', () => {
+  const schema = { flag: { type: 'bool', default: false } };
+  assert.equal(Logic.resolveSettings(schema, {}, { flag: '1' }).flag, true);
+  assert.equal(Logic.resolveSettings(schema, { flag: true }, { flag: 'false' }).flag, false);
+  assert.equal(Logic.resolveSettings(schema, {}, { flag: 'maybe' }).flag, false);
+});

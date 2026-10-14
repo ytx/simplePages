@@ -454,6 +454,12 @@ const Logic = (() => {
         const v = typeof spec.values[0] === 'number' ? Number(value) : String(value);
         return spec.values.includes(v) ? v : undefined;
       }
+      case 'bool': {
+        if (typeof value === 'boolean') return value;
+        if (value === '1' || value === 'true') return true;
+        if (value === '0' || value === 'false') return false;
+        return undefined;
+      }
       case 'string':
         return String(value);
       case 'object':

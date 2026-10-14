@@ -122,3 +122,10 @@ test('every i18n key used in index.html exists in both languages', () => {
     }
   }
 });
+
+test('bool schema entry is shared with the template', () => {
+  const schema = { flag: { type: 'bool', default: false } };
+  assert.equal(Logic.resolveSettings(schema, {}, { flag: '1' }).flag, true);
+  assert.equal(Logic.resolveSettings(schema, { flag: true }, { flag: 'false' }).flag, false);
+  assert.equal(Logic.resolveSettings(schema, {}, { flag: 'maybe' }).flag, false);
+});

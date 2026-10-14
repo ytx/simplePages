@@ -144,3 +144,15 @@ test('every i18n key used in index.html exists in both languages', () => {
     }
   }
 });
+
+test('bool schema entry: booleans and 1/0/true/false strings; anything else -> default', () => {
+  const schema = { flash: { type: 'bool', default: true } };
+  assert.equal(Logic.resolveSettings(schema, {}, {}).flash, true);
+  assert.equal(Logic.resolveSettings(schema, { flash: false }, {}).flash, false);
+  assert.equal(Logic.resolveSettings(schema, {}, { flash: '0' }).flash, false);
+  assert.equal(Logic.resolveSettings(schema, {}, { flash: 'false' }).flash, false);
+  assert.equal(Logic.resolveSettings(schema, { flash: false }, { flash: '1' }).flash, true);
+  assert.equal(Logic.resolveSettings(schema, { flash: false }, { flash: 'true' }).flash, true);
+  assert.equal(Logic.resolveSettings(schema, {}, { flash: 'yes' }).flash, true);
+  assert.equal(Logic.coerce({ type: 'bool', default: true }, 0), undefined);
+});
