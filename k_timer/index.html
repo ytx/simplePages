@@ -327,6 +327,75 @@ const Logic = (() => {
     'sound2-2': 'audio/sound2-2.wav',
     'sound2-3': 'audio/sound2-3.wav',
   };
+
+  // ---- タイマー状態機械。すべて純粋関数で、新しいオブジェクトを返す ----
+  const clampMs = (ms) => Math.min(MAX_MS, Math.max(0, ms));
+
+  function initialState(presetMinutes) {
+    const ms = clampMs(presetMinutes * 60000);
+    return { phase: 'idle', startMs: ms, remainingMs: ms, endAt: null };
+  }
+
+  function toIdle(s) {
+    return { phase: 'idle', startMs: s.startMs, remainingMs: s.startMs, endAt: null };
+  }
+
+  function toAlarm(s, now) {
+    return { ...s, phase: 'alarm', endAt: now };
+  }
+
+  // スタート/ストップのトグル。alarm 中は音を止めて idle に戻す。
+  function start(s, now) {
+    switch (s.phase) {
+      case 'idle':
+      case 'paused':
+        if (s.remainingMs <= 0) return s;
+        return { ...s, phase: 'running', endAt: now + s.remainingMs };
+      case 'running':
+        return { ...s, phase: 'paused', remainingMs: Math.max(0, s.endAt - now), endAt: null };
+      default:
+        return toIdle(s);
+    }
+  }
+
+  function reset(s) { return toIdle(s); }
+
+  function preset(s, minutes) { return initialState(minutes); }
+
+  // 停止中は残りと開始値を動かす。動作中は終了時刻だけ動かす(開始値はそのまま)。
+  function adjust(s, deltaMs, now) {
+    if (s.phase === 'alarm') return s;
+    if (s.phase === 'running') {
+      const endAt = Math.min(s.endAt + deltaMs, now + MAX_MS);
+      return endAt - now <= 0 ? toAlarm(s, now) : { ...s, endAt };
+    }
+    const ms = clampMs(s.remainingMs + deltaMs);
+    return { ...s, remainingMs: ms, startMs: ms };
+  }
+
+  // 「00」: 停止中は残りの秒を切り捨て。動作中は終了時刻の秒を 00 に切り下げ。
+  function zero(s, now) {
+    if (s.phase === 'alarm') return s;
+    if (s.phase === 'running') {
+      const d = new Date(s.endAt);
+      d.setSeconds(0, 0);
+      const endAt = d.getTime();
+      if (endAt === s.endAt) return s;
+      return endAt - now <= 0 ? toAlarm(s, now) : { ...s, endAt };
+    }
+    const ms = Math.floor(s.remainingMs / 60000) * 60000;
+    if (ms === s.remainingMs && ms === s.startMs) return s;
+    return { ...s, remainingMs: ms, startMs: ms };
+  }
+
+  function tick(s, now) {
+    if (s.phase === 'running' && s.endAt - now <= 0) return { ...s, phase: 'alarm' };
+    return s;
+  }
+
+  function remainingFor(s, now) {
+    return s.phase === 'running' || s.phase === 'alarm' ? s.endAt - now : s.remainingMs;
+  }
   // 一時的な実装。Task 4 で置き換える。
   function formatDateLine(d, lang) { return d.toDateString(); }
 
@@ -550,7 +619,8 @@ const Logic = (() => {
   }
 
   return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport,
-    MAX_MS, ADJUST_STEPS, SOUND_FILES, formatDateLine };
+    MAX_MS, ADJUST_STEPS, SOUND_FILES, formatDateLine,
+    initialState, start, reset, preset, adjust, zero, tick, remainingFor };
 })();
 </script>
 <script id="app-ui">
