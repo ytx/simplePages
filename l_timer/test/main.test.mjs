@@ -41,6 +41,7 @@ test('startLecture / startBreak / stopMain', () => {
   assert.deepEqual(Logic.stopMain(b), Logic.initialMain());
   // startLecture during break ends the break
   assert.equal(Logic.startLecture(b, T0 + 6 * MIN, 50).mode, 'lecture');
+  assert.equal(Logic.startLecture(b, T0 + 6 * MIN, 50).breakType, null);
 });
 
 test('floorToMinute drops seconds and milliseconds in local time', () => {
@@ -53,8 +54,8 @@ test('adjustEnd floors to the minute and refuses a past end unless in overtime',
   const a = Logic.adjustEnd(l, 1, T0 + MIN);
   assert.equal(a.endAt, new Date(2026, 9, 15, 13, 51, 0).getTime());
   assert.equal(a.totalMs, 50 * MIN, 'totalMs unchanged');
-  assert.deepEqual(Logic.adjustEnd(l, -10, T0 + 45 * MIN), l, 'would end in the past -> ignored');
-  assert.deepEqual(Logic.adjustEnd(Logic.initialMain(), 1, T0), Logic.initialMain(), 'idle ignored');
+  assert.equal(Logic.adjustEnd(l, -10, T0 + 45 * MIN), l, 'would end in the past -> ignored');
+  const idle = Logic.initialMain(); assert.equal(Logic.adjustEnd(idle, 1, T0), idle, 'idle ignored');
   // overtime: +1 that lands in the future returns to countdown
   const ot = { ...l, overtime: true };
   const back = Logic.adjustEnd(ot, 1, l.endAt + 20 * 1000); // now = 13:50:57, new end 13:51:00

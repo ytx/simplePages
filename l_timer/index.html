@@ -596,6 +596,128 @@ const Logic = (() => {
     return s.mode === 'idle' ? null : s.endAt - now;
   }
 
+  // ---- 演習タイマー(講義中に重ねて動く独立タイマー) ----
+  const EXERCISE_MIN = 1;
+  const EXERCISE_MAX = 120;
+  const MAX_TITLES = 20;
+  const DEFAULT_EXERCISE_TITLE = '演習';
+  const clampMin = (m) => Math.min(EXERCISE_MAX, Math.max(EXERCISE_MIN, m));
+
+  function initialExercise(defaultMin, nextDefaultMin) {
+    return { phase: 'none', title: '', setupMinutes: clampMin(defaultMin), startedAt: null, endAt: null, totalMs: 0, remainingMs: null, overtime: false, lastTickAt: null,
+      next: { title: '', minutes: clampMin(nextDefaultMin) }, nextOpen: false };
+  }
+
+  function exerciseOpenSetup(e, defaultMin) {
+    return { ...e, phase: 'setup', setupMinutes: clampMin(defaultMin), title: '' };
+  }
+
+  function exerciseAdjustSetup(e, deltaMin) {
+    return { ...e, setupMinutes: clampMin(e.setupMinutes + deltaMin) };
+  }
+
+  function exerciseCancelSetup(e) { return { ...e, phase: 'none' }; }
+
+  function exerciseStart(e, now, title, minutes, nextDefaultMin) {
+    const ms = clampMin(minutes) * 60000;
+    const t = String(title ?? '').trim() || DEFAULT_EXERCISE_TITLE;
+    return { ...e, phase: 'running', title: t, startedAt: now, endAt: now + ms, totalMs: ms, remainingMs: null, overtime: false, lastTickAt: now,
+      next: { title: '', minutes: clampMin(nextDefaultMin) }, nextOpen: false };
+  }
+
+  function exerciseStop(e) {
+    return { ...initialExercise(e.setupMinutes, e.next.minutes) };
+  }
+
+  // running: 終了時刻を動かす(adjustEnd と同じ規則)。paused: 保持している残りを動かす。
+  function exerciseAdjust(e, deltaMin, now) {
+    if (e.phase === 'running') {
+      const endAt = floorToMinute(e.endAt + deltaMin * 60000);
+      if (endAt <= now && !e.overtime) return e;
+      return { ...e, endAt, overtime: endAt <= now };
+    }
+    if (e.phase === 'paused') {
+      const remainingMs = e.remainingMs + deltaMin * 60000;
+      return { ...e, remainingMs, overtime: remainingMs <= 0 };
+    }
+    return e;
+  }
+
+  // 休憩開始で一時停止。残り(超過中は負)を保持し、終了時刻は捨てる。
+  function exercisePause(e, now) {
+    if (e.phase !== 'running') return e;
+    return { ...e, phase: 'paused', remainingMs: e.endAt - now, endAt: null };
+  }
+
+  // 講義再開で再開。保持した残りから新しい終了時刻を作る。
+  function exerciseResume(e, now) {
+    if (e.phase !== 'paused') return e;
+    return { ...e, phase: 'running', endAt: now + e.remainingMs, remainingMs: null, lastTickAt: now, overtime: e.remainingMs <= 0 };
+  }
+
+  function exerciseSetNext(e, title, minutes) {
+    return { ...e, next: { title: String(title ?? ''), minutes: clampMin(minutes) } };
+  }
+
+  function exerciseAdjustNext(e, deltaMin) {
+    return { ...e, next: { ...e.next, minutes: clampMin(e.next.minutes + deltaMin) } };
+  }
+
+  function exerciseToggleNext(e, open) { return { ...e, nextOpen: !!open }; }
+
+  function tickExercise(e, now, warningMin, tickSec) {
+    if (e.phase !== 'running') return { state: e, events: [] };
+    const ev = thresholdEvents(e.lastTickAt, now, e.startedAt, e.endAt, warningMin, tickSec);
+    const events = [];
+    if (ev.warning) events.push('warning');
+    let state = { ...e, lastTickAt: now };
+    if (ev.end) {
+      events.push('end');
+      if (e.next.title.trim()) {
+        events.push('next_started');
+        return { state: exerciseStart(e, now, e.next.title, e.next.minutes, e.next.minutes), events };
+      }
+      state.overtime = true;
+    }
+    if (state.overtime && ev.tick) events.push('tick');
+    return { state, events };
+  }
+
+  function remainingExercise(e, now) {
+    if (e.phase === 'running') return e.endAt - now;
+    if (e.phase === 'paused') return e.remainingMs;
+    return null;
+  }
+
+  function canStartExercise(main, e) {
+    return main.mode === 'lecture' && e.phase === 'none';
+  }
+
+  // 演習中でも講義側のボタンは隠さない
+  function buttonVisibility(main, e) {
+    return {
+      lecture: main.mode === 'idle',
+      lectureFromBreak: main.mode === 'break',
+      break1: main.mode !== 'break',
+      break2: main.mode !== 'break',
+      stop: main.mode !== 'idle',
+      exercise: canStartExercise(main, e),
+    };
+  }
+
+  function pageTitleKey(main) {
+    if (main.mode === 'lecture') return main.overtime ? 'title_overtime' : 'title_lecture';
+    if (main.mode === 'break') return 'title_break';
+    return 'title_idle';
+  }
+
+  // 演習タイトル履歴: 空と既定タイトルは入れない。新しい順、重複なし、20 件まで。
+  function addTitle(list, title) {
+    const t2 = String(title ?? '').trim();
+    if (!t2 || t2 === DEFAULT_EXERCISE_TITLE) return list.slice();
+    return [t2, ...list.filter((x) => x !== t2)].slice(0, MAX_TITLES);
+  }
+
   function coerce(spec, value) {
     if (value === undefined || value === null) return undefined;
     switch (spec.type) {
@@ -765,7 +887,8 @@ const Logic = (() => {
 
   return { VERSION, DATA_VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport,
     SOUND_FILES, SOUND_GROUPS, EDITOR_ZOOM_LEVELS, formatDateTimeLine,
-    ADJUST_STEPS, initialMain, startLecture, startBreak, stopMain, floorToMinute, adjustEnd, thresholdEvents, tickMain, remainingMain };
+    ADJUST_STEPS, initialMain, startLecture, startBreak, stopMain, floorToMinute, adjustEnd, thresholdEvents, tickMain, remainingMain,
+    EXERCISE_MIN, EXERCISE_MAX, MAX_TITLES, DEFAULT_EXERCISE_TITLE, initialExercise, exerciseOpenSetup, exerciseAdjustSetup, exerciseCancelSetup, exerciseStart, exerciseStop, exerciseAdjust, exercisePause, exerciseResume, exerciseSetNext, exerciseAdjustNext, exerciseToggleNext, tickExercise, remainingExercise, canStartExercise, buttonVisibility, pageTitleKey, addTitle };
 })();
 </script>
 <script id="app-ui">
