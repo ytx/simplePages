@@ -397,7 +397,37 @@ const Logic = (() => {
     return s.phase === 'running' || s.phase === 'alarm' ? s.endAt - now : s.remainingMs;
   }
   // 一時的な実装。Task 4 で置き換える。
-  function formatDateLine(d, lang) { return d.toDateString(); }
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  // 残り時間: 正は切り上げ(1 秒残っている間は 0:01)、超過は切り捨てで '-m:ss'。
+  function formatRemaining(ms) {
+    const neg = ms < 0;
+    const sec = neg ? Math.floor(-ms / 1000) : Math.ceil(ms / 1000);
+    return `${neg ? '-' : ''}${Math.floor(sec / 60)}:${pad2(sec % 60)}`;
+  }
+
+  function sameLocalDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function formatEndAt(endAt, now, lang) {
+    const e = new Date(endAt);
+    const time = `${pad2(e.getHours())}:${pad2(e.getMinutes())}`;
+    return t(lang, sameLocalDay(e, new Date(now)) ? 'end_at' : 'end_at_tomorrow', { time });
+  }
+
+  const WEEKDAYS_JA = ['日', '月', '火', '水', '木', '金', '土'];
+
+  function formatDateLine(d, lang) {
+    if (lang === 'ja') return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} (${WEEKDAYS_JA[d.getDay()]})`;
+    return new Intl.DateTimeFormat('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }).format(d);
+  }
+
+  // 針の角度(度、12 時から時計回り)。秒針は 1 秒刻み。
+  function handAngles(d) {
+    const h = d.getHours() % 12, m = d.getMinutes(), s = d.getSeconds();
+    return { hour: h * 30 + m * 0.5 + s / 120, minute: m * 6 + s * 0.1, second: s * 6 };
+  }
 
   function coerce(spec, value) {
     if (value === undefined || value === null) return undefined;
@@ -619,7 +649,7 @@ const Logic = (() => {
   }
 
   return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport,
-    MAX_MS, ADJUST_STEPS, SOUND_FILES, formatDateLine,
+    MAX_MS, ADJUST_STEPS, SOUND_FILES, formatRemaining, formatEndAt, formatDateLine, handAngles,
     initialState, start, reset, preset, adjust, zero, tick, remainingFor };
 })();
 </script>
