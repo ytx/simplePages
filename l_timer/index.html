@@ -718,6 +718,42 @@ const Logic = (() => {
     return [t2, ...list.filter((x) => x !== t2)].slice(0, MAX_TITLES);
   }
 
+  // ---- 表示用の書式 ----
+  // 残り時間: 正は切り上げ(1 秒残っている間は 00:01)、超過は切り捨てで '+MM:SS'。超過 1 秒未満は 00:00。
+  function formatClock(ms) {
+    let over = ms < 0;
+    const sec = over ? Math.floor(-ms / 1000) : Math.ceil(ms / 1000);
+    if (over && sec === 0) over = false;
+    return `${over ? '+' : ''}${pad2(Math.floor(sec / 60))}:${pad2(sec % 60)}`;
+  }
+
+  function formatMinutes(min) { return `${pad2(min)}:00`; }
+
+  function formatEndAt(endAt) {
+    if (endAt === null || endAt === undefined) return '--:--:--';
+    const d = new Date(endAt);
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+  }
+
+  // 進捗率(%)。超過は 100、分母が無ければ 0。
+  function progress(totalMs, remainingMs) {
+    if (!(totalMs > 0)) return 0;
+    if (!(remainingMs > 0)) return 100;
+    return Math.min(100, Math.max(0, ((totalMs - remainingMs) / totalMs) * 100));
+  }
+
+  // エディタ本文の拡大率。段階リストの前後へ。端で止まる。段階にない値は最も近い段階から数える。
+  function stepEditorZoom(level, dir) {
+    const n = Number(level);
+    let idx = EDITOR_ZOOM_LEVELS.indexOf(n);
+    if (idx < 0) {
+      const base = Number.isFinite(n) ? n : 100;
+      idx = EDITOR_ZOOM_LEVELS.reduce((best, v, i) => (Math.abs(v - base) < Math.abs(EDITOR_ZOOM_LEVELS[best] - base) ? i : best), 0);
+    }
+    const next = Math.min(EDITOR_ZOOM_LEVELS.length - 1, Math.max(0, idx + (dir < 0 ? -1 : 1)));
+    return EDITOR_ZOOM_LEVELS[next];
+  }
+
   function coerce(spec, value) {
     if (value === undefined || value === null) return undefined;
     switch (spec.type) {
@@ -888,7 +924,8 @@ const Logic = (() => {
   return { VERSION, DATA_VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport,
     SOUND_FILES, SOUND_GROUPS, EDITOR_ZOOM_LEVELS, formatDateTimeLine,
     ADJUST_STEPS, initialMain, startLecture, startBreak, stopMain, floorToMinute, adjustEnd, thresholdEvents, tickMain, remainingMain,
-    EXERCISE_MIN, EXERCISE_MAX, MAX_TITLES, DEFAULT_EXERCISE_TITLE, initialExercise, exerciseOpenSetup, exerciseAdjustSetup, exerciseCancelSetup, exerciseStart, exerciseStop, exerciseAdjust, exercisePause, exerciseResume, exerciseSetNext, exerciseAdjustNext, exerciseToggleNext, tickExercise, remainingExercise, canStartExercise, buttonVisibility, pageTitleKey, addTitle };
+    EXERCISE_MIN, EXERCISE_MAX, MAX_TITLES, DEFAULT_EXERCISE_TITLE, initialExercise, exerciseOpenSetup, exerciseAdjustSetup, exerciseCancelSetup, exerciseStart, exerciseStop, exerciseAdjust, exercisePause, exerciseResume, exerciseSetNext, exerciseAdjustNext, exerciseToggleNext, tickExercise, remainingExercise, canStartExercise, buttonVisibility, pageTitleKey, addTitle,
+    formatClock, formatMinutes, formatEndAt, progress, stepEditorZoom };
 })();
 </script>
 <script id="app-ui">
