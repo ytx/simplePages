@@ -51,3 +51,9 @@ test('editor: blocks rendered by DOM construction, plain-text paste, draft debou
   assert.match(ui, /'--editor-zoom'/);
   assert.doesNotMatch(ui, /innerHTML/);
 });
+
+test('both inline scripts parse as JavaScript', () => {
+  const logic = src.match(/<script id="app-logic">([\s\S]*?)<\/script>/)[1];
+  assert.doesNotThrow(() => new Function(logic), 'app-logic');
+  assert.doesNotThrow(() => new Function(ui), 'app-ui');
+});

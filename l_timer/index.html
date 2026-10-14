@@ -1710,7 +1710,6 @@ const App = (() => {
 
   function getTimerState() { return { main: { ...main }, ex: { ...ex } }; }
 
-```js
   // ---- 小ダイアログ(prompt / confirm の代わり) ----
   // input が null なら確認(true / false)、文字列なら入力(入力値 / キャンセルで null)。
   function ask({ message, input = null }) {
