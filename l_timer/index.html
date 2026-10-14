@@ -152,8 +152,8 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 .progress-fill.overtime { background: var(--c-overtime); }
 .progress-fill.exercise { background: var(--c-exercise); }
 .end-row { display: flex; align-items: center; justify-content: center; gap: var(--gap); flex-wrap: wrap; min-height: 2.6em; font-size: var(--fs-large); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
-.end-row .adj { display: flex; gap: calc(var(--gap) / 2); }
-.end-row .adj[hidden] { display: none; }
+.adj { display: flex; gap: calc(var(--gap) / 2); justify-content: center; }
+.adj[hidden] { display: none; }
 .tbtn {
   min-height: calc(40px * var(--zoom)); min-width: calc(48px * var(--zoom)); padding: 0 0.8em;
   font: inherit; font-size: var(--fs-base); font-variant-numeric: tabular-nums;
@@ -233,7 +233,7 @@ dialog#dialog::backdrop { background: rgba(0,0,0,0.5); }
   #content.editor-on { grid-template-columns: 1fr; grid-template-rows: auto auto minmax(0, 1fr); }
   #resizer { display: none !important; }
   #editor-pane { padding: var(--gap) 0 0; }
-  .cbtn { width: 48px; height: 48px; }
+  .cbtn { width: calc(48px * var(--zoom)); height: calc(48px * var(--zoom)); }
   .grid2 { grid-template-columns: 1fr; }
 }
 </style>
@@ -1299,7 +1299,13 @@ const App = (() => {
   function renderSettingsExtra(_settings) {
     loadSounds();
     applyMuteButton();
+    for (const sel of Object.values(AUDIO_ID)) {
+      const a = $(sel);
+      if (settings.muted || settings.volume === 0) { if (!a.paused) { a.pause(); a.currentTime = 0; } }
+      else a.volume = settings.volume / 100;
+    }
     if (previewAudio) stopPreview();
+    if (main) render();
   }
 
   // ---- 音 ----
@@ -1360,6 +1366,7 @@ const App = (() => {
     for (const sel of Object.values(AUDIO_ID)) {
       const a = $(sel);
       if (a.dataset.unlocked === '1') continue;
+      if (!a.paused) continue;
       a.muted = true;
       a.play().then(() => {
         a.dataset.unlocked = '1';
@@ -1426,8 +1433,284 @@ const App = (() => {
     $('#settings').addEventListener('close', stopPreview);
   }
 
+  // ---- 文書・下書き・演習タイトル履歴の保存(simplePages.l_timer.data) ----
+  let data = Logic.normalizeData(null);
+  let storageBroken = false;
+  const dataStorage = {
+    read() {
+      try { return JSON.parse(localStorage.getItem(DATA_KEY)); } catch { return null; }
+    },
+    write(d) {
+      try { localStorage.setItem(DATA_KEY, JSON.stringify(d)); return true; } catch { return false; }
+    },
+    clear() {
+      try { localStorage.removeItem(DATA_KEY); } catch { /* ignore */ }
+    },
+  };
+
+  function loadData() {
+    data = Logic.normalizeData(dataStorage.read());
+    renderTitleList();
+  }
+
+  function saveData() {
+    if (dataStorage.write(data) || storageBroken) return;
+    storageBroken = true;
+    setStatus('busy', () => Logic.t(settings.lang, 'error_storage'));
+  }
+
+  function renderTitleList() {
+    const dl = $('#exercise-titles');
+    dl.replaceChildren(...data.exerciseTitles.map((t2) => { const o = document.createElement('option'); o.value = t2; return o; }));
+  }
+
+  function rememberTitle(title) {
+    const next = Logic.addTitle(data.exerciseTitles, title);
+    if (next.length === data.exerciseTitles.length && next.every((v, i) => v === data.exerciseTitles[i])) return;
+    data = { ...data, exerciseTitles: next };
+    saveData();
+    renderTitleList();
+  }
+
+  // ---- タイマー ----
+  let main = null;             // Logic の MainState
+  let ex = null;               // Logic の ExerciseState
+  let endTimerMain = null;
+  let armedMain = null;
+  let endTimerEx = null;
+  let armedEx = null;
+  let breakEndTimer = null;
+  const BUTTON_IDS = { lecture: '#btn-lecture', lectureFromBreak: '#btn-lecture-from-break', break1: '#btn-break1', break2: '#btn-break2', stop: '#btn-stop', exercise: '#btn-exercise' };
+
+  // イベントで音を鳴らし、休憩終了の自動講義と演習タイトル履歴を処理する。
+  function dispatchEvents(events) {
+    const kinds = new Set();
+    for (const ev of events || []) {
+      if (ev === 'warning' || ev === 'end' || ev === 'tick') kinds.add(ev);
+      else if (ev === 'break_end') scheduleAutoLecture();
+      else if (ev === 'next_started') rememberTitle(ex.title);
+    }
+    for (const k of kinds) playSound(k);   // 講義と演習で同じ種類が同時に出ても 1 回
+  }
+
+  // 状態変更はすべてここを通す。イベントで音を鳴らし、終了タイマーを張り直し、描画する。
+  function setTimers(nextMain, nextEx, at, events) {
+    main = nextMain;
+    ex = nextEx;
+    armEndTimers(at);
+    dispatchEvents(events);
+    render(at);
+  }
+
+  function tick() {
+    const at = Date.now();
+    const m = Logic.tickMain(main, at, settings.warning, settings.tick);
+    const e = Logic.tickExercise(ex, at, settings.warning, settings.tick);
+    setTimers(m.state, e.state, at, [...m.events, ...e.events]);
+  }
+
+  // ユーザー操作の前に、前回 tick 以降に跨いだ閾値(予鈴・終了)を処理しておく
+  function flushTick(at) {
+    const m = Logic.tickMain(main, at, settings.warning, settings.tick);
+    const e = Logic.tickExercise(ex, at, settings.warning, settings.tick);
+    main = m.state;
+    ex = e.state;
+    dispatchEvents([...m.events, ...e.events]);
+  }
+
+  // 背景タブでは setInterval が間引かれるので、終了時刻ちょうどに 1 回だけ tick するタイマーも持つ。
+  // endAt が変わったときだけ張り直す(tick のたびに作り直さない)。
+  function armEndTimers(at) {
+    const mainEnd = main.mode !== 'idle' && !main.overtime ? main.endAt : null;
+    if (mainEnd !== armedMain) {
+      clearTimeout(endTimerMain);
+      endTimerMain = null;
+      armedMain = mainEnd;
+      if (mainEnd !== null) endTimerMain = setTimeout(tick, Math.max(0, mainEnd - at) + 10);
+    }
+    const exEnd = ex.phase === 'running' && !ex.overtime ? ex.endAt : null;
+    if (exEnd !== armedEx) {
+      clearTimeout(endTimerEx);
+      endTimerEx = null;
+      armedEx = exEnd;
+      if (exEnd !== null) endTimerEx = setTimeout(tick, Math.max(0, exEnd - at) + 10);
+    }
+  }
+
+  // 休憩終了の 1 秒後に自動で講義開始。その間に別の操作があれば(break でなくなっていれば)やめる。
+  function scheduleAutoLecture() {
+    clearTimeout(breakEndTimer);
+    breakEndTimer = setTimeout(() => {
+      breakEndTimer = null;
+      if (main.mode === 'break') doStartLecture();
+    }, 1000);
+  }
+
+  function cancelAutoLecture() {
+    clearTimeout(breakEndTimer);
+    breakEndTimer = null;
+  }
+
+  // 講義開始(idle から、休憩中の「講義開始」、休憩の自動終了)。一時停止中の演習は再開する。
+  function doStartLecture() {
+    cancelAutoLecture();
+    const at = Date.now();
+    flushTick(at);
+    if (settings.muted) updateSettings({ muted: false });
+    setTimers(Logic.startLecture(main, at, settings.lecture), Logic.exerciseResume(ex, at), at, []);
+  }
+
+  // 休憩開始。設定中の演習は取りやめ、動いている演習は一時停止。
+  function doStartBreak(type) {
+    cancelAutoLecture();
+    const at = Date.now();
+    flushTick(at);
+    let nextEx = ex;
+    if (ex.phase === 'setup') nextEx = Logic.exerciseCancelSetup(ex);
+    else if (ex.phase === 'running') nextEx = Logic.exercisePause(ex, at);
+    if (settings.muted) updateSettings({ muted: false });
+    setTimers(Logic.startBreak(main, at, type, type === 1 ? settings.break1 : settings.break2), nextEx, at, []);
+  }
+
+  // 停止。演習(一時停止中も)は破棄。
+  function doStop() {
+    cancelAutoLecture();
+    const at = Date.now();
+    flushTick(at);
+    setTimers(Logic.stopMain(main), Logic.exerciseStop(ex), at, []);
+  }
+
+  function startExerciseFromSetup() {
+    if (ex.phase !== 'setup') return;
+    const at = Date.now();
+    const next = Logic.exerciseStart(ex, at, $('#ex-title-input').value, ex.setupMinutes, settings.nextExercise);
+    rememberTitle(next.title);
+    setTimers(main, next, at, []);
+  }
+
+  function renderTitle(at) {
+    const h = $('#page-title');
+    h.textContent = Logic.t(settings.lang, Logic.pageTitleKey(main));
+    h.className = main.mode === 'lecture' ? (main.overtime ? 'overtime' : 'lecture') : main.mode;
+    const rem = Logic.remainingMain(main, at);
+    h.classList.toggle('warning', rem !== null && rem > 0 && rem <= settings.warning * 60000);
+  }
+
+  function renderMain(at) {
+    const rem = Logic.remainingMain(main, at);
+    const isBreak = main.mode === 'break';
+    const isOver = main.mode === 'lecture' && main.overtime;
+    const el = $('#main-remaining');
+    el.textContent = rem === null ? Logic.formatMinutes(settings.lecture) : Logic.formatClock(rem);
+    el.classList.toggle('break', isBreak);
+    el.classList.toggle('overtime', isOver);
+    const fill = $('#main-progress-fill');
+    fill.style.width = `${rem === null ? 0 : Logic.progress(main.totalMs, rem)}%`;
+    fill.classList.toggle('break', isBreak);
+    fill.classList.toggle('overtime', isOver);
+    $('#main-end-time').textContent = Logic.t(settings.lang, 'end_at', { time: Logic.formatEndAt(main.mode === 'idle' ? null : main.endAt) });
+    $('#main-adj').hidden = main.mode === 'idle';
+    $('#timer-pane').classList.toggle('exercise-active', ex.phase === 'running' || ex.phase === 'paused');
+  }
+
+  function renderExercise(at) {
+    const area = $('#exercise-area');
+    area.hidden = ex.phase === 'none';
+    area.classList.toggle('paused', ex.phase === 'paused');
+    $('#exercise-setup').hidden = ex.phase !== 'setup';
+    const active = ex.phase === 'running' || ex.phase === 'paused';
+    $('#exercise-running').hidden = !active;
+    if (ex.phase === 'setup') $('#ex-setup-time').textContent = Logic.formatMinutes(ex.setupMinutes);
+    if (!active) return;
+    const rem = Logic.remainingExercise(ex, at);
+    $('#ex-title').textContent = ex.title;
+    $('#ex-paused').hidden = ex.phase !== 'paused';
+    const r = $('#ex-remaining');
+    r.textContent = Logic.formatClock(rem);
+    r.classList.toggle('overtime', ex.overtime);
+    const fill = $('#ex-progress-fill');
+    fill.style.width = `${Logic.progress(ex.totalMs, rem)}%`;
+    fill.classList.toggle('overtime', ex.overtime);
+    $('#ex-end-time').textContent = Logic.t(settings.lang, 'end_at', { time: Logic.formatEndAt(ex.phase === 'running' ? ex.endAt : null) });
+    $('#ex-next-panel').hidden = !ex.nextOpen;
+    $('#ex-next-open').hidden = ex.nextOpen;
+    $('#ex-next-time').textContent = Logic.formatMinutes(ex.next.minutes);
+    const inp = $('#ex-next-title');
+    if (inp.value !== ex.next.title) inp.value = ex.next.title;
+  }
+
+  function renderButtons() {
+    const vis = Logic.buttonVisibility(main, ex);
+    for (const [k, sel] of Object.entries(BUTTON_IDS)) $(sel).hidden = !vis[k];
+    for (const [sel, min] of [['#btn-break1', settings.break1], ['#btn-break2', settings.break2]]) {
+      const s = Logic.t(settings.lang, 'start_break', { min });
+      const b = $(sel);
+      b.setAttribute('aria-label', s);
+      b.title = s;
+    }
+  }
+
+  function render(at = Date.now()) {
+    renderTitle(at);
+    renderMain(at);
+    renderExercise(at);
+    renderButtons();
+  }
+
+  function adjDelta(b) {
+    const d = Number(b.dataset.delta);
+    return Logic.ADJUST_STEPS.includes(d) ? d : null;
+  }
+
+  function bindTimer() {
+    $('#btn-lecture').addEventListener('click', doStartLecture);
+    $('#btn-lecture-from-break').addEventListener('click', doStartLecture);
+    $('#btn-break1').addEventListener('click', () => doStartBreak(1));
+    $('#btn-break2').addEventListener('click', () => doStartBreak(2));
+    $('#btn-stop').addEventListener('click', doStop);
+    for (const b of $$('button.main-adj')) {
+      b.addEventListener('click', () => {
+        const d = adjDelta(b);
+        if (d === null) return;
+        const at = Date.now();
+        flushTick(at);
+        setTimers(Logic.adjustEnd(main, d, at), ex, at, []);
+      });
+    }
+    $('#btn-exercise').addEventListener('click', () => {
+      if (!Logic.canStartExercise(main, ex)) return;
+      $('#ex-title-input').value = '';
+      setTimers(main, Logic.exerciseOpenSetup(ex, settings.exercise), Date.now(), []);
+      $('#ex-title-input').focus();
+    });
+    for (const b of $$('button.ex-setup-adj')) {
+      b.addEventListener('click', () => { const d = adjDelta(b); if (d !== null) setTimers(main, Logic.exerciseAdjustSetup(ex, d), Date.now(), []); });
+    }
+    $('#ex-setup-cancel').addEventListener('click', () => setTimers(main, Logic.exerciseCancelSetup(ex), Date.now(), []));
+    $('#ex-setup-ok').addEventListener('click', startExerciseFromSetup);
+    $('#ex-title-input').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); unlockAudio(); startExerciseFromSetup(); } });
+    for (const b of $$('button.ex-adj')) {
+      b.addEventListener('click', () => {
+        const d = adjDelta(b);
+        if (d === null) return;
+        const at = Date.now();
+        flushTick(at);
+        setTimers(main, Logic.exerciseAdjust(ex, d, at), at, []);
+      });
+    }
+    $('#ex-stop').addEventListener('click', () => setTimers(main, Logic.exerciseStop(ex), Date.now(), []));
+    $('#ex-next-open').addEventListener('click', () => setTimers(main, Logic.exerciseToggleNext(ex, true), Date.now(), []));
+    $('#ex-next-close').addEventListener('click', () => setTimers(main, Logic.exerciseToggleNext(ex, false), Date.now(), []));
+    $('#ex-next-title').addEventListener('input', (ev) => { ex = Logic.exerciseSetNext(ex, ev.target.value, ex.next.minutes); });
+    for (const b of $$('button.ex-next-adj')) {
+      b.addEventListener('click', () => { const d = adjDelta(b); if (d !== null) setTimers(main, Logic.exerciseAdjustNext(ex, d), Date.now(), []); });
+    }
+  }
+
+  function getTimerState() { return { main: { ...main }, ex: { ...ex } }; }
+
   function onVisibility() {
-    if (document.visibilityState === 'visible') tickClock();
+    if (document.visibilityState === 'visible') { tick(); tickClock(); }
   }
 
   function resetIdle() {
@@ -1529,6 +1812,12 @@ const App = (() => {
     bindToolbar();
     applySettings();
     bindAudio();
+    loadData();
+    main = Logic.initialMain();
+    ex = Logic.initialExercise(settings.exercise, settings.nextExercise);
+    bindTimer();
+    render();
+    setInterval(tick, 250);
     tickClock();
     setInterval(tickClock, 1000);
     setStatus('ok', '');
@@ -1540,7 +1829,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { getSettings, updateSettings, setStatus, refresh, applyZoom, setToolbarAttention };
+  return { getSettings, updateSettings, setStatus, refresh, applyZoom, setToolbarAttention, getTimerState };
 })();
 </script>
 </body>

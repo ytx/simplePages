@@ -19,3 +19,19 @@ test('audio: three elements, kinds map to the sound groups, unlock on the start 
   }
   assert.match(ui, /muted: !settings\.muted/);
 });
+
+test('timers: 250 ms tick, end timers armed on endAt change, break pauses and lecture resumes the exercise, stop drops it', () => {
+  assert.match(ui, /setInterval\(tick, 250\)/);
+  assert.match(ui, /function armEndTimers\(at\)/);
+  assert.match(ui, /function scheduleAutoLecture\(\)/);
+  assert.match(ui, /Logic\.exercisePause\(ex, at\)/);
+  assert.match(ui, /Logic\.exerciseResume\(ex, at\)/);
+  assert.match(ui, /Logic\.exerciseStop\(ex\)/);
+  assert.match(ui, /Logic\.exerciseCancelSetup\(ex\)/);
+  assert.match(ui, /Logic\.buttonVisibility\(main, ex\)/);
+  assert.match(ui, /Logic\.pageTitleKey\(main\)/);
+  assert.match(ui, /DATA_KEY/);
+  assert.match(ui, /Logic\.addTitle\(data\.exerciseTitles, title\)/);
+  assert.doesNotMatch(ui, /keydown[^\n]*'[lbsft]'/i, 'no letter shortcuts');
+  assert.match(ui, /function flushTick\(at\)/);
+});
