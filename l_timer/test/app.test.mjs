@@ -35,3 +35,19 @@ test('timers: 250 ms tick, end timers armed on endAt change, break pauses and le
   assert.doesNotMatch(ui, /keydown[^\n]*'[lbsft]'/i, 'no letter shortcuts');
   assert.match(ui, /function flushTick\(at\)/);
 });
+
+test('editor: blocks rendered by DOM construction, plain-text paste, draft debounce, dialog instead of prompt/confirm, data tab with documents', () => {
+  assert.match(ui, /function renderBlocks\(blocks\)/);
+  assert.match(ui, /function readBlocks\(\)/);
+  assert.match(ui, /document\.createTextNode\(r\.text\)/);
+  assert.match(ui, /execCommand\('insertText', false, text\)/);
+  assert.match(ui, /setTimeout\(saveDraft, 500\)/);
+  assert.match(ui, /function ask\(\{ message, input = null \}\)/);
+  assert.match(ui, /Logic\.parseImportAll\(text, Logic\.VERSION\)/);
+  assert.match(ui, /Logic\.mergeImport\(data, result, Date\.now\(\)\)/);
+  assert.match(ui, /JSON\.stringify\(\{ version: Logic\.VERSION, settings, data \}, null, 2\)/);
+  assert.match(ui, /dataStorage\.clear\(\)/);
+  assert.match(ui, /'--left-width'/);
+  assert.match(ui, /'--editor-zoom'/);
+  assert.doesNotMatch(ui, /innerHTML/);
+});

@@ -1306,6 +1306,7 @@ const App = (() => {
     }
     if (previewAudio) stopPreview();
     if (main) render();
+    if (data) applyEditorLayout();
   }
 
   // ---- 音 ----
@@ -1709,6 +1710,323 @@ const App = (() => {
 
   function getTimerState() { return { main: { ...main }, ex: { ...ex } }; }
 
+```js
+  // ---- 小ダイアログ(prompt / confirm の代わり) ----
+  // input が null なら確認(true / false)、文字列なら入力(入力値 / キャンセルで null)。
+  function ask({ message, input = null }) {
+    return new Promise((resolve) => {
+      const dlg = $('#dialog');
+      const inp = $('#dialog-input');
+      $('#dialog-message').textContent = message;
+      inp.hidden = input === null;
+      inp.value = input ?? '';
+      const onClose = () => {
+        dlg.removeEventListener('close', onClose);
+        const ok = dlg.returnValue === 'ok';
+        resolve(input === null ? ok : (ok ? inp.value : null));
+      };
+      dlg.addEventListener('close', onClose);
+      dlg.returnValue = '';
+      dlg.showModal();
+      if (input !== null) { inp.focus(); inp.select(); }
+    });
+  }
+
+  function bindDialog() {
+    $('#dialog-cancel').addEventListener('click', () => $('#dialog').close('cancel'));
+  }
+
+  // ---- エディタ(contenteditable、書式は太字・箇条書き・見出し) ----
+  let currentDocId = null;
+  let draftTimer = null;
+  let savedTimer = null;
+
+  function editorEl() { return $('#editor'); }
+
+  // blocks → DOM。createElement と textContent だけで組む(DOM 構築のみ)。
+  function renderBlocks(blocks) {
+    const frag = document.createDocumentFragment();
+    let ul = null;
+    for (const b of blocks) {
+      let el;
+      if (b.type === 'li') {
+        if (!ul) { ul = document.createElement('ul'); frag.appendChild(ul); }
+        el = document.createElement('li');
+        ul.appendChild(el);
+      } else {
+        ul = null;
+        el = document.createElement(b.type === 'h' ? 'h2' : 'p');
+        frag.appendChild(el);
+      }
+      for (const r of b.runs) {
+        if (!r.text) continue;
+        if (r.bold) {
+          const s = document.createElement('strong');
+          s.textContent = r.text;
+          el.appendChild(s);
+        } else {
+          el.appendChild(document.createTextNode(r.text));
+        }
+      }
+      if (!el.childNodes.length) el.appendChild(document.createElement('br'));
+    }
+    editorEl().replaceChildren(frag);
+  }
+
+  // DOM → blocks。H1〜H6 → h、UL/OL の LI → li、それ以外のブロック → p。STRONG/B/font-weight>=600 を bold。
+  function readBlocks() {
+    const root = editorEl();
+    const blocks = [];
+    const isBold = (node) => {
+      for (let n = node; n && n !== root; n = n.parentNode) {
+        if (n.nodeType !== 1) continue;
+        if (n.tagName === 'STRONG' || n.tagName === 'B') return true;
+        const fw = n.style && n.style.fontWeight;
+        if (fw === 'bold' || Number(fw) >= 600) return true;
+      }
+      return false;
+    };
+    const isList = (n) => n.nodeType === 1 && (n.tagName === 'UL' || n.tagName === 'OL');
+    const pushBlock = (type, el) => {
+      const runs = [];
+      const walk = (node) => {
+        for (const c of node.childNodes) {
+          if (c.nodeType === 3) {
+            if (!c.nodeValue) continue;
+            const b = isBold(c);
+            const last = runs[runs.length - 1];
+            if (last && last.bold === b) last.text += c.nodeValue;
+            else runs.push({ text: c.nodeValue, bold: b });
+          } else if (c.nodeType === 1 && c.tagName !== 'BR' && !isList(c)) {
+            walk(c);
+          }
+        }
+      };
+      walk(el);
+      blocks.push({ type, runs });
+    };
+    const visit = (node) => {
+      for (const c of node.childNodes) {
+        if (c.nodeType === 3) { if (c.nodeValue.trim()) blocks.push({ type: 'p', runs: [{ text: c.nodeValue, bold: false }] }); continue; }
+        if (c.nodeType !== 1) continue;
+        if (isList(c)) {
+          for (const li of c.children) {
+            if (li.tagName !== 'LI') continue;
+            pushBlock('li', li);
+            for (const sub of li.children) if (isList(sub)) visit(sub); // 入れ子は平らにする
+          }
+        } else if (/^H[1-6]$/.test(c.tagName)) pushBlock('h', c);
+        else if (c.tagName === 'LI') pushBlock('li', c);
+        else if (c.tagName === 'BR') blocks.push({ type: 'p', runs: [] });
+        else pushBlock('p', c);
+      }
+    };
+    visit(root);
+    return Logic.normalizeBlocks(blocks);
+  }
+
+  function currentDoc() { return data.documents.find((d) => d.id === currentDocId) || null; }
+
+  function scheduleDraft() {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 500);
+  }
+
+  function saveDraft() {
+    clearTimeout(draftTimer);
+    draftTimer = null;
+    data = { ...data, draft: { documentId: currentDocId, blocks: readBlocks(), updatedAt: new Date().toISOString() } };
+    saveData();
+    updateDocUI();
+  }
+
+  // 「保存していない変更」= 下書きの blocks と保存済み文書の blocks が違う
+  function hasUnsavedChanges() {
+    const doc = currentDoc();
+    const saved = JSON.stringify(doc ? doc.blocks : Logic.emptyBlocks());
+    return JSON.stringify(readBlocks()) !== saved;
+  }
+
+  function updateDocUI() {
+    const sel = $('#doc-select');
+    const first = document.createElement('option');
+    first.value = '';
+    first.textContent = Logic.t(settings.lang, 'doc_new');
+    const sorted = [...data.documents].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0));
+    sel.replaceChildren(first, ...sorted.map((d) => { const o = document.createElement('option'); o.value = d.id; o.textContent = d.title; return o; }));
+    sel.value = currentDocId || '';
+    $('#doc-delete').disabled = !currentDocId;
+  }
+
+  function loadDocument(id) {
+    currentDocId = id;
+    const doc = currentDoc();
+    renderBlocks(doc ? doc.blocks : Logic.emptyBlocks());
+    saveDraft();
+  }
+
+  async function switchDocument(id) {
+    if (hasUnsavedChanges() && !(await ask({ message: Logic.t(settings.lang, 'doc_unsaved_confirm') }))) { updateDocUI(); return; }
+    loadDocument(id || null);
+  }
+
+  function dateForTitle(d) {
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  // 保存: タイトルが選択中の文書と同じなら上書き、違えば新規文書として追加
+  async function saveDocument() {
+    const blocks = readBlocks();
+    const cur = currentDoc();
+    const def = cur ? cur.title : (Logic.firstLine(blocks) || Logic.t(settings.lang, 'untitled', { date: dateForTitle(new Date()) }));
+    const answer = await ask({ message: Logic.t(settings.lang, 'doc_title_prompt'), input: def });
+    if (answer === null) return;
+    const title = answer.trim() || def;
+    const now = new Date().toISOString();
+    let documents;
+    if (cur && cur.title === title) {
+      documents = data.documents.map((d) => (d.id === cur.id ? { ...d, blocks, updatedAt: now } : d));
+    } else {
+      const id = `doc_${Date.now()}`;
+      documents = [...data.documents, { id, title, blocks, createdAt: now, updatedAt: now }];
+      currentDocId = id;
+    }
+    data = { ...data, documents };
+    saveDraft();
+    flashSaved();
+  }
+
+  function flashSaved() {
+    const b = $('#doc-save');
+    b.classList.add('saved');
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(() => b.classList.remove('saved'), 2000);
+  }
+
+  async function deleteDocument() {
+    const cur = currentDoc();
+    if (!cur) return;
+    if (!(await ask({ message: Logic.t(settings.lang, 'doc_delete_confirm', { title: cur.title }) }))) return;
+    data = { ...data, documents: data.documents.filter((d) => d.id !== cur.id) };
+    currentDocId = null;
+    renderBlocks(Logic.emptyBlocks());
+    saveDraft();
+  }
+
+  function closestBlockTag() {
+    const sel = window.getSelection();
+    if (!sel || !sel.anchorNode) return null;
+    const root = editorEl();
+    for (let n = sel.anchorNode; n && n !== root; n = n.parentNode) {
+      if (n.nodeType === 1 && /^(P|H[1-6]|LI|DIV)$/.test(n.tagName)) return n.tagName;
+    }
+    return null;
+  }
+
+  function updateToolState() {
+    $('#ed-bold').setAttribute('aria-pressed', String(document.queryCommandState('bold')));
+    $('#ed-list').setAttribute('aria-pressed', String(document.queryCommandState('insertUnorderedList')));
+    $('#ed-heading').setAttribute('aria-pressed', String(closestBlockTag() === 'H2'));
+  }
+
+  function execFormat(cmd) {
+    editorEl().focus();
+    if (cmd === 'heading') document.execCommand('formatBlock', false, closestBlockTag() === 'H2' ? '<p>' : '<h2>');
+    else if (cmd === 'list') document.execCommand('insertUnorderedList');
+    else document.execCommand('bold');
+    afterInput();
+  }
+
+  function afterInput() {
+    scheduleDraft();
+    updateToolState();
+  }
+
+  function insertPlainText(text) {
+    if (!text) return;
+    editorEl().focus();
+    document.execCommand('insertText', false, text);
+    afterInput();
+  }
+
+  function restoreDraft() {
+    if (data.draft) {
+      currentDocId = data.draft.documentId;
+      renderBlocks(data.draft.blocks);
+    } else {
+      currentDocId = null;
+      renderBlocks(Logic.emptyBlocks());
+    }
+    updateDocUI();
+  }
+
+  function applyEditorLayout() {
+    const on = !!settings.editor;
+    $('#editor-pane').hidden = !on;
+    $('#resizer').hidden = !on;
+    $('#content').classList.toggle('editor-on', on);
+    $('#btn-editor').setAttribute('aria-pressed', String(on));
+    document.documentElement.style.setProperty('--left-width', `${settings.editorWidth}%`);
+    document.documentElement.style.setProperty('--editor-zoom', String(settings.editorZoom / 100));
+    $('#ed-zoom-level').textContent = `${settings.editorZoom}%`;
+    $('#ed-zoom-in').disabled = Logic.stepEditorZoom(settings.editorZoom, 1) === settings.editorZoom;
+    $('#ed-zoom-out').disabled = Logic.stepEditorZoom(settings.editorZoom, -1) === settings.editorZoom;
+    editorEl().dataset.placeholder = Logic.t(settings.lang, 'editor_placeholder');
+    updateDocUI();
+  }
+
+  function bindEditor() {
+    const ed = editorEl();
+    ed.addEventListener('input', afterInput);
+    document.addEventListener('selectionchange', () => { if (ed.contains(document.activeElement) || document.activeElement === ed) updateToolState(); });
+    ed.addEventListener('paste', (ev) => {
+      ev.preventDefault();
+      insertPlainText((ev.clipboardData || window.clipboardData).getData('text/plain'));
+    });
+    ed.addEventListener('drop', (ev) => {
+      ev.preventDefault();
+      insertPlainText(ev.dataTransfer ? ev.dataTransfer.getData('text/plain') : '');
+    });
+    $('#ed-bold').addEventListener('click', () => execFormat('bold'));
+    $('#ed-list').addEventListener('click', () => execFormat('list'));
+    $('#ed-heading').addEventListener('click', () => execFormat('heading'));
+    $('#ed-zoom-in').addEventListener('click', () => updateSettings({ editorZoom: Logic.stepEditorZoom(settings.editorZoom, 1) }));
+    $('#ed-zoom-out').addEventListener('click', () => updateSettings({ editorZoom: Logic.stepEditorZoom(settings.editorZoom, -1) }));
+    $('#btn-editor').addEventListener('click', () => updateSettings({ editor: !settings.editor }));
+    $('#doc-select').addEventListener('change', (ev) => switchDocument(ev.target.value));
+    $('#doc-save').addEventListener('click', saveDocument);
+    $('#doc-delete').addEventListener('click', deleteDocument);
+  }
+
+  // ---- リサイザ(タイマー列の幅 30〜70%) ----
+  function bindResizer() {
+    const r = $('#resizer');
+    let dragging = false;
+    const pct = (ev) => {
+      const rect = $('#content').getBoundingClientRect();
+      return Math.min(70, Math.max(30, ((ev.clientX - rect.left) / rect.width) * 100));
+    };
+    r.addEventListener('pointerdown', (ev) => {
+      dragging = true;
+      r.classList.add('active');
+      r.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+    r.addEventListener('pointermove', (ev) => {
+      if (dragging) document.documentElement.style.setProperty('--left-width', `${pct(ev)}%`);
+    });
+    const end = (ev) => {
+      if (!dragging) return;
+      dragging = false;
+      r.classList.remove('active');
+      updateSettings({ editorWidth: Math.round(pct(ev)) });
+    };
+    r.addEventListener('pointerup', end);
+    r.addEventListener('pointercancel', end);
+    r.addEventListener('dblclick', () => updateSettings({ editorWidth: 50 }));
+  }
+
   function onVisibility() {
     if (document.visibilityState === 'visible') { tick(); tickClock(); }
   }
@@ -1725,8 +2043,10 @@ const App = (() => {
     if (name === 'data') refreshDataText();
   }
 
+  function exportObject() { return { version: Logic.VERSION, settings, data }; }
+
   function refreshDataText() {
-    $('#data-text').value = JSON.stringify({ version: Logic.VERSION, settings }, null, 2);
+    $('#data-text').value = JSON.stringify({ version: Logic.VERSION, settings, data }, null, 2);
     setDataMessage('none', '');
   }
 
@@ -1736,12 +2056,16 @@ const App = (() => {
     el.textContent = text;
   }
 
+  // 設定は置き換え、文書は追加(id 衝突は改名)、履歴は結合。旧 l_timer の書き出しも受け付ける。
   function importText(text) {
-    const result = Logic.parseImport(text, Logic.VERSION);
+    const result = Logic.parseImportAll(text, Logic.VERSION);
     if (!result.ok) {
       setDataMessage('error', Logic.t(settings.lang, result.reason === 'invalid_json' ? 'import_failed_json' : 'import_failed_format'));
       return;
     }
+    data = Logic.mergeImport(data, result, Date.now());
+    saveData();
+    renderTitleList();
     updateSettings(result.settings);
     refreshDataText();
     setDataMessage('ok', Logic.t(settings.lang, 'import_ok'));
@@ -1781,7 +2105,7 @@ const App = (() => {
     }
     $('#set-volume').addEventListener('input', () => { $('#volume-value').textContent = `${$('#set-volume').value}%`; });
     $('#btn-export').addEventListener('click', () => {
-      const blob = new Blob([JSON.stringify({ version: Logic.VERSION, settings }, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(exportObject(), null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       const d = new Date();
@@ -1800,7 +2124,7 @@ const App = (() => {
     $('#btn-clear').addEventListener('click', () => {
       if (!confirm(Logic.t(settings.lang, 'confirm_clear'))) return;
       storage.clear();
-      try { localStorage.removeItem(DATA_KEY); } catch { /* ignore */ }
+      dataStorage.clear();
       location.href = location.pathname;
     });
     renderAbout();
@@ -1818,6 +2142,11 @@ const App = (() => {
     bindTimer();
     render();
     setInterval(tick, 250);
+    bindDialog();
+    bindEditor();
+    bindResizer();
+    restoreDraft();
+    applyEditorLayout();
     tickClock();
     setInterval(tickClock, 1000);
     setStatus('ok', '');
