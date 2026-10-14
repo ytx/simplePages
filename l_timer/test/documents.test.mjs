@@ -85,6 +85,8 @@ test('importLegacyHtml: headings, lists, bold, entities, blank paragraphs, unkno
   assert.deepEqual(Logic.importLegacyHtml('<h2>T</h2>\n  <p>x</p>'), [{ type: 'h', runs: [{ text: 'T', bold: false }] }, P('x')]);
   assert.deepEqual(Logic.importLegacyHtml('<p><b>a</b><strong>b</strong>c &lt;tag&gt; &#x41;</p>'), [{ type: 'p', runs: [{ text: 'ab', bold: true }, { text: 'c <tag> A', bold: false }] }]);
   assert.deepEqual(Logic.importLegacyHtml('loose text'), [P('loose text')]);
+  assert.deepEqual(Logic.importLegacyHtml('<p>&#99999999;&#x110000;x</p>'), [P('&#99999999;&#x110000;x')]);
+  assert.doesNotThrow(() => Logic.parseImportAll(JSON.stringify({ version: '1.0', settings: {}, documents: { documents: [{ id: 'a', title: 'A', content: { html: '<p>&#x110000;</p>' } }] } }), 1));
   assert.deepEqual(Logic.importLegacyHtml('<p>a\u00a0b</p>'), [P('a\u00a0b')]);
 });
 

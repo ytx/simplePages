@@ -829,8 +829,11 @@ const Logic = (() => {
   const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' };
   function decodeEntities(s) {
     return s.replace(/&(#x([0-9a-f]+)|#(\d+)|([a-z]+));/gi, (m, _g, hex, dec, name) => {
-      if (hex) return String.fromCodePoint(parseInt(hex, 16));
-      if (dec) return String.fromCodePoint(parseInt(dec, 10));
+      if (hex || dec) {
+        const cp = hex ? parseInt(hex, 16) : parseInt(dec, 10);
+        if (!Number.isInteger(cp) || cp < 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return m;
+        return String.fromCodePoint(cp);
+      }
       const v = ENTITIES[name.toLowerCase()];
       return v === undefined ? m : v;
     });
