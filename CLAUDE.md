@@ -10,6 +10,7 @@ index.html 1 ファイルで動く小さな Web ページの集まり。各ペ�
 | `weather/` | 1 地点の天気予報を横長 1 画面に常時表示 | 気象庁 bosai JSON、Open-Meteo Forecast / Geocoding |
 | `calendar/` | Google カレンダーの予定を日・週・月で常時表示 | Google Apps Script ウェブアプリ(`calendar/gas/Code.gs`、CalendarApp) |
 | `k_timer/` | キッチンタイマー(アナログ時計 + プリセット/± 調整、終了音ループ) | なし(`k_timer/audio/*.wav` を同梱) |
+| `l_timer/` | 講義用タイマー(講義/休憩サイクル、予鈴・終了音・経過音、演習サブタイマー、メモエディタ) | なし(`l_timer/audio/*.wav` を同梱) |
 
 ## 共通規約(要約)
 
