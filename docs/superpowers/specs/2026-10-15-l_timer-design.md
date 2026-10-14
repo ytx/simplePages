@@ -24,7 +24,7 @@
 | キーボードショートカット L/B/S/F/T/Esc | 廃止 |
 | 予鈴は講義のみ | 講義・休憩・演習すべて |
 | 演習中は講義側の操作ボタンを隠す | 残す。休憩開始で演習を一時停止し、講義再開で再開 |
-| エディタ独自のズーム(50〜200%) | 廃止。共通の `--zoom` に従う |
+| エディタ独自のズーム(50〜200%、localStorage `editorSettings`) | 維持。設定 `editorZoom` として保存し、共通の `--zoom` と掛け合わせる |
 | 初回起動時の言語選択ダイアログ | 廃止(共通の言語検出とツールバー切替) |
 | `prompt` / `confirm` / `alert` | ページ内の小ダイアログ(全消去の `confirm` のみ共通どおり) |
 | 1 秒 `setInterval` で `===` 判定(背景タブで取りこぼす) | 終了時刻基準。閾値の跨ぎで判定 |
@@ -54,7 +54,7 @@ l_timer/
 ```
 ┌──────────────────────────────────── [🔇][✎]│[◐][−][+][⛶][A][⚙]┐
 │ 講義中                              ║                           │
-│   ┌ 演習エリア(演習中のみ) ──────┐  ║  [B][•][H]                 │
+│   ┌ 演習エリア(演習中のみ) ──────┐  ║  [B][•][H]      [−]100%[+] │
 │   │ 演習1            [一時停止中]│  ║ ┌───────────────────────┐ │
 │   │        12:34                 │  ║ │ メモ本文…              │ │
 │   │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━  │  ║ │                       │ │
@@ -249,6 +249,7 @@ l_timer/
 | `isMuted` | `muted` |
 | `sound1Src` `audio/sound1-2.wav` | `sound1` `sound1-2`(辞書にないものは捨てる) |
 | `timerTheme` | `theme` |
+| `editorSettings.zoomLevel`(50〜200) | `editorZoom`(段階にないものは既定) |
 | 文書 `{ id, title, content: { html }, createdAt, updatedAt }` | `{ id, title, blocks: importLegacyHtml(html), createdAt, updatedAt }` |
 
 ### 編集 UI(App)
@@ -263,7 +264,7 @@ l_timer/
   - 切替・新規: 未保存の変更があればダイアログで確認。
   - 削除: ダイアログで確認。
 - **ダイアログ**(`#dialog`): メッセージ、任意の入力欄、OK / キャンセル の固定サイズモーダル。設定モーダルと同じ見た目。`prompt` / `confirm` / `alert` は使わない(データタブの全消去だけ共通どおり `confirm`)。
-- 文字サイズは `--fs-base` に従い、共通の `--zoom` で拡縮する。エディタ独自のズームはない。
+- **エディタ拡縮**: ツールバー右端に `−` / `100%` / `+`。段階は 50 / 75 / 100 / 125 / 150 / 200(%)。設定 `editorZoom` に保存し、`#editor` の `font-size` を `calc(var(--fs-base) * var(--zoom) * var(--editor-zoom))` とする。共通の `--zoom`(ツールバーの拡大縮小)はタイマーとエディタの両方に、`--editor-zoom` はエディタ本文だけに掛かる。ツールバー・文書操作欄の大きさは `--editor-zoom` の影響を受けない。
 - 表示切替はツールバーの `#btn-editor`。非表示にしても下書きは保持する。
 
 ### 保存(App)
@@ -295,10 +296,11 @@ localStorage キー `simplePages.l_timer`、`version: 1`。
 | `muted` | bool | false | `muted=1` | ミュート |
 | `editor` | bool | false | `editor=1` | エディタを表示 |
 | `editorWidth` | int 30〜70 | 50 | `editorWidth=40` | タイマー列の幅(%) |
+| `editorZoom` | enum 50/75/100/125/150/200 | 100 | `editorZoom=150` | エディタ本文の拡大率(%) |
 
 - 全キーが表示専用なので `DISPLAY_ONLY_KEYS` に全部入れる。`?save=1` で URL の値を保存(共通)。
 - 設定モーダルのタブ: **表示 / タイマー / 音 / データ / About**(更新間隔がないため一般タブは置かない。k_timer と同じ)。
-  - 表示: エディタを表示(checkbox)、タイマー列の幅(number 30〜70)。共通のテーマ・拡大率・言語。
+  - 表示: エディタを表示(checkbox)、タイマー列の幅(number 30〜70)、エディタ本文の拡大率(select)。共通のテーマ・拡大率・言語。
   - タイマー: 7 項目を **2 列グリッド**(ラベル + number)でスクロールなしに収める。並びは 講義 / 休憩、昼休憩 / 予鈴、超過通知間隔 / 演習、次の演習。
   - 音: 音量(range + 数値)、ミュート(checkbox)、予鈴音・終了音・経過音(select + 試聴)。
   - データ: 共通のエクスポート/インポート(ファイルとテキストエリア)。エクスポート JSON は `{ version: 1, settings, data }`。インポートは `settings` を置き換え、`data.documents` は **追加**(id が衝突したら新しい id を振る)、`data.exerciseTitles` は結合して 20 件。旧 l_timer 形式(`parseLegacyExport` が認識)も同じ扱い。全消去は `simplePages.l_timer` と `simplePages.l_timer.data` の両方を消す。
@@ -307,7 +309,7 @@ localStorage キー `simplePages.l_timer`、`version: 1`。
 
 ## CSS 変数(ページ固有)
 
-`--c-lecture`(青)、`--c-break`(緑)、`--c-overtime`(赤)、`--c-exercise`(橙)をライト/ダークで定義。`--fs-timer`、`--fs-timer-small = calc(var(--fs-timer) * 0.5)`、`--left-width`(リサイザが更新)。ボタン類は共通の `--gap`、`--fs-base`、`--radius` を使う。円形アイコンボタンは `calc(60px * var(--zoom))`、700px 未満では 48px。
+`--c-lecture`(青)、`--c-break`(緑)、`--c-overtime`(赤)、`--c-exercise`(橙)をライト/ダークで定義。`--fs-timer`、`--fs-timer-small = calc(var(--fs-timer) * 0.5)`、`--left-width`(リサイザが更新)、`--editor-zoom`(`editorZoom / 100`)。ボタン類は共通の `--gap`、`--fs-base`、`--radius` を使う。円形アイコンボタンは `calc(60px * var(--zoom))`、700px 未満では 48px。
 
 ## エラー処理
 
@@ -322,7 +324,7 @@ localStorage キー `simplePages.l_timer`、`version: 1`。
 - 定数: `SOUND_FILES`、`LIMITS`(各設定の範囲)、`ADJUST_STEPS = [-10, -1, 1, 10]`、`MAX_TITLES = 20`
 - 講義: `initialMain()`、`startLecture`、`startBreak`、`stopMain`、`adjustEnd`、`tickMain`、`remainingMain`、`floorToMinute`
 - 演習: `initialExercise(defaultMin, nextDefaultMin)`、`exerciseOpenSetup`、`exerciseAdjustSetup`、`exerciseCancelSetup`、`exerciseStart`、`exerciseStop`、`exerciseAdjust`、`exercisePause`、`exerciseResume`、`exerciseSetNext`、`exerciseAdjustNext`、`exerciseToggleNext`、`tickExercise`、`canStartExercise`
-- 表示: `pageTitleKey(main)`、`buttonVisibility(main, e)`(ボタン id → boolean)、`formatClock`、`formatMinutes`、`formatEndAt`、`formatDateTimeLine`、`progress`
+- 表示: `pageTitleKey(main)`、`buttonVisibility(main, e)`(ボタン id → boolean)、`stepEditorZoom(level, dir)`(段階の前後へ、端で止まる)、`formatClock`、`formatMinutes`、`formatEndAt`、`formatDateTimeLine`、`progress`
 - データ: `addTitle`、`normalizeBlocks`、`blocksToPlainText`、`firstLine`、`importLegacyHtml`、`parseLegacyExport`、`mergeImport(data, incoming)`
 
 ## テスト(`l_timer/test/`)
@@ -330,7 +332,7 @@ localStorage キー `simplePages.l_timer`、`version: 1`。
 - `load-logic.mjs`(`TZ=Asia/Tokyo`)。
 - `main.test.mjs`: 状態表の各セル。予鈴が `prev < t <= now` で 1 回だけ鳴る、開始時点で予鈴分以下なら鳴らない、`+10` の後にもう一度鳴る、休憩でも鳴る。`end` で lecture は `overtime`、break は `break_end`。背景タブ想定(prev から 5 分飛ぶ)で `end` と `tick` がそれぞれ 1 回。`adjustEnd` の分丸めと過去拒否、超過中の `+` で復帰。
 - `exercise.test.mjs`: setup → running → end → `next_started`(次の演習あり)/ overtime(なし)。`pause` が残りを保持し `resume` で `endAt = now + remainingMs`、超過中に止めた場合は再開後も超過。`paused` 中は events 空。`exerciseAdjust` の paused 分岐。`canStartExercise`。`buttonVisibility` の各状態(演習中も講義側ボタンが出る)。
-- `format.test.mjs`: `formatClock`(0、999 → `00:01`、3000000 → `50:00`、18000000 → `300:00`、-500 → `00:00`、-1500 → `+00:01`)、`formatEndAt`、`formatDateTimeLine` ja/en、`progress`(0 / 50 / 100 / 超過 100)。
+- `format.test.mjs`: `formatClock`(0、999 → `00:01`、3000000 → `50:00`、18000000 → `300:00`、-500 → `00:00`、-1500 → `+00:01`)、`formatEndAt`、`formatDateTimeLine` ja/en、`progress`(0 / 50 / 100 / 超過 100)、`stepEditorZoom`(100→125、200→200、50→50)。
 - `documents.test.mjs`: `normalizeBlocks`(壊れた入力 7 種)、`firstLine`、`addTitle`(重複・20 件・`'演習'` 除外)、`importLegacyHtml`(段落・見出し・箇条書き・strong・実体参照・未知タグ・ネスト)、`parseLegacyExport`(旧 JSON 固定サンプルを `test/fixtures/legacy-export.json` に置く。音 src の変換、volume の換算、不正キーの除外)、`mergeImport`(id 衝突、履歴結合)。
 - `settings.test.mjs`: スキーマの範囲外・型変換、`DISPLAY_ONLY_KEYS` が全キーを含む、i18n キー網羅(index.html 内の `data-i18n*` と `Logic.t(…)` の全キーが ja/en にある)、`page_title` 系キーと `exercise_paused` の存在。
 - `audio.test.mjs`: `SOUND_FILES` の 9 パスが `l_timer/` 配下に存在し、先頭 4 バイトが `RIFF`。
@@ -346,6 +348,7 @@ localStorage キー `simplePages.l_timer`、`version: 1`。
 - `±` で終了時刻の秒が 00 になる。超過中に `+1` で通常カウントに戻る
 - ミュート、エディタ切替が共通ボタンの左に並び、10 秒で一緒に減光する
 - エディタで太字・箇条書き・見出し。リロードで下書きが戻る。保存・切替・削除。貼り付けがプレーンテキストになる
+- エディタの `−` / `+` で本文だけが拡縮し、ツールバーの拡大縮小ではタイマーとエディタの両方が拡縮する
 - リサイザのドラッグで幅が変わり、タイマー文字が追従する。ダブルクリックで 50%
 - 旧 l_timer のエクスポート JSON をデータタブから取り込むと設定と文書が入る
 - 幅 700px 未満でエディタが下に積まれる。ダーク/ライト、拡縮、日英で崩れない
