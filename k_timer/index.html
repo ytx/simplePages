@@ -396,7 +396,6 @@ const Logic = (() => {
   function remainingFor(s, now) {
     return s.phase === 'running' || s.phase === 'alarm' ? s.endAt - now : s.remainingMs;
   }
-  // 一時的な実装。Task 4 で置き換える。
   const pad2 = (n) => String(n).padStart(2, '0');
 
   // 残り時間: 正は切り上げ(1 秒残っている間は 0:01)、超過は切り捨てで '-m:ss'。
@@ -812,9 +811,129 @@ const App = (() => {
   async function refresh() {}
 
   // ページ固有: 設定タブに項目を追加する。
-  function renderSettingsExtra(_settings) {}
+  function renderSettingsExtra(_settings) {
+    if (timer) render();
+  }
 
-  function onVisibility() {}
+  // ---- タイマー ----
+  let timer = null;        // Logic の TimerState
+  let tickTimer = null;
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  function buildClockFace() {
+    const g = $('#clock-marks');
+    g.replaceChildren();
+    for (let i = 0; i < 60; i++) {
+      const a = (i * 6 * Math.PI) / 180;
+      const major = i % 5 === 0;
+      const r1 = major ? 86 : 90;
+      const line = document.createElementNS(SVG_NS, 'line');
+      line.setAttribute('x1', (100 + r1 * Math.sin(a)).toFixed(2));
+      line.setAttribute('y1', (100 - r1 * Math.cos(a)).toFixed(2));
+      line.setAttribute('x2', (100 + 94 * Math.sin(a)).toFixed(2));
+      line.setAttribute('y2', (100 - 94 * Math.cos(a)).toFixed(2));
+      line.setAttribute('class', major ? 'mark major' : 'mark');
+      g.appendChild(line);
+    }
+    for (let n = 1; n <= 12; n++) {
+      const a = (n * 30 * Math.PI) / 180;
+      const text = document.createElementNS(SVG_NS, 'text');
+      text.setAttribute('x', (100 + 74 * Math.sin(a)).toFixed(2));
+      text.setAttribute('y', (100 - 74 * Math.cos(a)).toFixed(2));
+      text.setAttribute('class', 'num');
+      text.textContent = String(n);
+      g.appendChild(text);
+    }
+  }
+
+  function renderClock(now) {
+    const ang = Logic.handAngles(new Date(now));
+    $('#hand-hour').setAttribute('transform', `rotate(${ang.hour} 100 100)`);
+    $('#hand-minute').setAttribute('transform', `rotate(${ang.minute} 100 100)`);
+    const sec = $('#hand-second');
+    sec.hidden = !settings.seconds;
+    sec.setAttribute('transform', `rotate(${ang.second} 100 100)`);
+  }
+
+  const START_LABEL = { idle: 'start', paused: 'start', running: 'stop', alarm: 'stop_alarm' };
+
+  function renderTimer(now) {
+    const rem = Logic.remainingFor(timer, now);
+    const remEl = $('#remaining');
+    remEl.textContent = Logic.formatRemaining(rem);
+    remEl.classList.toggle('alarm', timer.phase === 'alarm');
+    $('#end-at').textContent = timer.phase === 'running' ? Logic.formatEndAt(timer.endAt, now, settings.lang) : '';
+    $('#btn-start').textContent = Logic.t(settings.lang, START_LABEL[timer.phase]);
+    $('#btn-start').disabled = timer.phase !== 'alarm' && timer.phase !== 'running' && timer.remainingMs <= 0;
+    for (const b of $$('button.preset')) b.textContent = Logic.t(settings.lang, 'preset_minutes', { n: settings[`preset${b.dataset.preset}`] });
+    const adjustable = timer.phase !== 'alarm';
+    for (const b of $$('button.adj')) b.disabled = !adjustable;
+    $('#btn-zero').disabled = !adjustable;
+  }
+
+  function render(now = Date.now()) {
+    renderClock(now);
+    renderTimer(now);
+  }
+
+  // Task 6 で音と点滅を入れるフック
+  function onAlarmStart() {}
+  function onAlarmStop() {}
+
+  // 状態変更はすべてここを通す。alarm への出入りでフックを呼ぶ。
+  function setState(next, now = Date.now()) {
+    const was = timer && timer.phase === 'alarm';
+    timer = next;
+    const is = timer.phase === 'alarm';
+    if (!was && is) onAlarmStart();
+    if (was && !is) onAlarmStop();
+    render(now);
+  }
+
+  function tick() {
+    const now = Date.now();
+    setState(Logic.tick(timer, now), now);
+  }
+
+  function bindTimer() {
+    for (const b of $$('button.preset')) {
+      b.addEventListener('click', () => {
+        const now = Date.now();
+        const cur = Logic.tick(timer, now);
+        setState(Logic.preset(cur, settings[`preset${b.dataset.preset}`]), now);
+      });
+    }
+    for (const b of $$('button.adj')) {
+      b.addEventListener('click', () => {
+        const delta = Number(b.dataset.delta);
+        if (!Logic.ADJUST_STEPS.includes(delta)) return;
+        const now = Date.now();
+        const cur = Logic.tick(timer, now);
+        setState(Logic.adjust(cur, delta, now), now);
+      });
+    }
+    $('#btn-zero').addEventListener('click', () => {
+      const now = Date.now();
+      const cur = Logic.tick(timer, now);
+      setState(Logic.zero(cur, now), now);
+    });
+    $('#btn-start').addEventListener('click', () => {
+      const now = Date.now();
+      const cur = Logic.tick(timer, now);
+      setState(Logic.start(cur, now), now);
+    });
+    $('#btn-reset').addEventListener('click', () => {
+      const now = Date.now();
+      setState(Logic.reset(Logic.tick(timer, now)), now);
+    });
+  }
+
+  function getTimerState() { return { ...timer }; }
+
+
+  function onVisibility() {
+    if (document.visibilityState === 'visible') { tick(); tickClock(); }
+  }
 
   function resetIdle() {
     $('#toolbar').classList.remove('idle');
@@ -913,6 +1032,11 @@ const App = (() => {
     bindSettingsDialog();
     bindToolbar();
     applySettings();
+    buildClockFace();
+    timer = Logic.initialState(settings.preset1);
+    bindTimer();
+    render();
+    tickTimer = setInterval(tick, 250);
     tickClock();
     setInterval(tickClock, 1000);
     setStatus('ok', '');
@@ -924,7 +1048,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { getSettings, updateSettings, setStatus, refresh, applyZoom, setToolbarAttention };
+  return { getSettings, updateSettings, setStatus, refresh, applyZoom, setToolbarAttention, getTimerState };
 })();
 </script>
 </body>
