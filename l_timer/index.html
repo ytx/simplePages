@@ -63,6 +63,7 @@ body {
 .icon-btn[hidden] { display: none; }
 .icon-btn svg { width: 1.3em; height: 1.3em; fill: currentColor; }
 .icon-btn.attention { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+.icon-btn.muted { color: var(--error); border-color: var(--error); }
 #content { flex: 1; min-height: 0; padding: 0 var(--gap) var(--gap); }
 #page-title { margin: 0 0 var(--gap); text-align: center; font-size: var(--fs-large); font-weight: 600; }
 #status-bar {
@@ -1294,8 +1295,136 @@ const App = (() => {
   // l_timer は何も取得しない。共通 API のため空実装を残す。
   async function refresh() {}
 
-  // ページ固有: 設定変更の即時反映。Task 6〜8 で中身を足す。
-  function renderSettingsExtra(_settings) {}
+  // ページ固有: 設定変更の即時反映。
+  function renderSettingsExtra(_settings) {
+    loadSounds();
+    applyMuteButton();
+    if (previewAudio) stopPreview();
+  }
+
+  // ---- 音 ----
+  const SOUND_KIND = { warning: 'sound1', end: 'sound2', tick: 'sound3' };
+  const AUDIO_ID = { sound1: '#audio-warning', sound2: '#audio-end', sound3: '#audio-tick' };
+  let audioBroken = false;   // どれかの <audio> が読めない → Web Audio のビープで代替
+  let audioCtx = null;
+  let previewAudio = null;
+  let previewBtn = null;
+
+  // 設定の音キーを SOUND_GROUPS の既知キーに丸める。src には必ず SOUND_FILES の値を入れる。
+  function soundKey(group) {
+    const k = settings[group];
+    return Logic.SOUND_GROUPS[group].includes(k) ? k : Logic.SOUND_GROUPS[group][0];
+  }
+
+  function loadSounds() {
+    let changed = false;
+    for (const group of Object.keys(AUDIO_ID)) {
+      const a = $(AUDIO_ID[group]);
+      const key = soundKey(group);
+      if (a.dataset.sound === key) continue;
+      a.dataset.sound = key;
+      a.dataset.unlocked = '';
+      a.src = Logic.SOUND_FILES[key];
+      a.load();
+      changed = true;
+    }
+    if (changed && audioBroken) { audioBroken = false; setStatus('ok', ''); }
+  }
+
+  function markAudioBroken() {
+    if (audioBroken) return;
+    audioBroken = true;
+    setStatus('error', () => Logic.t(settings.lang, 'error_audio'));
+  }
+
+  // 880 Hz 0.2 秒のビープ 1 回(読込失敗・自動再生拒否の代替)
+  function beep() {
+    if (!audioCtx || settings.muted || settings.volume === 0) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 880;
+    gain.gain.value = 0.3 * (settings.volume / 100);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.2);
+  }
+
+  // ユーザー操作(開始ボタン)の中で一度だけ無音再生し、後の play() が自動再生制限で拒否されないようにする
+  function unlockAudio() {
+    if (!audioCtx && window.AudioContext) {
+      try { audioCtx = new AudioContext(); } catch { audioCtx = null; }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    if (audioBroken) return;
+    for (const sel of Object.values(AUDIO_ID)) {
+      const a = $(sel);
+      if (a.dataset.unlocked === '1') continue;
+      a.muted = true;
+      a.play().then(() => {
+        a.dataset.unlocked = '1';
+        a.muted = false;
+        a.pause();
+        a.currentTime = 0;
+      }).catch(() => { a.muted = false; });
+    }
+  }
+
+  function playSound(kind) {
+    const group = SOUND_KIND[kind];
+    if (!group || settings.muted || settings.volume === 0) return;
+    if (audioBroken) { beep(); return; }
+    const a = $(AUDIO_ID[group]);
+    a.volume = settings.volume / 100;
+    a.currentTime = 0;
+    a.play().catch((e) => {
+      const name = e && e.name;
+      if (name === 'AbortError') return;                    // 鳴り始める前に別の再生で差し替えられた
+      if (name === 'NotAllowedError') { beep(); return; }   // 自動再生拒否: ビープで代替(AudioContext があれば)
+      markAudioBroken();
+      beep();
+    });
+  }
+
+  function applyMuteButton() {
+    const b = $('#btn-mute');
+    b.classList.toggle('muted', !!settings.muted);
+    b.querySelector('use').setAttribute('href', settings.muted ? '#icon-volume-off' : '#icon-volume');
+    const s = Logic.t(settings.lang, settings.muted ? 'unmute' : 'mute');
+    b.setAttribute('aria-label', s);
+    b.title = s;
+  }
+
+  // 試聴(設定 → 音)。1 回だけ再生。もう一度押すか設定変更で止める。
+  function togglePreview(group, btn) {
+    if (previewAudio) { const same = previewBtn === btn; stopPreview(); if (same) return; }
+    const inst = new Audio();
+    previewAudio = inst;
+    previewBtn = btn;
+    inst.src = Logic.SOUND_FILES[soundKey(group)];
+    inst.volume = settings.volume / 100;
+    inst.addEventListener('ended', () => { if (previewAudio === inst) stopPreview(); });
+    inst.addEventListener('error', () => { if (previewAudio === inst) { markAudioBroken(); stopPreview(); } });
+    inst.play().catch(() => { if (previewAudio === inst) stopPreview(); });
+    btn.textContent = Logic.t(settings.lang, 'preview_stop');
+  }
+
+  function stopPreview() {
+    if (previewAudio) { previewAudio.pause(); previewAudio = null; }
+    previewBtn = null;
+    for (const b of $$('button.preview')) b.textContent = Logic.t(settings.lang, 'preview');
+  }
+
+  function bindAudio() {
+    for (const sel of Object.values(AUDIO_ID)) $(sel).addEventListener('error', markAudioBroken);
+    loadSounds();
+    for (const sel of ['#btn-lecture', '#btn-lecture-from-break', '#btn-break1', '#btn-break2', '#ex-setup-ok']) {
+      $(sel).addEventListener('click', unlockAudio, true); // 状態変更(bubble)より先に capture で
+    }
+    $('#btn-mute').addEventListener('click', () => updateSettings({ muted: !settings.muted }));
+    for (const b of $$('button.preview')) b.addEventListener('click', () => togglePreview(b.dataset.preview, b));
+    $('#settings').addEventListener('close', stopPreview);
+  }
 
   function onVisibility() {
     if (document.visibilityState === 'visible') tickClock();
@@ -1399,6 +1528,7 @@ const App = (() => {
     bindSettingsDialog();
     bindToolbar();
     applySettings();
+    bindAudio();
     tickClock();
     setInterval(tickClock, 1000);
     setStatus('ok', '');
