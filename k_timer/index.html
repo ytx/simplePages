@@ -812,7 +812,12 @@ const App = (() => {
 
   // ページ固有: 設定タブに項目を追加する。
   function renderSettingsExtra(_settings) {
-    if (timer) render();
+    if (!timer) return;
+    render();
+    loadAlarmSound();                       // 音の変更(alarm 中は次回から)
+    alarmAudio().volume = settings.volume / 100;
+    if (timer.phase === 'alarm') document.documentElement.classList.toggle('alarm', !!settings.flash);
+    if (previewAudio) stopPreview();        // 設定を変えたら試聴は止める
   }
 
   // ---- タイマー ----
@@ -876,10 +881,6 @@ const App = (() => {
     renderTimer(now);
   }
 
-  // Task 6 で音と点滅を入れるフック
-  function onAlarmStart() {}
-  function onAlarmStop() {}
-
   // 状態変更はすべてここを通す。alarm への出入りでフックを呼ぶ。
   function setState(next, now = Date.now()) {
     const was = timer && timer.phase === 'alarm';
@@ -929,6 +930,143 @@ const App = (() => {
   }
 
   function getTimerState() { return { ...timer }; }
+
+  // ---- 終了音 ----
+  const SWALLOW_CLICK_MS = 700;
+  let audioBroken = false;   // <audio> が読めない → Web Audio のビープで代替
+  let audioCtx = null;
+  let beepTimer = null;
+  let alarmStoppedAt = 0;
+  let previewAudio = null;
+
+  function alarmAudio() { return $('#alarm-audio'); }
+
+  // 設定の音キーを SOUND_FILES の既知キーに丸める。src には必ずこの表の値を入れる。
+  function soundKey() {
+    return Logic.SOUND_FILES[settings.sound] ? settings.sound : 'sound2-1';
+  }
+
+  function loadAlarmSound() {
+    const a = alarmAudio();
+    const key = soundKey();
+    if (a.dataset.sound === key) return;
+    a.dataset.sound = key;
+    audioBroken = false;
+    setStatus('ok', '');
+    a.src = Logic.SOUND_FILES[key];
+    a.load();
+  }
+
+  function markAudioBroken() {
+    if (audioBroken) return;
+    audioBroken = true;
+    setStatus('error', () => Logic.t(settings.lang, 'error_audio'));
+    if (timer && timer.phase === 'alarm') startBeep();
+  }
+
+  // ユーザー操作(スタート押下)の中で一度だけ無音再生し、alarm 時の play() が自動再生制限で拒否されないようにする
+  function unlockAudio() {
+    const a = alarmAudio();
+    if (!audioCtx && window.AudioContext) {
+      try { audioCtx = new AudioContext(); } catch { audioCtx = null; }
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+    if (a.dataset.unlocked === '1' || audioBroken) return;
+    a.muted = true;
+    a.play().then(() => {
+      a.dataset.unlocked = '1';
+      a.muted = false;
+      if (timer && timer.phase === 'alarm') return; // すでに鳴り始めていたら止めない
+      a.pause();
+      a.currentTime = 0;
+    }).catch(() => { a.muted = false; });
+  }
+
+  function startBeep() {
+    if (beepTimer || !audioCtx) return;
+    const beep = () => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 880;
+      gain.gain.value = 0.3 * (settings.volume / 100);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.2);
+    };
+    beep();
+    beepTimer = setInterval(beep, 600);
+  }
+
+  function stopBeep() {
+    clearInterval(beepTimer);
+    beepTimer = null;
+  }
+
+  function onAlarmStart() {
+    document.documentElement.classList.toggle('alarm', !!settings.flash);
+    stopPreview();
+    if (audioBroken) { startBeep(); return; }
+    const a = alarmAudio();
+    a.volume = settings.volume / 100;
+    a.currentTime = 0;
+    a.play().catch((e) => {
+      if (e && e.name === 'NotAllowedError') return; // 自動再生拒否: 画面点滅だけ
+      markAudioBroken();
+    });
+  }
+
+  function onAlarmStop() {
+    document.documentElement.classList.remove('alarm');
+    const a = alarmAudio();
+    a.pause();
+    a.currentTime = 0;
+    stopBeep();
+  }
+
+  // 鳴っている間はどこを触っても止まる。止めた直後の click は飲み込み、押したボタンを誤って作動させない。
+  function onAnyInput() {
+    if (!timer || timer.phase !== 'alarm') return;
+    alarmStoppedAt = Date.now();
+    setState(Logic.start(timer, alarmStoppedAt), alarmStoppedAt);
+  }
+
+  function swallowClickAfterStop(ev) {
+    if (alarmStoppedAt && Date.now() - alarmStoppedAt < SWALLOW_CLICK_MS) {
+      ev.stopPropagation();
+      ev.preventDefault();
+    }
+    alarmStoppedAt = 0;
+  }
+
+  // 試聴(設定 → タイマー)。1 回だけ再生。alarm 中は無効。
+  function togglePreview() {
+    if (previewAudio) { stopPreview(); return; }
+    if (timer && timer.phase === 'alarm') return;
+    previewAudio = new Audio();
+    previewAudio.src = Logic.SOUND_FILES[soundKey()];
+    previewAudio.volume = settings.volume / 100;
+    previewAudio.addEventListener('ended', stopPreview);
+    previewAudio.addEventListener('error', () => { markAudioBroken(); stopPreview(); });
+    previewAudio.play().catch(() => stopPreview());
+    $('#btn-preview').textContent = Logic.t(settings.lang, 'preview_stop');
+  }
+
+  function stopPreview() {
+    if (previewAudio) { previewAudio.pause(); previewAudio = null; }
+    $('#btn-preview').textContent = Logic.t(settings.lang, 'preview');
+  }
+
+  function bindAudio() {
+    alarmAudio().addEventListener('error', markAudioBroken);
+    loadAlarmSound();
+    document.addEventListener('pointerdown', onAnyInput, true);
+    document.addEventListener('keydown', onAnyInput, true);
+    document.addEventListener('click', swallowClickAfterStop, true);
+    $('#btn-start').addEventListener('click', unlockAudio, true); // 状態変更(bubble)より先に capture で
+    $('#btn-preview').addEventListener('click', togglePreview);
+    $('#settings').addEventListener('close', stopPreview);
+  }
 
 
   function onVisibility() {
@@ -1035,6 +1173,7 @@ const App = (() => {
     buildClockFace();
     timer = Logic.initialState(settings.preset1);
     bindTimer();
+    bindAudio();
     render();
     tickTimer = setInterval(tick, 250);
     tickClock();

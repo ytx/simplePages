@@ -79,3 +79,11 @@ test('markup: two columns, timer controls, audio element, no external resources'
   assert.match(src, /@media \(max-width: 699px\)/);
   assert.doesNotMatch(src, /<link|<script src=|https?:\/\/[^"']*\.(css|js|woff)/);
 });
+
+test('audio src comes only from Logic.SOUND_FILES and the alarm stops on any pointerdown/keydown', () => {
+  assert.match(ui, /\.src = Logic\.SOUND_FILES\[/);
+  assert.doesNotMatch(ui, /\.src = settings/);
+  assert.match(ui, /document\.addEventListener\('pointerdown', onAnyInput/);
+  assert.match(ui, /document\.addEventListener\('keydown', onAnyInput/);
+  assert.match(ui, /SWALLOW_CLICK_MS = 700/);
+});
