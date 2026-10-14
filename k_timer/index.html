@@ -932,11 +932,10 @@ const App = (() => {
   function getTimerState() { return { ...timer }; }
 
   // ---- 終了音 ----
-  const SWALLOW_CLICK_MS = 700;
   let audioBroken = false;   // <audio> が読めない → Web Audio のビープで代替
   let audioCtx = null;
   let beepTimer = null;
-  let alarmStoppedAt = 0;
+  let swallowNextClick = false;
   let previewAudio = null;
 
   function alarmAudio() { return $('#alarm-audio'); }
@@ -1011,7 +1010,7 @@ const App = (() => {
     a.volume = settings.volume / 100;
     a.currentTime = 0;
     a.play().catch((e) => {
-      if (e && e.name === 'NotAllowedError') return; // 自動再生拒否: 画面点滅だけ
+      if (e && (e.name === 'NotAllowedError' || e.name === 'AbortError')) return; // 自動再生拒否: 画面点滅だけ
       markAudioBroken();
     });
   }
@@ -1025,30 +1024,33 @@ const App = (() => {
   }
 
   // 鳴っている間はどこを触っても止まる。止めた直後の click は飲み込み、押したボタンを誤って作動させない。
-  function onAnyInput() {
-    if (!timer || timer.phase !== 'alarm') return;
-    alarmStoppedAt = Date.now();
-    setState(Logic.start(timer, alarmStoppedAt), alarmStoppedAt);
+  function onAnyInput(ev) {
+    if (ev.type === 'keydown' && ev.repeat) return;
+    if (!timer || timer.phase !== 'alarm') { swallowNextClick = false; return; }
+    swallowNextClick = true;
+    const now = Date.now();
+    setState(Logic.start(timer, now), now);
   }
 
   function swallowClickAfterStop(ev) {
-    if (alarmStoppedAt && Date.now() - alarmStoppedAt < SWALLOW_CLICK_MS) {
+    if (swallowNextClick) {
       ev.stopPropagation();
       ev.preventDefault();
     }
-    alarmStoppedAt = 0;
+    swallowNextClick = false;
   }
 
   // 試聴(設定 → タイマー)。1 回だけ再生。alarm 中は無効。
   function togglePreview() {
     if (previewAudio) { stopPreview(); return; }
     if (timer && timer.phase === 'alarm') return;
-    previewAudio = new Audio();
-    previewAudio.src = Logic.SOUND_FILES[soundKey()];
-    previewAudio.volume = settings.volume / 100;
-    previewAudio.addEventListener('ended', stopPreview);
-    previewAudio.addEventListener('error', () => { markAudioBroken(); stopPreview(); });
-    previewAudio.play().catch(() => stopPreview());
+    const inst = new Audio();
+    previewAudio = inst;
+    inst.src = Logic.SOUND_FILES[soundKey()];
+    inst.volume = settings.volume / 100;
+    inst.addEventListener('ended', () => { if (previewAudio === inst) stopPreview(); });
+    inst.addEventListener('error', () => { if (previewAudio === inst) { markAudioBroken(); stopPreview(); } });
+    inst.play().catch(() => { if (previewAudio === inst) stopPreview(); });
     $('#btn-preview').textContent = Logic.t(settings.lang, 'preview_stop');
   }
 

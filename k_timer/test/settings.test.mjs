@@ -85,5 +85,7 @@ test('audio src comes only from Logic.SOUND_FILES and the alarm stops on any poi
   assert.doesNotMatch(ui, /\.src = settings/);
   assert.match(ui, /document\.addEventListener\('pointerdown', onAnyInput/);
   assert.match(ui, /document\.addEventListener\('keydown', onAnyInput/);
-  assert.match(ui, /SWALLOW_CLICK_MS = 700/);
+  assert.match(ui, /function onAnyInput[\s\S]*?swallowNextClick = true/);
+  assert.match(ui, /function swallowClickAfterStop[\s\S]*?swallowNextClick = false/);
+  assert.doesNotMatch(ui, /SWALLOW_CLICK_MS|alarmStoppedAt/);
 });
