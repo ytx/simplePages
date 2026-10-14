@@ -532,6 +532,70 @@ const Logic = (() => {
     return `${new Intl.DateTimeFormat('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }).format(d)} ${time}`;
   }
 
+  const ADJUST_STEPS = [-10, -1, 1, 10];
+
+  // ---- 講義/休憩タイマー。すべて純粋関数で、新しいオブジェクトを返す ----
+  function initialMain() {
+    return { mode: 'idle', breakType: null, startedAt: null, endAt: null, totalMs: 0, overtime: false, lastTickAt: null };
+  }
+
+  function startLecture(_s, now, minutes) {
+    const ms = minutes * 60000;
+    return { mode: 'lecture', breakType: null, startedAt: now, endAt: now + ms, totalMs: ms, overtime: false, lastTickAt: now };
+  }
+
+  function startBreak(_s, now, type, minutes) {
+    const ms = minutes * 60000;
+    return { mode: 'break', breakType: type, startedAt: now, endAt: now + ms, totalMs: ms, overtime: false, lastTickAt: now };
+  }
+
+  function stopMain(_s) { return initialMain(); }
+
+  // ローカル時刻の秒・ミリ秒を 0 にする
+  function floorToMinute(ms) {
+    const d = new Date(ms);
+    d.setSeconds(0, 0);
+    return d.getTime();
+  }
+
+  // 終了時刻を deltaMin 分動かし、秒を 00 にする。過去にはしない(超過中だけは過去も許す)。
+  function adjustEnd(s, deltaMin, now) {
+    if (s.mode === 'idle') return s;
+    const endAt = floorToMinute(s.endAt + deltaMin * 60000);
+    const canBePast = s.mode === 'lecture' && s.overtime;
+    if (endAt <= now && !canBePast) return s;
+    return { ...s, endAt, overtime: s.mode === 'lecture' && endAt <= now };
+  }
+
+  // prev < t <= now を「閾値 t を跨いだ」とする。背景タブで数分飛んでも各 1 回だけ。
+  function thresholdEvents(prev, now, startedAt, endAt, warningMin, tickSec) {
+    const warnAt = endAt - warningMin * 60000;
+    const warning = warnAt > startedAt && prev < warnAt && warnAt <= now;
+    const end = prev < endAt && endAt <= now;
+    const tickMs = tickSec * 1000;
+    const tick = now - endAt >= tickMs && Math.floor((now - endAt) / tickMs) > Math.floor((prev - endAt) / tickMs);
+    return { warning, end, tick };
+  }
+
+  function tickMain(s, now, warningMin, tickSec) {
+    if (s.mode === 'idle') return { state: s, events: [] };
+    const ev = thresholdEvents(s.lastTickAt, now, s.startedAt, s.endAt, warningMin, tickSec);
+    const events = [];
+    let overtime = s.overtime;
+    if (ev.warning) events.push('warning');
+    if (ev.end) {
+      events.push('end');
+      if (s.mode === 'lecture') overtime = true;
+      else events.push('break_end');
+    }
+    if (s.mode === 'lecture' && overtime && ev.tick) events.push('tick');
+    return { state: { ...s, overtime, lastTickAt: now }, events };
+  }
+
+  function remainingMain(s, now) {
+    return s.mode === 'idle' ? null : s.endAt - now;
+  }
+
   function coerce(spec, value) {
     if (value === undefined || value === null) return undefined;
     switch (spec.type) {
@@ -700,7 +764,8 @@ const Logic = (() => {
   }
 
   return { VERSION, DATA_VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport,
-    SOUND_FILES, SOUND_GROUPS, EDITOR_ZOOM_LEVELS, formatDateTimeLine };
+    SOUND_FILES, SOUND_GROUPS, EDITOR_ZOOM_LEVELS, formatDateTimeLine,
+    ADJUST_STEPS, initialMain, startLecture, startBreak, stopMain, floorToMinute, adjustEnd, thresholdEvents, tickMain, remainingMain };
 })();
 </script>
 <script id="app-ui">
