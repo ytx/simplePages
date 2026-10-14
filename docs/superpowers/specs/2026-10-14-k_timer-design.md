@@ -34,7 +34,7 @@ k_timer/
 ┌────────────────────────────────────────────── [◐][−][+][⛶][A][⚙]┐
 │                             │                                      │
 │        ┌─────────┐          │              4:37                    │
-│        │ 12      │          │           終了 14:32                 │
+│        │ 12      │          │         終了 14:32:10                │
 │        │9   ·   3│          │                                      │
 │        │    6    │          │     [ 3 分 ] [ 5 分 ] [ 12 分 ]       │
 │        └─────────┘          │  [-10][-1][-0.5][00][+0.5][+1][+10]   │
@@ -61,12 +61,12 @@ k_timer/
 上から順に:
 
 1. `#remaining`: 残り時間。`m:ss`(例 `4:37`、`12:00`、`0:05`)。alarm 中は超過を `-m:ss`(例 `-0:42`)で表示し点滅。フォントは `--fs-timer = calc(clamp(64px, min(14vw, 20vh), 180px) * var(--zoom))`、等幅数字(`font-variant-numeric: tabular-nums`)。
-2. `#end-at`: 動作中のみ「終了 14:32」(`end_at` i18n: `終了 {time}` / `Ends {time}`)。`HH:MM` 24 時間。終了時刻が翌日なら「終了 翌 0:05」(`end_at_tomorrow`)。idle / paused / alarm では空(高さは確保し、レイアウトが跳ねないようにする)。
-3. `.row.presets`: ボタン 3 つ。表記は `{n} 分` / `{n} min`。設定 `preset1..3`。
-4. `.row.adjust`: ボタン 7 つ。表記は固定 `-10` `-1` `-0.5` `00` `+0.5` `+1` `+10`。単位は分(0.5 = 30 秒)。
-5. `.row.controls`: `#btn-start`(idle / paused で「スタート」、running で「ストップ」、alarm で「停止」)と `#btn-reset`(「リセット」)。`#btn-start` は `--accent` 塗り。
+2. `#end-at`: 動作中のみ「終了 14:32:10」(`end_at` i18n: `終了 {time}` / `Ends {time}`)。`HH:MM:SS` 24 時間。終了時刻が翌日なら「終了 翌 00:05:00」(`end_at_tomorrow`)。idle / paused / alarm では空(高さは確保し、レイアウトが跳ねないようにする)。
+3. `.row.adjust`: ボタン 7 つ。表記は固定 `-10` `-1` `-0.5` `00` `+0.5` `+1` `+10`。単位は分(0.5 = 30 秒)。
+4. `.row.controls`: `#btn-start`(idle / paused で「スタート」、running で「ストップ」、alarm で「停止」)と `#btn-reset`(「リセット」)。`#btn-start` は `--accent` 塗り。
+5. `.row.presets`: ボタン 3 つ。表記は `{n} 分` / `{n} min`。設定 `preset1..3`。
 
-ボタンは `min-height: calc(48px * var(--zoom))`、`min-width: calc(56px * var(--zoom))`、`--fs-base` の 1.1 倍、タッチ対象の間隔 `--gap`。
+ボタンは `min-height: calc(48px * var(--zoom))`、`min-width: calc(56px * var(--zoom))`、`--fs-base` の 1.1 倍、タッチ対象の間隔 `--gap`。スタート/ストップ・リセットは縦横 2 倍(`96px` × `112px`、文字 1.6 倍)。
 
 ### ステータス帯
 
@@ -98,7 +98,7 @@ k_timer/
 - 動作中の `adjust`/`zero` は `startMs` を変えない(リセットは元の開始値に戻る)。
 - `remainingFor(s, now)`: idle/paused → `remainingMs`、running → `endAt - now`、alarm → `endAt - now`(負)。
 - `formatRemaining(ms)`: `ms >= 0` は `ceil(ms/1000)` 秒を `m:ss`。負は `-` + `floor(-ms/1000)` 秒を `m:ss`。表示上 1 秒残っているうちは `0:01`、0 到達の瞬間 `0:00`。超過 1 秒未満は `0:00`、以後 `-m:ss`。
-- `formatEndAt(endAt, now, lang)`: `HH:MM`。`endAt` の日付が `now` の翌日なら翌日表記。
+- `formatEndAt(endAt, now, lang)`: `HH:MM:SS`。`endAt` の日付が `now` の翌日なら翌日表記。
 - `handAngles(date)`: `{ hour, minute, second }` 度。`hour = (h%12)*30 + m*0.5 + s/120`、`minute = m*6 + s*0.1`、`second = s*6`。
 - `formatDateLine(date, lang)`: ステータス帯の日付文字列。
 

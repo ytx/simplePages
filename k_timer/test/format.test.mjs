@@ -21,12 +21,12 @@ test('formatRemaining: ceiling for positive, floor for overrun, m:ss', () => {
   assert.equal(Logic.formatRemaining(-61000), '-1:01');
 });
 
-test('formatEndAt: HH:MM same day; tomorrow variant across midnight', () => {
-  assert.equal(Logic.formatEndAt(jst(14, 32, 10), jst(14, 0), 'ja'), '終了 14:32');
-  assert.equal(Logic.formatEndAt(jst(14, 32, 10), jst(14, 0), 'en'), 'Ends 14:32');
-  assert.equal(Logic.formatEndAt(jst(9, 5), jst(9, 0), 'ja'), '終了 09:05');
-  assert.equal(Logic.formatEndAt(jst(0, 5, 0, 15), jst(23, 50), 'ja'), '終了 翌 00:05');
-  assert.equal(Logic.formatEndAt(jst(0, 5, 0, 15), jst(23, 50), 'en'), 'Ends tomorrow 00:05');
+test('formatEndAt: HH:MM:SS same day; tomorrow variant across midnight', () => {
+  assert.equal(Logic.formatEndAt(jst(14, 32, 10), jst(14, 0), 'ja'), '終了 14:32:10');
+  assert.equal(Logic.formatEndAt(jst(14, 32, 10), jst(14, 0), 'en'), 'Ends 14:32:10');
+  assert.equal(Logic.formatEndAt(jst(9, 5), jst(9, 0), 'ja'), '終了 09:05:00');
+  assert.equal(Logic.formatEndAt(jst(0, 5, 0, 15), jst(23, 50), 'ja'), '終了 翌 00:05:00');
+  assert.equal(Logic.formatEndAt(jst(0, 5, 0, 15), jst(23, 50), 'en'), 'Ends tomorrow 00:05:00');
 });
 
 test('formatDateLine', () => {
