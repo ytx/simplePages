@@ -20,7 +20,7 @@ function run(e, from, to, warning = 3, tick = 60, step = 250) {
 
 test('initialExercise, setup panel', () => {
   const e = Logic.initialExercise(15, 10);
-  assert.deepEqual(e, { phase: 'none', title: '', setupMinutes: 15, startedAt: null, endAt: null, totalMs: 0, remainingMs: null, overtime: false, lastTickAt: null, next: { title: '', minutes: 10 }, nextOpen: false });
+  assert.deepEqual(e, { phase: 'none', title: '', setupMinutes: 15, startedAt: null, endAt: null, totalMs: 0, remainingMs: null, overtime: false, lastTickAt: null, next: [{ title: '', minutes: 10 }], nextOpen: false });
   assert.equal(Logic.remainingExercise(e, T0), null);
   const s = Logic.exerciseOpenSetup(e, 20);
   assert.equal(s.phase, 'setup');
@@ -42,7 +42,7 @@ test('exerciseStart trims the title, defaults it, resets next', () => {
   assert.equal(r.totalMs, 10 * MIN);
   assert.equal(r.startedAt, T0);
   assert.equal(r.lastTickAt, T0);
-  assert.deepEqual(r.next, { title: '', minutes: 20 });
+  assert.deepEqual(r.next, [{ title: '', minutes: 20 }]);
   assert.equal(r.nextOpen, false);
   assert.equal(Logic.exerciseStart(e, T0, '   ', 10, 15).title, Logic.DEFAULT_EXERCISE_TITLE);
   assert.equal(Logic.DEFAULT_EXERCISE_TITLE, '演習');
@@ -68,7 +68,7 @@ test('running: warning, end, then overtime ticks when no next exercise is set', 
 
 test('running: end with a next exercise set starts it immediately', () => {
   let r = Logic.exerciseStart(Logic.initialExercise(15, 15), T0, 'a', 5, 15);
-  r = Logic.exerciseSetNext(r, 'b', 7);
+  r = Logic.exerciseSetNext(r, 0, 'b', 7);
   const pre = run(r, T0, T0 + 4 * MIN);
   assert.deepEqual(pre.events, ['warning']);
   const res = Logic.tickExercise(pre.state, T0 + 5 * MIN, 3, 60);
@@ -77,20 +77,59 @@ test('running: end with a next exercise set starts it immediately', () => {
   assert.equal(res.state.endAt, T0 + 12 * MIN);
   assert.equal(res.state.totalMs, 7 * MIN);
   assert.equal(res.state.overtime, false);
-  assert.deepEqual(res.state.next, { title: '', minutes: 7 });
+  assert.deepEqual(res.state.next, [{ title: '', minutes: 7 }]);
   assert.equal(res.state.nextOpen, false);
   // a whitespace-only next title does not count
-  const r2 = run(Logic.exerciseSetNext(Logic.exerciseStart(Logic.initialExercise(15, 15), T0, 'a', 5, 15), '  ', 7), T0, T0 + 4 * MIN).state;
+  const r2 = run(Logic.exerciseSetNext(Logic.exerciseStart(Logic.initialExercise(15, 15), T0, 'a', 5, 15), 0, '  ', 7), T0, T0 + 4 * MIN).state;
   assert.deepEqual(Logic.tickExercise(r2, T0 + 5 * MIN, 3, 60).events, ['end']);
 });
 
 test('next exercise editing', () => {
   const r = Logic.exerciseStart(Logic.initialExercise(15, 15), T0, 'a', 5, 15);
-  assert.equal(Logic.exerciseAdjustNext(r, 10).next.minutes, 25);
-  assert.equal(Logic.exerciseAdjustNext(r, -20).next.minutes, 1);
-  assert.equal(Logic.exerciseSetNext(r, 'x', 500).next.minutes, 120);
+  assert.equal(Logic.exerciseAdjustNext(r, 0, 10).next[0].minutes, 25);
+  assert.equal(Logic.exerciseAdjustNext(r, 0, -20).next[0].minutes, 1);
+  assert.equal(Logic.exerciseSetNext(r, 0, 'x', 500).next[0].minutes, 120);
   assert.equal(Logic.exerciseToggleNext(r, true).nextOpen, true);
   assert.equal(Logic.exerciseToggleNext(Logic.exerciseToggleNext(r, true), false).nextOpen, false);
+  // out-of-range index leaves the state untouched
+  assert.equal(Logic.exerciseSetNext(r, 3, 'x', 5), r);
+  assert.equal(Logic.exerciseAdjustNext(r, -1, 5), r);
+});
+
+test('next exercise queue: add, edit by index, remove, never empty', () => {
+  const r = Logic.exerciseStart(Logic.initialExercise(15, 15), T0, 'a', 5, 15);
+  const a = Logic.exerciseAddNext(r, 10);
+  assert.deepEqual(a.next, [{ title: '', minutes: 15 }, { title: '', minutes: 10 }]);
+  const b = Logic.exerciseSetNext(Logic.exerciseSetNext(a, 0, 'b', 15), 1, 'c', 10);
+  assert.deepEqual(Logic.exerciseAdjustNext(b, 1, 10).next[1], { title: 'c', minutes: 20 });
+  assert.deepEqual(Logic.exerciseRemoveNext(b, 0).next, [{ title: 'c', minutes: 10 }]);
+  // removing the only entry leaves a blank entry with the same minutes
+  assert.deepEqual(Logic.exerciseRemoveNext(Logic.exerciseRemoveNext(b, 0), 0).next, [{ title: '', minutes: 10 }]);
+  assert.equal(Logic.exerciseRemoveNext(b, 5), b);
+  // the first entry's minutes become the next default after stop
+  assert.deepEqual(Logic.exerciseStop(b).next, [{ title: '', minutes: 15 }]);
+});
+
+test('running: end with a queue starts the head and carries the rest, keeping the panel open', () => {
+  let r = Logic.exerciseStart(Logic.initialExercise(15, 15), T0, 'a', 5, 15);
+  r = Logic.exerciseSetNext(Logic.exerciseAddNext(r, 15), 0, 'b', 7);
+  r = Logic.exerciseSetNext(r, 1, 'c', 3);
+  r = Logic.exerciseToggleNext(r, false);
+  const res = Logic.tickExercise({ ...r, lastTickAt: T0 + 4 * MIN }, T0 + 5 * MIN, 3, 60);
+  assert.deepEqual(res.events, ['end', 'next_started']);
+  assert.equal(res.state.title, 'b');
+  assert.equal(res.state.endAt, T0 + 12 * MIN);
+  assert.deepEqual(res.state.next, [{ title: 'c', minutes: 3 }]);
+  assert.equal(res.state.nextOpen, true);
+  const res2 = Logic.tickExercise({ ...res.state, lastTickAt: T0 + 11 * MIN }, T0 + 12 * MIN, 3, 60);
+  assert.deepEqual(res2.events, ['end', 'next_started']);
+  assert.equal(res2.state.title, 'c');
+  assert.deepEqual(res2.state.next, [{ title: '', minutes: 3 }]);
+  assert.equal(res2.state.nextOpen, false);
+  // an empty head does not start even if a later entry has a title
+  let q = Logic.exerciseStart(Logic.initialExercise(15, 15), T0, 'a', 5, 15);
+  q = Logic.exerciseSetNext(Logic.exerciseAddNext(q, 15), 1, 'z', 3);
+  assert.deepEqual(Logic.tickExercise({ ...q, lastTickAt: T0 + 4 * MIN }, T0 + 5 * MIN, 3, 60).events, ['end']);
 });
 
 test('exerciseAdjust while running: floor to minute, past refused unless overtime', () => {

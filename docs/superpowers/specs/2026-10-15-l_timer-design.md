@@ -59,7 +59,7 @@ l_timer/
 │   │        12:34                 │  ║ │ メモ本文…              │ │
 │   │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━  │  ║ │                       │ │
 │   │ 終了 14:12:00                │  ║ │                       │ │
-│   │ [-10][-1][+1][+10] [■] [Next]│  ║ │                       │ │
+│   │ 終了 HH:MM [-10][-1][+1][+10]  [■] [⇨]  │  ║ │                       │ │
 │   └──────────────────────────────┘  ║ └───────────────────────┘ │
 │                37:12               ║ [▼ 文書 ][💾][🗑]          │
 │   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━    ║                           │
@@ -113,7 +113,7 @@ l_timer/
 
 **設定パネル**(`phase = setup`): タイトル入力(`<input list="exercise-titles">`、履歴を候補表示)、✓(開始)、×(キャンセル)、`MM:00` 表示(橙)、`-10` `-1` `+1` `+10`(分、1〜120 にクランプ)。分の初期値は設定 `exercise`。開くとタイトル入力にフォーカス。
 
-**実行パネル**(`phase = running` / `paused`): 左に 現在の演習(タイトル、残り `MM:SS` 橙、超過は `+MM:SS` 赤、進捗バー、終了時刻、`±` 4 つ、停止 ■ 赤)、右に **次の演習パネル**(ラベル「次の演習」、タイトル入力、`MM:00`、`±` 4 つ、× で折りたたみ)。折りたたみ中は左下に「Next」ボタンが出る。演習開始時は折りたたんだ状態。`paused` のあいだはタイトル横に「一時停止中」(`exercise_paused` / `Paused`)を出し、エリア全体を `opacity: 0.6`。残り時間は止まったまま。`±`、停止、次の演習パネルは `paused` でも操作できる。
+**実行パネル**(`phase = running` / `paused`): 左に 現在の演習(タイトル、残り `MM:SS` 橙、超過は `+MM:SS` 赤、進捗バー、終了時刻と `±` 4 つを 1 行(講義側と同じ `.end-row`)、その下に 停止 ■ 赤 と 次の演習 ⇨ 橙 のアイコンボタン)、右に **次の演習パネル**(ラベル「次の演習」、× で折りたたみ、キューの各件に タイトル入力 + 削除 ×、`MM:00`、`±` 4 つ、末尾に「+ 追加」)。折りたたみ中は ⇨ ボタンが出る。演習開始時は折りたたんだ状態。`paused` のあいだはタイトル横に「一時停止中」(`exercise_paused` / `Paused`)を出し、エリア全体を `opacity: 0.6`。大小は反転し、演習側の残り時間・進捗バーが `--fs-timer-small`、講義側が通常サイズに戻る(`running` 中は講義側が小さく、不透明度はそのまま)。残り時間は止まったまま。`±`、停止、次の演習パネルは `paused` でも操作できる。
 
 ### ステータス帯
 
@@ -161,7 +161,7 @@ l_timer/
   remainingMs: null,      // paused のときだけ。負なら超過中に止めた
   overtime: false,
   lastTickAt: null,
-  next: { title: '', minutes: 15 },
+  next: [{ title: '', minutes: 15 }],   // キュー、常に 1 件以上
   nextOpen: false }
 ```
 
@@ -170,13 +170,13 @@ l_timer/
 | `exerciseOpenSetup(e, defaultMin)` | `phase = setup`、`setupMinutes = defaultMin`、`title = ''`。lecture 中で `phase = none` のときのみ呼ぶ(`canStartExercise(main, e)` が true) |
 | `exerciseAdjustSetup(e, deltaMin)` | `setupMinutes` を 1〜120 にクランプ |
 | `exerciseCancelSetup(e)` | `phase = none` |
-| `exerciseStart(e, now, title, min, nextDefaultMin)` | `phase = running`、`title = title.trim() || '演習'`、`startedAt = lastTickAt = now`、`endAt = now + min*60000`、`totalMs`、`overtime = false`、`next = { title: '', minutes: nextDefaultMin }`、`nextOpen = false` |
+| `exerciseStart(e, now, title, min, nextDefaultMin)` | `phase = running`、`title = title.trim() || '演習'`、`startedAt = lastTickAt = now`、`endAt = now + min*60000`、`totalMs`、`overtime = false`、`next = [{ title: '', minutes: nextDefaultMin }]`、`nextOpen = false` |
 | `exerciseStop(e)` | `phase = none`、残りは初期値 |
 | `exerciseAdjust(e, deltaMin, now)` | `adjustEnd` と同じ規則(`floorToMinute`、超過中は過去も許す、採用時 `overtime = newEnd <= now`)。`paused` では `remainingMs += deltaMin*60000`(結果が 0 以下なら `overtime = true`) |
 | `exercisePause(e, now)` | running → paused。`remainingMs = endAt - now`(負も保持) |
 | `exerciseResume(e, now)` | paused → running。`endAt = now + remainingMs`、`lastTickAt = now`、`overtime = remainingMs <= 0` |
-| `exerciseSetNext(e, title, minutes)` / `exerciseAdjustNext(e, deltaMin)` / `exerciseToggleNext(e, open)` | 次の演習の編集。分は 1〜120 |
-| `tickExercise(e, now, warningMin, tickSec)` | `running` のみ。`warning` / `end` / `tick` は `tickMain` と同じ規則。`end` のとき `next.title.trim()` が空でなければ `exerciseStart(e, now, next.title, next.minutes, next.minutes)` を適用して events に `'next_started'` を加える(遅延なし)。空なら `overtime = true` で継続 |
+| `exerciseSetNext(e, i, title, minutes)` / `exerciseAdjustNext(e, i, deltaMin)` / `exerciseAddNext(e, defaultMin)` / `exerciseRemoveNext(e, i)` / `exerciseToggleNext(e, open)` | 次の演習キューの編集。分は 1〜120。範囲外の `i` は無視。最後の 1 件を消すと同じ分数の空の 1 件が残る |
+| `tickExercise(e, now, warningMin, tickSec)` | `running` のみ。`warning` / `end` / `tick` は `tickMain` と同じ規則。`end` のとき `next[0].title.trim()` が空でなければ `exerciseStart(e, now, next[0].title, next[0].minutes, next[0].minutes)` を適用して events に `'next_started'` を加える(遅延なし)。残りのキューがあれば `next` に引き継ぎ `nextOpen = true`。空なら `overtime = true` で継続 |
 
 `paused` / `setup` / `none` では events は常に空。
 
@@ -323,7 +323,7 @@ localStorage キー `simplePages.l_timer`、`version: 1`。
 
 - 定数: `SOUND_FILES`、`LIMITS`(各設定の範囲)、`ADJUST_STEPS = [-10, -1, 1, 10]`、`MAX_TITLES = 20`
 - 講義: `initialMain()`、`startLecture`、`startBreak`、`stopMain`、`adjustEnd`、`tickMain`、`remainingMain`、`floorToMinute`
-- 演習: `initialExercise(defaultMin, nextDefaultMin)`、`exerciseOpenSetup`、`exerciseAdjustSetup`、`exerciseCancelSetup`、`exerciseStart`、`exerciseStop`、`exerciseAdjust`、`exercisePause`、`exerciseResume`、`exerciseSetNext`、`exerciseAdjustNext`、`exerciseToggleNext`、`tickExercise`、`canStartExercise`
+- 演習: `initialExercise(defaultMin, nextDefaultMin)`、`exerciseOpenSetup`、`exerciseAdjustSetup`、`exerciseCancelSetup`、`exerciseStart`、`exerciseStop`、`exerciseAdjust`、`exercisePause`、`exerciseResume`、`exerciseSetNext`、`exerciseAdjustNext`、`exerciseAddNext`、`exerciseRemoveNext`、`exerciseToggleNext`、`tickExercise`、`canStartExercise`
 - 表示: `pageTitleKey(main)`、`buttonVisibility(main, e)`(ボタン id → boolean)、`stepEditorZoom(level, dir)`(段階の前後へ、端で止まる)、`formatClock`、`formatMinutes`、`formatEndAt`、`formatDateTimeLine`、`progress`
 - データ: `addTitle`、`normalizeBlocks`、`blocksToPlainText`、`firstLine`、`importLegacyHtml`、`parseLegacyExport`、`mergeImport(data, incoming)`
 
@@ -342,7 +342,7 @@ localStorage キー `simplePages.l_timer`、`version: 1`。
 
 - 講義開始 → `49:59` から減り「終了 HH:MM:SS」が出る。3 分前に予鈴、0 で終了音、以後 `+00:01…` と 60 秒ごとに経過音
 - 休憩開始 → 緑。3 分前に予鈴、0 で終了音、1 秒後に自動で講義開始
-- 講義中に演習 → タイトルを入れて開始。講義タイマーが小さく薄くなる。演習の予鈴・終了音が鳴り、次の演習を設定していれば自動で切り替わる
+- 講義中に演習 → タイトルを入れて開始。講義タイマーが小さくなる。演習の予鈴・終了音が鳴り、次の演習を設定していれば自動で切り替わる
 - 演習中に休憩開始 → 演習が「一時停止中」で止まり、休憩明けに同じ残りから再開する。休憩中に停止を押すと演習も消える
 - 演習中でも講義側の休憩・停止ボタンが押せる
 - `±` で終了時刻の秒が 00 になる。超過中に `+1` で通常カウントに戻る

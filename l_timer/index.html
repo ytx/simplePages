@@ -143,7 +143,9 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 #main-remaining { font-size: var(--fs-timer); font-variant-numeric: tabular-nums; line-height: 1; font-weight: 700; color: var(--c-lecture); transition: font-size 0.3s, opacity 0.3s; }
 #main-remaining.break { color: var(--c-break); }
 #main-remaining.overtime { color: var(--c-overtime); }
-#timer-pane.exercise-active #main-remaining { font-size: var(--fs-timer-small); opacity: 0.45; }
+#timer-pane.exercise-active #main-remaining { font-size: var(--fs-timer-small); }
+#timer-pane.exercise-paused #ex-remaining { font-size: var(--fs-timer-small); }
+#timer-pane.exercise-paused #exercise-running .progress { font-size: var(--fs-timer-small); }
 .progress { width: 7ch; max-width: 100%; font-size: var(--fs-timer); line-height: 0; }
 #timer-pane.exercise-active #main-progress { font-size: var(--fs-timer-small); }
 .progress-bar { width: 100%; height: clamp(8px, 0.12em, 20px); border-radius: 10px; background: var(--border); overflow: hidden; }
@@ -181,7 +183,7 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 #exercise-setup[hidden], #exercise-running[hidden] { display: none; }
 .ex-title-row { display: flex; align-items: center; gap: calc(var(--gap) / 2); justify-content: center; width: 100%; max-width: 30em; }
 .ex-title-row input { flex: 1; min-width: 0; border-color: var(--c-exercise); }
-.ex-time { font-size: var(--fs-timer); font-variant-numeric: tabular-nums; line-height: 1; font-weight: 700; color: var(--c-exercise); }
+.ex-time { font-size: var(--fs-timer); font-variant-numeric: tabular-nums; line-height: 1; font-weight: 700; color: var(--c-exercise); transition: font-size 0.3s; }
 .ex-time.overtime { color: var(--c-overtime); }
 .ex-main { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: var(--gap); width: 100%; }
 .ex-current { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 2); }
@@ -193,7 +195,11 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 #ex-next-open[hidden], #ex-next-panel[hidden] { display: none; }
 #ex-next-panel { display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 2); padding: var(--gap); border: 1px dashed var(--c-exercise); border-radius: var(--radius); }
 .ex-next-head { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: calc(var(--gap) / 2); color: var(--fg-muted); font-size: var(--fs-small); }
-#ex-next-time { font-size: calc(var(--fs-large) * 1.4); font-weight: 700; color: var(--c-exercise); font-variant-numeric: tabular-nums; }
+#ex-next-list { display: flex; flex-direction: column; gap: var(--gap); width: 100%; }
+.ex-next-row { display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 4); padding-top: calc(var(--gap) / 2); border-top: 1px dashed var(--border); }
+.ex-next-row:first-child { border-top: none; padding-top: 0; }
+.ex-next-row .ex-title-row input { border-color: var(--border); }
+.ex-next-time { font-size: calc(var(--fs-large) * 1.4); font-weight: 700; color: var(--c-exercise); font-variant-numeric: tabular-nums; }
 #resizer { cursor: col-resize; background: var(--border); display: grid; place-items: center; touch-action: none; user-select: none; }
 #resizer:hover, #resizer.active { background: var(--accent); }
 #resizer[hidden] { display: none; }
@@ -258,6 +264,7 @@ dialog#dialog::backdrop { background: rgba(0,0,0,0.5); }
   <symbol id="icon-dining" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></symbol>
   <symbol id="icon-stop" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></symbol>
   <symbol id="icon-timer" viewBox="0 0 24 24"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0 0 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9a8.994 8.994 0 0 0 7.03-14.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></symbol>
+  <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></symbol>
   <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></symbol>
   <symbol id="icon-save" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></symbol>
   <symbol id="icon-delete" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></symbol>
@@ -297,16 +304,17 @@ dialog#dialog::backdrop { background: rgba(0,0,0,0.5); }
             <div><span id="ex-title"></span><span id="ex-paused" hidden data-i18n="exercise_paused"></span></div>
             <div id="ex-remaining" class="ex-time">15:00</div>
             <div class="progress"><div class="progress-bar"><div id="ex-progress-fill" class="progress-fill exercise"></div></div></div>
-            <div class="end-row"><span id="ex-end-time"></span></div>
-            <div class="ex-bottom">
+            <div class="end-row"><span id="ex-end-time"></span>
               <div class="adj">
                 <button type="button" class="tbtn ex-adj" data-delta="-10">-10</button>
                 <button type="button" class="tbtn ex-adj" data-delta="-1">-1</button>
                 <button type="button" class="tbtn ex-adj" data-delta="1">+1</button>
                 <button type="button" class="tbtn ex-adj" data-delta="10">+10</button>
               </div>
+            </div>
+            <div class="ex-bottom">
               <button id="ex-stop" class="cbtn stop ex-stop" type="button" data-i18n-label="exercise_stop"><svg aria-hidden="true"><use href="#icon-stop"></use></svg></button>
-              <button id="ex-next-open" class="tbtn small" type="button" data-i18n="next_open"></button>
+              <button id="ex-next-open" class="cbtn exercise ex-stop" type="button" data-i18n-label="next_open"><svg aria-hidden="true"><use href="#icon-arrow-right"></use></svg></button>
             </div>
           </div>
           <div id="ex-next-panel" hidden>
@@ -314,14 +322,8 @@ dialog#dialog::backdrop { background: rgba(0,0,0,0.5); }
               <span data-i18n="next_exercise"></span>
               <button id="ex-next-close" class="icon-btn" type="button" data-i18n-label="next_close"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button>
             </div>
-            <input id="ex-next-title" type="text" list="exercise-titles" autocomplete="off" data-i18n-placeholder="next_title_placeholder">
-            <div id="ex-next-time">15:00</div>
-            <div class="adj">
-              <button type="button" class="tbtn small ex-next-adj" data-delta="-10">-10</button>
-              <button type="button" class="tbtn small ex-next-adj" data-delta="-1">-1</button>
-              <button type="button" class="tbtn small ex-next-adj" data-delta="1">+1</button>
-              <button type="button" class="tbtn small ex-next-adj" data-delta="10">+10</button>
-            </div>
+            <div id="ex-next-list"></div>
+            <button id="ex-next-add" class="tbtn small" type="button" data-i18n="next_add"></button>
           </div>
         </div>
       </div>
@@ -604,9 +606,10 @@ const Logic = (() => {
   const DEFAULT_EXERCISE_TITLE = '演習';
   const clampMin = (m) => Math.min(EXERCISE_MAX, Math.max(EXERCISE_MIN, m));
 
+  // next は次の演習のキュー(常に 1 件以上)。先頭にタイトルがあれば終了時に自動で始まる。
   function initialExercise(defaultMin, nextDefaultMin) {
     return { phase: 'none', title: '', setupMinutes: clampMin(defaultMin), startedAt: null, endAt: null, totalMs: 0, remainingMs: null, overtime: false, lastTickAt: null,
-      next: { title: '', minutes: clampMin(nextDefaultMin) }, nextOpen: false };
+      next: [{ title: '', minutes: clampMin(nextDefaultMin) }], nextOpen: false };
   }
 
   function exerciseOpenSetup(e, defaultMin) {
@@ -623,11 +626,11 @@ const Logic = (() => {
     const ms = clampMin(minutes) * 60000;
     const t = String(title ?? '').trim() || DEFAULT_EXERCISE_TITLE;
     return { ...e, phase: 'running', title: t, startedAt: now, endAt: now + ms, totalMs: ms, remainingMs: null, overtime: false, lastTickAt: now,
-      next: { title: '', minutes: clampMin(nextDefaultMin) }, nextOpen: false };
+      next: [{ title: '', minutes: clampMin(nextDefaultMin) }], nextOpen: false };
   }
 
   function exerciseStop(e) {
-    return { ...initialExercise(e.setupMinutes, e.next.minutes) };
+    return { ...initialExercise(e.setupMinutes, e.next[0].minutes) };
   }
 
   // running: 終了時刻を動かす(adjustEnd と同じ規則)。paused: 保持している残りを動かす。
@@ -656,12 +659,27 @@ const Logic = (() => {
     return { ...e, phase: 'running', endAt: now + e.remainingMs, remainingMs: null, lastTickAt: now, overtime: e.remainingMs <= 0 };
   }
 
-  function exerciseSetNext(e, title, minutes) {
-    return { ...e, next: { title: String(title ?? ''), minutes: clampMin(minutes) } };
+  const hasNext = (e, i) => Number.isInteger(i) && i >= 0 && i < e.next.length;
+
+  function exerciseSetNext(e, i, title, minutes) {
+    if (!hasNext(e, i)) return e;
+    return { ...e, next: e.next.map((n, k) => (k === i ? { title: String(title ?? ''), minutes: clampMin(minutes) } : n)) };
   }
 
-  function exerciseAdjustNext(e, deltaMin) {
-    return { ...e, next: { ...e.next, minutes: clampMin(e.next.minutes + deltaMin) } };
+  function exerciseAdjustNext(e, i, deltaMin) {
+    if (!hasNext(e, i)) return e;
+    return { ...e, next: e.next.map((n, k) => (k === i ? { ...n, minutes: clampMin(n.minutes + deltaMin) } : n)) };
+  }
+
+  function exerciseAddNext(e, defaultMin) {
+    return { ...e, next: [...e.next, { title: '', minutes: clampMin(defaultMin) }] };
+  }
+
+  // 最後の 1 件を消すと、同じ分数の空の 1 件が残る
+  function exerciseRemoveNext(e, i) {
+    if (!hasNext(e, i)) return e;
+    const rest = e.next.filter((_, k) => k !== i);
+    return { ...e, next: rest.length ? rest : [{ title: '', minutes: e.next[i].minutes }] };
   }
 
   function exerciseToggleNext(e, open) { return { ...e, nextOpen: !!open }; }
@@ -674,9 +692,11 @@ const Logic = (() => {
     let state = { ...e, lastTickAt: now };
     if (ev.end) {
       events.push('end');
-      if (e.next.title.trim()) {
+      const [head, ...rest] = e.next;
+      if (head.title.trim()) {
         events.push('next_started');
-        return { state: exerciseStart(e, now, e.next.title, e.next.minutes, e.next.minutes), events };
+        const started = exerciseStart(e, now, head.title, head.minutes, head.minutes);
+        return { state: rest.length ? { ...started, next: rest, nextOpen: true } : started, events };
       }
       state.overtime = true;
     }
@@ -1018,7 +1038,7 @@ const Logic = (() => {
       end_at: '終了 {time}',
       start_lecture: '講義開始', start_break: '休憩開始({min} 分)', stop: '停止', start_exercise: '演習タイマー',
       exercise_title_placeholder: '演習タイトル', exercise_start: 'スタート', exercise_cancel: 'キャンセル', exercise_stop: '演習終了', exercise_paused: '一時停止中',
-      next_exercise: '次の演習', next_title_placeholder: 'タイトル', next_open: 'Next', next_close: '非表示',
+      next_exercise: '次の演習', next_title_placeholder: 'タイトル', next_open: '次の演習', next_close: '非表示', next_add: '+ 追加', next_remove: '削除',
       mute: 'ミュート', unmute: 'ミュート解除', toggle_editor: 'エディタの表示/非表示',
       editor_bold: '太字', editor_list: '箇条書き', editor_heading: '見出し', editor_placeholder: 'メモを入力…',
       doc_new: '新規文書', doc_save: '保存', doc_delete: '削除', doc_title_prompt: '文書のタイトル',
@@ -1048,7 +1068,7 @@ const Logic = (() => {
       end_at: 'Ends {time}',
       start_lecture: 'Start lecture', start_break: 'Start break ({min} min)', stop: 'Stop', start_exercise: 'Exercise timer',
       exercise_title_placeholder: 'Exercise title', exercise_start: 'Start', exercise_cancel: 'Cancel', exercise_stop: 'Stop exercise', exercise_paused: 'Paused',
-      next_exercise: 'Next exercise', next_title_placeholder: 'Title', next_open: 'Next', next_close: 'Hide',
+      next_exercise: 'Next exercise', next_title_placeholder: 'Title', next_open: 'Next exercise', next_close: 'Hide', next_add: '+ Add', next_remove: 'Remove',
       mute: 'Mute', unmute: 'Unmute', toggle_editor: 'Show/hide the editor',
       editor_bold: 'Bold', editor_list: 'Bullet list', editor_heading: 'Heading', editor_placeholder: 'Type your notes…',
       doc_new: 'New document', doc_save: 'Save', doc_delete: 'Delete', doc_title_prompt: 'Document title',
@@ -1117,7 +1137,7 @@ const Logic = (() => {
   return { VERSION, DATA_VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport,
     SOUND_FILES, SOUND_GROUPS, EDITOR_ZOOM_LEVELS, formatDateTimeLine,
     ADJUST_STEPS, initialMain, startLecture, startBreak, stopMain, floorToMinute, adjustEnd, thresholdEvents, tickMain, remainingMain,
-    EXERCISE_MIN, EXERCISE_MAX, MAX_TITLES, DEFAULT_EXERCISE_TITLE, initialExercise, exerciseOpenSetup, exerciseAdjustSetup, exerciseCancelSetup, exerciseStart, exerciseStop, exerciseAdjust, exercisePause, exerciseResume, exerciseSetNext, exerciseAdjustNext, exerciseToggleNext, tickExercise, remainingExercise, canStartExercise, buttonVisibility, pageTitleKey, addTitle,
+    EXERCISE_MIN, EXERCISE_MAX, MAX_TITLES, DEFAULT_EXERCISE_TITLE, initialExercise, exerciseOpenSetup, exerciseAdjustSetup, exerciseCancelSetup, exerciseStart, exerciseStop, exerciseAdjust, exercisePause, exerciseResume, exerciseSetNext, exerciseAdjustNext, exerciseAddNext, exerciseRemoveNext, exerciseToggleNext, tickExercise, remainingExercise, canStartExercise, buttonVisibility, pageTitleKey, addTitle,
     formatClock, formatMinutes, formatEndAt, progress, stepEditorZoom,
     emptyBlocks, normalizeBlocks, blocksToPlainText, firstLine, normalizeDocument, normalizeData, importLegacyHtml, isLegacyExport, parseLegacyExport, parseImportAll, mergeImport };
 })();
@@ -1621,7 +1641,60 @@ const App = (() => {
     fill.classList.toggle('overtime', isOver);
     $('#main-end-time').textContent = Logic.t(settings.lang, 'end_at', { time: Logic.formatEndAt(main.mode === 'idle' ? null : main.endAt) });
     $('#main-adj').hidden = main.mode === 'idle';
-    $('#timer-pane').classList.toggle('exercise-active', ex.phase === 'running' || ex.phase === 'paused');
+    $('#timer-pane').classList.toggle('exercise-active', ex.phase === 'running');
+    $('#timer-pane').classList.toggle('exercise-paused', ex.phase === 'paused');
+  }
+
+  // 次の演習キューの 1 行。createElement と textContent だけで組む。
+  function buildNextRow(i) {
+    const row = document.createElement('div');
+    row.className = 'ex-next-row';
+    row.dataset.index = String(i);
+    const titleRow = document.createElement('div');
+    titleRow.className = 'ex-title-row';
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'ex-next-title';
+    inp.setAttribute('list', 'exercise-titles');
+    inp.autocomplete = 'off';
+    inp.placeholder = Logic.t(settings.lang, 'next_title_placeholder');
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'icon-btn ex-next-remove';
+    rm.title = Logic.t(settings.lang, 'next_remove');
+    rm.setAttribute('aria-label', rm.title);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', '#icon-close');
+    svg.append(use);
+    rm.append(svg);
+    titleRow.append(inp, rm);
+    const time = document.createElement('div');
+    time.className = 'ex-next-time';
+    const adj = document.createElement('div');
+    adj.className = 'adj';
+    for (const d of Logic.ADJUST_STEPS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tbtn small ex-next-adj';
+      b.dataset.delta = String(d);
+      b.textContent = d > 0 ? `+${d}` : String(d);
+      adj.append(b);
+    }
+    row.append(titleRow, time, adj);
+    return row;
+  }
+
+  function renderNextList() {
+    const list = $('#ex-next-list');
+    if (list.children.length !== ex.next.length) list.replaceChildren(...ex.next.map((_, i) => buildNextRow(i)));
+    ex.next.forEach((n, i) => {
+      const row = list.children[i];
+      row.querySelector('.ex-next-time').textContent = Logic.formatMinutes(n.minutes);
+      const inp = row.querySelector('.ex-next-title');
+      if (inp.value !== n.title) inp.value = n.title;
+    });
   }
 
   function renderExercise(at) {
@@ -1645,9 +1718,7 @@ const App = (() => {
     $('#ex-end-time').textContent = Logic.t(settings.lang, 'end_at', { time: Logic.formatEndAt(ex.phase === 'running' ? ex.endAt : null) });
     $('#ex-next-panel').hidden = !ex.nextOpen;
     $('#ex-next-open').hidden = ex.nextOpen;
-    $('#ex-next-time').textContent = Logic.formatMinutes(ex.next.minutes);
-    const inp = $('#ex-next-title');
-    if (inp.value !== ex.next.title) inp.value = ex.next.title;
+    renderNextList();
   }
 
   function renderButtons() {
@@ -1713,10 +1784,21 @@ const App = (() => {
     $('#ex-stop').addEventListener('click', () => setTimers(main, Logic.exerciseStop(ex), Date.now(), []));
     $('#ex-next-open').addEventListener('click', () => setTimers(main, Logic.exerciseToggleNext(ex, true), Date.now(), []));
     $('#ex-next-close').addEventListener('click', () => setTimers(main, Logic.exerciseToggleNext(ex, false), Date.now(), []));
-    $('#ex-next-title').addEventListener('input', (ev) => { ex = Logic.exerciseSetNext(ex, ev.target.value, ex.next.minutes); });
-    for (const b of $$('button.ex-next-adj')) {
-      b.addEventListener('click', () => { const d = adjDelta(b); if (d !== null) setTimers(main, Logic.exerciseAdjustNext(ex, d), Date.now(), []); });
-    }
+    $('#ex-next-add').addEventListener('click', () => setTimers(main, Logic.exerciseAddNext(ex, settings.nextExercise), Date.now(), []));
+    const list = $('#ex-next-list');
+    const rowIndex = (el) => { const row = el.closest('.ex-next-row'); return row ? Number(row.dataset.index) : null; };
+    list.addEventListener('input', (ev) => {
+      const i = rowIndex(ev.target);
+      if (i === null || !ev.target.classList.contains('ex-next-title')) return;
+      ex = Logic.exerciseSetNext(ex, i, ev.target.value, ex.next[i].minutes);
+    });
+    list.addEventListener('click', (ev) => {
+      const b = ev.target.closest('button');
+      const i = b ? rowIndex(b) : null;
+      if (i === null) return;
+      if (b.classList.contains('ex-next-remove')) { setTimers(main, Logic.exerciseRemoveNext(ex, i), Date.now(), []); return; }
+      if (b.classList.contains('ex-next-adj')) { const d = adjDelta(b); if (d !== null) setTimers(main, Logic.exerciseAdjustNext(ex, i, d), Date.now(), []); }
+    });
   }
 
   function getTimerState() { return { main: { ...main }, ex: { ...ex } }; }
