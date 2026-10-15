@@ -106,6 +106,8 @@ test('page markup has the toolbar page buttons, the panes, the dialog and the au
   assert.equal((src.match(/data-delta="-10">−10<\/button>/g) || []).length, 3);
   assert.doesNotMatch(src, /data-delta="-1">-1</);
   assert.match(src, /<symbol id="icon-arrow-right"/);
+  assert.match(src, /<symbol id="icon-arrow-down"/);
+  assert.match(src, /<button id="ex-next-add" class="cbtn exercise ex-stop"[^>]*><svg aria-hidden="true"><use href="#icon-arrow-down">/);
   assert.doesNotMatch(src, /#timer-pane\.exercise-active #main-remaining \{[^}]*opacity/);
   assert.match(src, /#timer-pane\.exercise-paused #ex-remaining \{ font-size: var\(--fs-timer-small\)/);
   for (const key of ['lecture', 'break1', 'break2', 'warning', 'tick', 'exercise', 'nextExercise', 'sound1', 'sound2', 'sound3', 'volume', 'muted', 'editor', 'editorWidth', 'editorZoom', 'lang', 'theme']) {

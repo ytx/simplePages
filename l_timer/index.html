@@ -200,8 +200,10 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 .cbtn.ex-stop { width: calc(40px * var(--zoom)); height: calc(40px * var(--zoom)); }
 #ex-next-open[hidden], #ex-next-panel[hidden] { display: none; }
 #ex-next-panel { flex: 0 0 auto; width: 16em; max-width: 40%; align-self: center; max-height: 100%; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 2); padding: var(--gap); border: 1px dashed var(--c-exercise); border-radius: var(--radius); }
-.ex-next-remove { border: none; background: transparent; color: var(--c-overtime); min-width: 0; }
-.ex-next-remove:hover { text-decoration: underline; }
+.ex-next-remove { border: none; background: transparent; color: var(--fg-muted); min-width: 0; padding: 0 0.3em; display: grid; place-items: center; cursor: pointer; }
+.ex-next-remove svg { width: 1.3em; height: 1.3em; fill: currentColor; }
+.ex-next-remove:hover { color: var(--c-overtime); }
+.ex-next-line { display: flex; align-items: center; justify-content: center; gap: calc(var(--gap) / 2); }
 .ex-next-head { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: calc(var(--gap) / 2); color: var(--fg-muted); font-size: var(--fs-small); }
 #ex-next-list { display: flex; flex-direction: column; gap: var(--gap); width: 100%; }
 .ex-next-row { display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 4); padding-top: calc(var(--gap) / 2); border-top: 1px dashed var(--border); }
@@ -275,6 +277,7 @@ dialog#dialog::backdrop { background: rgba(0,0,0,0.5); }
   <symbol id="icon-dining" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></symbol>
   <symbol id="icon-stop" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></symbol>
   <symbol id="icon-timer" viewBox="0 0 24 24"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0 0 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9a8.994 8.994 0 0 0 7.03-14.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></symbol>
+  <symbol id="icon-arrow-down" viewBox="0 0 24 24"><path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z"/></symbol>
   <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></symbol>
   <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></symbol>
   <symbol id="icon-save" viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></symbol>
@@ -356,7 +359,7 @@ dialog#dialog::backdrop { background: rgba(0,0,0,0.5); }
         <button id="ex-next-close" class="icon-btn" type="button" data-i18n-label="next_close"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button>
       </div>
       <div id="ex-next-list"></div>
-      <button id="ex-next-add" class="tbtn small" type="button" data-i18n="next_add"></button>
+      <button id="ex-next-add" class="cbtn exercise ex-stop" type="button" data-i18n-label="next_add"><svg aria-hidden="true"><use href="#icon-arrow-down"></use></svg></button>
     </aside>
   </section>
   <div id="resizer" hidden role="separator" aria-orientation="vertical"></div>
@@ -1049,7 +1052,7 @@ const Logic = (() => {
       end_at: '終了 {time}',
       start_lecture: '講義開始', start_break: '休憩開始({min} 分)', stop: '停止', start_exercise: '演習タイマー',
       exercise_title_placeholder: '演習タイトル', exercise_start: 'スタート', exercise_cancel: 'キャンセル', exercise_stop: '演習終了', exercise_paused: '一時停止中',
-      next_exercise: '次の演習', next_title_placeholder: 'タイトル', next_open: '次の演習', next_close: '非表示', next_add: '+ 追加', next_remove: '削除',
+      next_exercise: '次の演習', next_title_placeholder: 'タイトル', next_open: '次の演習', next_close: '非表示', next_add: '追加', next_remove: '削除',
       mute: 'ミュート', unmute: 'ミュート解除', toggle_editor: 'エディタの表示/非表示',
       editor_bold: '太字', editor_list: '箇条書き', editor_heading: '見出し', editor_placeholder: 'メモを入力…',
       doc_new: '新規文書', doc_save: '保存', doc_delete: '削除', doc_title_prompt: '文書のタイトル',
@@ -1079,7 +1082,7 @@ const Logic = (() => {
       end_at: 'Ends {time}',
       start_lecture: 'Start lecture', start_break: 'Start break ({min} min)', stop: 'Stop', start_exercise: 'Exercise timer',
       exercise_title_placeholder: 'Exercise title', exercise_start: 'Start', exercise_cancel: 'Cancel', exercise_stop: 'Stop exercise', exercise_paused: 'Paused',
-      next_exercise: 'Next exercise', next_title_placeholder: 'Title', next_open: 'Next exercise', next_close: 'Hide', next_add: '+ Add', next_remove: 'Remove',
+      next_exercise: 'Next exercise', next_title_placeholder: 'Title', next_open: 'Next exercise', next_close: 'Hide', next_add: 'Add', next_remove: 'Remove',
       mute: 'Mute', unmute: 'Unmute', toggle_editor: 'Show/hide the editor',
       editor_bold: 'Bold', editor_list: 'Bullet list', editor_heading: 'Heading', editor_placeholder: 'Type your notes…',
       doc_new: 'New document', doc_save: 'Save', doc_delete: 'Delete', doc_title_prompt: 'Document title',
@@ -1671,8 +1674,15 @@ const App = (() => {
     inp.placeholder = Logic.t(settings.lang, 'next_title_placeholder');
     const rm = document.createElement('button');
     rm.type = 'button';
-    rm.className = 'tbtn small ex-next-remove';
-    rm.textContent = Logic.t(settings.lang, 'next_remove');
+    rm.className = 'ex-next-remove';
+    rm.title = Logic.t(settings.lang, 'next_remove');
+    rm.setAttribute('aria-label', rm.title);
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+    use.setAttribute('href', '#icon-close');
+    svg.append(use);
+    rm.append(svg);
     titleRow.append(inp, rm);
     const time = document.createElement('div');
     time.className = 'ex-next-time';
@@ -1686,13 +1696,21 @@ const App = (() => {
       b.textContent = d > 0 ? `+${d}` : `−${-d}`;
       adj.append(b);
     }
-    row.append(titleRow, time, adj);
+    const line = document.createElement('div');
+    line.className = 'ex-next-line';
+    line.append(adj);
+    row.append(titleRow, time, line);
     return row;
   }
 
+  let nextAddBtn = null;   // 追加ボタンは最後の件の ± と同じ行に置くので、再構築のたびに移す
+
   function renderNextList() {
     const list = $('#ex-next-list');
-    if (list.children.length !== ex.next.length) list.replaceChildren(...ex.next.map((_, i) => buildNextRow(i)));
+    if (list.children.length !== ex.next.length) {
+      list.replaceChildren(...ex.next.map((_, i) => buildNextRow(i)));
+      list.lastElementChild.querySelector('.ex-next-line').append(nextAddBtn);
+    }
     ex.next.forEach((n, i) => {
       const row = list.children[i];
       row.querySelector('.ex-next-time').textContent = Logic.formatMinutes(n.minutes);
@@ -1788,7 +1806,8 @@ const App = (() => {
     $('#ex-stop').addEventListener('click', () => setTimers(main, Logic.exerciseStop(ex), Date.now(), []));
     $('#ex-next-open').addEventListener('click', () => setTimers(main, Logic.exerciseToggleNext(ex, true), Date.now(), []));
     $('#ex-next-close').addEventListener('click', () => setTimers(main, Logic.exerciseToggleNext(ex, false), Date.now(), []));
-    $('#ex-next-add').addEventListener('click', () => setTimers(main, Logic.exerciseAddNext(ex, settings.nextExercise), Date.now(), []));
+    nextAddBtn = $('#ex-next-add');
+    nextAddBtn.addEventListener('click', () => setTimers(main, Logic.exerciseAddNext(ex, settings.nextExercise), Date.now(), []));
     const list = $('#ex-next-list');
     const rowIndex = (el) => { const row = el.closest('.ex-next-row'); return row ? Number(row.dataset.index) : null; };
     list.addEventListener('input', (ev) => {
