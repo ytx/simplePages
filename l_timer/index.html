@@ -139,7 +139,8 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 #page-title.warning { color: var(--c-exercise); animation: pulse 1s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { #page-title.warning { animation: none; } }
-#timer-pane { container-type: inline-size; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: var(--gap); min-width: 0; min-height: 0; overflow: auto; padding: 0 var(--gap); }
+#timer-pane { display: flex; align-items: stretch; justify-content: center; gap: var(--gap); min-width: 0; min-height: 0; overflow: hidden; padding: 0 var(--gap); }
+#timer-stack { container-type: inline-size; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: var(--gap); min-width: 0; min-height: 0; overflow: auto; }
 #main-remaining { font-size: var(--fs-timer); font-variant-numeric: tabular-nums; line-height: 1; font-weight: 700; color: var(--c-lecture); transition: font-size 0.3s, opacity 0.3s; }
 #main-remaining.break { color: var(--c-break); }
 #main-remaining.overtime { color: var(--c-overtime); }
@@ -154,8 +155,14 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 .progress-fill.overtime { background: var(--c-overtime); }
 .progress-fill.exercise { background: var(--c-exercise); }
 .end-row { display: flex; align-items: center; justify-content: center; gap: var(--gap); flex-wrap: wrap; min-height: 2.6em; font-size: var(--fs-large); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
-.adj { display: flex; gap: calc(var(--gap) / 2); justify-content: center; }
+.adj { display: inline-flex; color: var(--c-lecture); border: 1px solid currentColor; border-radius: 999px; overflow: hidden; }
 .adj[hidden] { display: none; }
+.adj .tbtn { border: none; border-radius: 0; border-left: 1px solid currentColor; background: transparent; color: inherit; font-weight: 700; padding: 0 0.7em; }
+.adj .tbtn:first-child { border-left: none; }
+.adj .tbtn:hover { background: color-mix(in srgb, currentColor 18%, transparent); }
+#main-remaining.break ~ .end-row .adj { color: var(--c-break); }
+#main-remaining.overtime ~ .end-row .adj { color: var(--c-overtime); }
+#exercise-area .adj, #ex-next-panel .adj { color: var(--c-exercise); }
 .tbtn {
   min-height: calc(40px * var(--zoom)); min-width: calc(48px * var(--zoom)); padding: 0 0.8em;
   font: inherit; font-size: var(--fs-base); font-variant-numeric: tabular-nums;
@@ -185,15 +192,16 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 .ex-title-row input { flex: 1; min-width: 0; border-color: var(--c-exercise); }
 .ex-time { font-size: var(--fs-timer); font-variant-numeric: tabular-nums; line-height: 1; font-weight: 700; color: var(--c-exercise); transition: font-size 0.3s; }
 .ex-time.overtime { color: var(--c-overtime); }
-.ex-main { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: var(--gap); width: 100%; }
-.ex-current { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 2); }
+.ex-current { width: 100%; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 2); }
 #ex-title { font-size: var(--fs-large); font-weight: 600; color: var(--c-exercise); }
 #ex-paused { font-size: var(--fs-small); color: var(--fg-muted); margin-left: 0.5em; }
 #ex-paused[hidden] { display: none; }
 .ex-bottom { display: flex; align-items: center; justify-content: center; gap: var(--gap); flex-wrap: wrap; }
 .cbtn.ex-stop { width: calc(40px * var(--zoom)); height: calc(40px * var(--zoom)); }
 #ex-next-open[hidden], #ex-next-panel[hidden] { display: none; }
-#ex-next-panel { display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 2); padding: var(--gap); border: 1px dashed var(--c-exercise); border-radius: var(--radius); }
+#ex-next-panel { flex: 0 0 auto; width: 16em; max-width: 40%; align-self: center; max-height: 100%; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 2); padding: var(--gap); border: 1px dashed var(--c-exercise); border-radius: var(--radius); }
+.ex-next-remove { border: none; background: transparent; color: var(--c-overtime); min-width: 0; }
+.ex-next-remove:hover { text-decoration: underline; }
 .ex-next-head { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: calc(var(--gap) / 2); color: var(--fg-muted); font-size: var(--fs-small); }
 #ex-next-list { display: flex; flex-direction: column; gap: var(--gap); width: 100%; }
 .ex-next-row { display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 4); padding-top: calc(var(--gap) / 2); border-top: 1px dashed var(--border); }
@@ -240,6 +248,9 @@ dialog#dialog::backdrop { background: rgba(0,0,0,0.5); }
   #resizer { display: none !important; }
   #editor-pane { padding: var(--gap) 0 0; }
   .cbtn { width: calc(48px * var(--zoom)); height: calc(48px * var(--zoom)); }
+  #timer-pane { flex-direction: column; align-items: center; overflow: auto; }
+  #timer-stack { flex: 0 0 auto; overflow: visible; width: 100%; }
+  #ex-next-panel { width: 100%; max-width: 100%; max-height: none; align-self: stretch; }
   .grid2 { grid-template-columns: 1fr; }
 }
 </style>
@@ -282,71 +293,71 @@ dialog#dialog::backdrop { background: rgba(0,0,0,0.5); }
 <main id="content">
   <h1 id="page-title"></h1>
   <section id="timer-pane">
-    <div id="exercise-area" hidden>
-      <datalist id="exercise-titles"></datalist>
-      <div id="exercise-setup" hidden>
-        <div class="ex-title-row">
-          <input id="ex-title-input" type="text" list="exercise-titles" autocomplete="off" data-i18n-placeholder="exercise_title_placeholder">
-          <button id="ex-setup-ok" class="cbtn exercise ex-stop" type="button" data-i18n-label="exercise_start"><svg aria-hidden="true"><use href="#icon-check"></use></svg></button>
-          <button id="ex-setup-cancel" class="cbtn ex-stop" type="button" data-i18n-label="exercise_cancel"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button>
+    <div id="timer-stack">
+      <div id="exercise-area" hidden>
+        <datalist id="exercise-titles"></datalist>
+        <div id="exercise-setup" hidden>
+          <div class="ex-title-row">
+            <input id="ex-title-input" type="text" list="exercise-titles" autocomplete="off" data-i18n-placeholder="exercise_title_placeholder">
+            <button id="ex-setup-ok" class="cbtn exercise ex-stop" type="button" data-i18n-label="exercise_start"><svg aria-hidden="true"><use href="#icon-check"></use></svg></button>
+            <button id="ex-setup-cancel" class="cbtn ex-stop" type="button" data-i18n-label="exercise_cancel"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button>
+          </div>
+          <div id="ex-setup-time" class="ex-time">15:00</div>
+          <div class="adj">
+            <button type="button" class="tbtn ex-setup-adj" data-delta="-10">−10</button>
+            <button type="button" class="tbtn ex-setup-adj" data-delta="-1">−1</button>
+            <button type="button" class="tbtn ex-setup-adj" data-delta="1">+1</button>
+            <button type="button" class="tbtn ex-setup-adj" data-delta="10">+10</button>
+          </div>
         </div>
-        <div id="ex-setup-time" class="ex-time">15:00</div>
-        <div class="adj">
-          <button type="button" class="tbtn ex-setup-adj" data-delta="-10">-10</button>
-          <button type="button" class="tbtn ex-setup-adj" data-delta="-1">-1</button>
-          <button type="button" class="tbtn ex-setup-adj" data-delta="1">+1</button>
-          <button type="button" class="tbtn ex-setup-adj" data-delta="10">+10</button>
-        </div>
-      </div>
-      <div id="exercise-running" hidden>
-        <div class="ex-main">
-          <div class="ex-current">
-            <div><span id="ex-title"></span><span id="ex-paused" hidden data-i18n="exercise_paused"></span></div>
-            <div id="ex-remaining" class="ex-time">15:00</div>
-            <div class="progress"><div class="progress-bar"><div id="ex-progress-fill" class="progress-fill exercise"></div></div></div>
-            <div class="end-row"><span id="ex-end-time"></span>
-              <div class="adj">
-                <button type="button" class="tbtn ex-adj" data-delta="-10">-10</button>
-                <button type="button" class="tbtn ex-adj" data-delta="-1">-1</button>
-                <button type="button" class="tbtn ex-adj" data-delta="1">+1</button>
-                <button type="button" class="tbtn ex-adj" data-delta="10">+10</button>
+        <div id="exercise-running" hidden>
+            <div class="ex-current">
+              <div><span id="ex-title"></span><span id="ex-paused" hidden data-i18n="exercise_paused"></span></div>
+              <div id="ex-remaining" class="ex-time">15:00</div>
+              <div class="progress"><div class="progress-bar"><div id="ex-progress-fill" class="progress-fill exercise"></div></div></div>
+              <div class="end-row"><span id="ex-end-time"></span>
+                <div class="adj">
+                  <button type="button" class="tbtn ex-adj" data-delta="-10">−10</button>
+                  <button type="button" class="tbtn ex-adj" data-delta="-1">−1</button>
+                  <button type="button" class="tbtn ex-adj" data-delta="1">+1</button>
+                  <button type="button" class="tbtn ex-adj" data-delta="10">+10</button>
+                </div>
+              </div>
+              <div class="ex-bottom">
+                <button id="ex-stop" class="cbtn stop" type="button" data-i18n-label="exercise_stop"><svg aria-hidden="true"><use href="#icon-stop"></use></svg></button>
+                <button id="ex-next-open" class="cbtn exercise" type="button" data-i18n-label="next_open"><svg aria-hidden="true"><use href="#icon-arrow-right"></use></svg></button>
               </div>
             </div>
-            <div class="ex-bottom">
-              <button id="ex-stop" class="cbtn stop ex-stop" type="button" data-i18n-label="exercise_stop"><svg aria-hidden="true"><use href="#icon-stop"></use></svg></button>
-              <button id="ex-next-open" class="cbtn exercise ex-stop" type="button" data-i18n-label="next_open"><svg aria-hidden="true"><use href="#icon-arrow-right"></use></svg></button>
-            </div>
-          </div>
-          <div id="ex-next-panel" hidden>
-            <div class="ex-next-head">
-              <span data-i18n="next_exercise"></span>
-              <button id="ex-next-close" class="icon-btn" type="button" data-i18n-label="next_close"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button>
-            </div>
-            <div id="ex-next-list"></div>
-            <button id="ex-next-add" class="tbtn small" type="button" data-i18n="next_add"></button>
           </div>
         </div>
+      <div id="main-remaining">50:00</div>
+      <div id="main-progress" class="progress"><div class="progress-bar"><div id="main-progress-fill" class="progress-fill"></div></div></div>
+      <div id="main-end" class="end-row">
+        <span id="main-end-time"></span>
+        <div class="adj" id="main-adj" hidden>
+          <button type="button" class="tbtn main-adj" data-delta="-10">−10</button>
+          <button type="button" class="tbtn main-adj" data-delta="-1">−1</button>
+          <button type="button" class="tbtn main-adj" data-delta="1">+1</button>
+          <button type="button" class="tbtn main-adj" data-delta="10">+10</button>
+        </div>
+      </div>
+      <div class="row controls">
+        <button id="btn-lecture" class="cbtn lecture" type="button" data-i18n-label="start_lecture"><svg aria-hidden="true"><use href="#icon-play"></use></svg></button>
+        <button id="btn-lecture-from-break" class="cbtn lecture" type="button" hidden data-i18n-label="start_lecture"><svg aria-hidden="true"><use href="#icon-book"></use></svg></button>
+        <button id="btn-break1" class="cbtn break" type="button"><svg aria-hidden="true"><use href="#icon-cafe"></use></svg></button>
+        <button id="btn-break2" class="cbtn break" type="button"><svg aria-hidden="true"><use href="#icon-dining"></use></svg></button>
+        <button id="btn-stop" class="cbtn stop" type="button" hidden data-i18n-label="stop"><svg aria-hidden="true"><use href="#icon-stop"></use></svg></button>
+        <button id="btn-exercise" class="cbtn exercise" type="button" hidden data-i18n-label="start_exercise"><svg aria-hidden="true"><use href="#icon-timer"></use></svg></button>
       </div>
     </div>
-    <div id="main-remaining">50:00</div>
-    <div id="main-progress" class="progress"><div class="progress-bar"><div id="main-progress-fill" class="progress-fill"></div></div></div>
-    <div id="main-end" class="end-row">
-      <span id="main-end-time"></span>
-      <div class="adj" id="main-adj" hidden>
-        <button type="button" class="tbtn main-adj" data-delta="-10">-10</button>
-        <button type="button" class="tbtn main-adj" data-delta="-1">-1</button>
-        <button type="button" class="tbtn main-adj" data-delta="1">+1</button>
-        <button type="button" class="tbtn main-adj" data-delta="10">+10</button>
+    <aside id="ex-next-panel" hidden>
+      <div class="ex-next-head">
+        <span data-i18n="next_exercise"></span>
+        <button id="ex-next-close" class="icon-btn" type="button" data-i18n-label="next_close"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button>
       </div>
-    </div>
-    <div class="row controls">
-      <button id="btn-lecture" class="cbtn lecture" type="button" data-i18n-label="start_lecture"><svg aria-hidden="true"><use href="#icon-play"></use></svg></button>
-      <button id="btn-lecture-from-break" class="cbtn lecture" type="button" hidden data-i18n-label="start_lecture"><svg aria-hidden="true"><use href="#icon-book"></use></svg></button>
-      <button id="btn-break1" class="cbtn break" type="button"><svg aria-hidden="true"><use href="#icon-cafe"></use></svg></button>
-      <button id="btn-break2" class="cbtn break" type="button"><svg aria-hidden="true"><use href="#icon-dining"></use></svg></button>
-      <button id="btn-stop" class="cbtn stop" type="button" hidden data-i18n-label="stop"><svg aria-hidden="true"><use href="#icon-stop"></use></svg></button>
-      <button id="btn-exercise" class="cbtn exercise" type="button" hidden data-i18n-label="start_exercise"><svg aria-hidden="true"><use href="#icon-timer"></use></svg></button>
-    </div>
+      <div id="ex-next-list"></div>
+      <button id="ex-next-add" class="tbtn small" type="button" data-i18n="next_add"></button>
+    </aside>
   </section>
   <div id="resizer" hidden role="separator" aria-orientation="vertical"></div>
   <aside id="editor-pane" hidden>
@@ -1660,15 +1671,8 @@ const App = (() => {
     inp.placeholder = Logic.t(settings.lang, 'next_title_placeholder');
     const rm = document.createElement('button');
     rm.type = 'button';
-    rm.className = 'icon-btn ex-next-remove';
-    rm.title = Logic.t(settings.lang, 'next_remove');
-    rm.setAttribute('aria-label', rm.title);
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('aria-hidden', 'true');
-    const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-    use.setAttribute('href', '#icon-close');
-    svg.append(use);
-    rm.append(svg);
+    rm.className = 'tbtn small ex-next-remove';
+    rm.textContent = Logic.t(settings.lang, 'next_remove');
     titleRow.append(inp, rm);
     const time = document.createElement('div');
     time.className = 'ex-next-time';
@@ -1679,7 +1683,7 @@ const App = (() => {
       b.type = 'button';
       b.className = 'tbtn small ex-next-adj';
       b.dataset.delta = String(d);
-      b.textContent = d > 0 ? `+${d}` : String(d);
+      b.textContent = d > 0 ? `+${d}` : `−${-d}`;
       adj.append(b);
     }
     row.append(titleRow, time, adj);

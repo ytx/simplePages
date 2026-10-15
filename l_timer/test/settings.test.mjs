@@ -81,7 +81,7 @@ test('page markup: no external resources, no innerHTML, no keyboard shortcuts', 
 test('page markup has the toolbar page buttons, the panes, the dialog and the audio elements', () => {
   const order = src.indexOf('id="btn-mute"') < src.indexOf('id="btn-editor"') && src.indexOf('id="btn-editor"') < src.indexOf('id="btn-theme"');
   assert.ok(order, 'mute and editor buttons come before the shared buttons');
-  for (const id of ['timer-pane', 'exercise-area', 'exercise-setup', 'exercise-running', 'main-remaining', 'main-progress-fill', 'main-end-time',
+  for (const id of ['timer-pane', 'timer-stack', 'exercise-area', 'exercise-setup', 'exercise-running', 'main-remaining', 'main-progress-fill', 'main-end-time',
     'btn-lecture', 'btn-lecture-from-break', 'btn-break1', 'btn-break2', 'btn-stop', 'btn-exercise',
     'ex-title-input', 'ex-setup-time', 'ex-setup-ok', 'ex-setup-cancel', 'ex-title', 'ex-paused', 'ex-remaining', 'ex-progress-fill', 'ex-end-time', 'ex-stop',
     'ex-next-open', 'ex-next-panel', 'ex-next-list', 'ex-next-add', 'ex-next-close', 'exercise-titles',
@@ -95,7 +95,16 @@ test('page markup has the toolbar page buttons, the panes, the dialog and the au
   assert.doesNotMatch(src, /data-tab="general"/);
   // exercise end time and ± share one row like the main timer; Next is an icon button; the shrunken main countdown keeps full opacity
   assert.match(src, /<div class="end-row"><span id="ex-end-time"><\/span>\s*<div class="adj">\s*<button type="button" class="tbtn ex-adj"/);
-  assert.match(src, /<button id="ex-next-open" class="cbtn exercise ex-stop"[^>]*><svg aria-hidden="true"><use href="#icon-arrow-right">/);
+  assert.match(src, /<button id="ex-next-open" class="cbtn exercise"[^>]*><svg aria-hidden="true"><use href="#icon-arrow-right">/);
+  assert.match(src, /<button id="ex-stop" class="cbtn stop"/);
+  // the next-exercise panel is its own column beside the timer stack, not inside the exercise area
+  const stackEnd = src.indexOf('id="btn-exercise"');
+  const panel = src.indexOf('id="ex-next-panel"');
+  assert.ok(stackEnd > 0 && panel > stackEnd, 'next panel follows the timer stack');
+  assert.ok(src.indexOf('id="exercise-area"') > src.indexOf('id="timer-stack"'), 'exercise area sits inside the timer stack');
+  // ± buttons use a real minus sign
+  assert.equal((src.match(/data-delta="-10">−10<\/button>/g) || []).length, 3);
+  assert.doesNotMatch(src, /data-delta="-1">-1</);
   assert.match(src, /<symbol id="icon-arrow-right"/);
   assert.doesNotMatch(src, /#timer-pane\.exercise-active #main-remaining \{[^}]*opacity/);
   assert.match(src, /#timer-pane\.exercise-paused #ex-remaining \{ font-size: var\(--fs-timer-small\)/);
