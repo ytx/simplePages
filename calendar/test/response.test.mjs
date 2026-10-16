@@ -100,21 +100,18 @@ test('validGasUrl / gasRequestUrl', () => {
   assert.equal(Logic.gasRequestUrl('nope', { action: 'list' }), null);
 });
 
-test('swipeOffset: damped follow, capped, armed past the swipe threshold, inactive while the drag is mostly vertical', () => {
-  assert.deepEqual(Logic.swipeOffset(0, 0), { offset: 0, armed: false, active: true });
-  assert.deepEqual(Logic.swipeOffset(100, 0), { offset: 35, armed: true, active: true });
-  assert.deepEqual(Logic.swipeOffset(-40, 10), { offset: -14, armed: false, active: true });
-  assert.deepEqual(Logic.swipeOffset(1000, 0), { offset: 80, armed: true, active: true });
-  assert.deepEqual(Logic.swipeOffset(-1000, 0), { offset: -80, armed: true, active: true });
-  // a finger arc: 150px across with 70px of drift still counts
-  assert.deepEqual(Logic.swipeOffset(150, 70), { offset: 53, armed: true, active: true });
-  // too shallow an angle (less than 1.5x horizontal) follows but is not armed
-  assert.deepEqual(Logic.swipeOffset(100, 80), { offset: 35, armed: false, active: true });
-  // mostly vertical: inactive, no follow — but it is a momentary state, not a cancel
-  assert.deepEqual(Logic.swipeOffset(30, 60), { offset: 0, armed: false, active: false });
-  assert.deepEqual(Logic.swipeOffset(10, 40), { offset: 0, armed: false, active: false });
-  // small wobble near the origin stays active
-  assert.deepEqual(Logic.swipeOffset(5, 8), { offset: 2, armed: false, active: true });
+test('swipeOffset: 1:1 follow clamped to the pane width, armed past the swipe threshold, inactive while mostly vertical', () => {
+  const W = 1000;
+  assert.deepEqual(Logic.swipeOffset(0, 0, W), { offset: 0, armed: false, active: true });
+  assert.deepEqual(Logic.swipeOffset(100, 0, W), { offset: 100, armed: true, active: true });
+  assert.deepEqual(Logic.swipeOffset(-40, 10, W), { offset: -40, armed: false, active: true });
+  assert.deepEqual(Logic.swipeOffset(1500, 0, W), { offset: 1000, armed: true, active: true });
+  assert.deepEqual(Logic.swipeOffset(-1500, 0, W), { offset: -1000, armed: true, active: true });
+  assert.deepEqual(Logic.swipeOffset(150.4, 70, W), { offset: 150, armed: true, active: true });
+  assert.deepEqual(Logic.swipeOffset(100, 80, W), { offset: 100, armed: false, active: true });
+  assert.deepEqual(Logic.swipeOffset(30, 60, W), { offset: 0, armed: false, active: false });
+  assert.deepEqual(Logic.swipeOffset(10, 40, W), { offset: 0, armed: false, active: false });
+  assert.deepEqual(Logic.swipeOffset(5, 8, W), { offset: 5, armed: false, active: true });
 });
 
 test('isSwipe / normalizeHours / nowLinePct', () => {

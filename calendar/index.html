@@ -116,16 +116,14 @@ button.btn.danger { color: var(--error); }
 #status-dot[data-state="warn"] { background: var(--busy); }
 #content { display: flex; flex-direction: column; gap: calc(var(--gap) / 2); }
 #no-connection { flex: 1; display: grid; place-items: center; font-size: var(--fs-large); color: var(--fg-muted); text-align: center; }
-#no-connection[hidden], #cal-wrap[hidden], #range-title[hidden], #month[hidden], #timegrid[hidden], #popover[hidden] { display: none; }
+#no-connection[hidden], #cal-wrap[hidden], #range-title[hidden], .month[hidden], .timegrid[hidden], #popover[hidden] { display: none; }
 #range-title { margin: 0; text-align: center; font-size: var(--fs-large); font-weight: 600; line-height: 1.2; }
-#cal-wrap { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
-#cal { flex: 1; min-height: 0; display: flex; flex-direction: column; touch-action: none; user-select: none; will-change: transform; }
-#cal.settle { transition: transform 0.15s ease-out, opacity 0.15s ease-out; }
-#cal.leave { transition: transform 0.15s ease-in, opacity 0.15s ease-in; opacity: 0; }
-#cal.enter-from-right { animation: cal-enter-right 0.2s ease-out; }
-#cal.enter-from-left { animation: cal-enter-left 0.2s ease-out; }
-@keyframes cal-enter-right { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes cal-enter-left { from { transform: translateX(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+#cal-wrap { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; overflow: hidden; }
+/* カルーセル: 3 枚(前・現在・翌)を横に並べたトラックを 1 枚分左にずらして現在を見せる */
+#cal { flex: 1; min-height: 0; display: flex; width: 300%; transform: translateX(calc(-100% / 3)); touch-action: none; user-select: none; will-change: transform; }
+#cal.animate { transition: transform 0.25s ease-out; }
+.pane { flex: 0 0 calc(100% / 3); min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.pane:not(.current) { pointer-events: none; }
 .swipe-hint {
   position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; pointer-events: none;
   padding: 0.4em 0.8em; border-radius: 999px; font-size: var(--fs-large); font-weight: 600; white-space: nowrap;
@@ -136,25 +134,21 @@ button.btn.danger { color: var(--error); }
 .swipe-hint.next { right: var(--gap); }
 .swipe-hint.show { opacity: 0.6; }
 .swipe-hint.armed { opacity: 1; color: #fff; background: var(--accent); border-color: var(--accent); transform: translateY(-50%) scale(1.1); }
-@media (prefers-reduced-motion: reduce) {
-  #cal.settle, #cal.leave { transition: none; }
-  #cal.leave { opacity: 1; }
-  #cal.enter-from-right, #cal.enter-from-left { animation: none; }
-}
-#timegrid { flex: 1; min-height: 0; display: flex; flex-direction: column; --hour-col: 3.6em; }
-#day-headers, #allday { display: grid; grid-template-columns: var(--hour-col) repeat(var(--cols, 7), 1fr); }
-#day-headers { border-bottom: 1px solid var(--border); }
+@media (prefers-reduced-motion: reduce) { #cal.animate { transition: none; } }
+.timegrid { flex: 1; min-height: 0; display: flex; flex-direction: column; --hour-col: 3.6em; }
+.day-headers, .allday { display: grid; grid-template-columns: var(--hour-col) repeat(var(--cols, 7), 1fr); }
+.day-headers { border-bottom: 1px solid var(--border); }
 .day-head { text-align: center; padding: 0.2em 0; font-size: var(--fs-small); color: var(--fg-muted); }
 .day-head .dnum { display: inline-block; min-width: 1.6em; padding: 0.1em 0.3em; border-radius: 1em; font-size: var(--fs-base); color: var(--fg); font-weight: 600; }
 .day-head.today .dnum { background: var(--accent); color: #fff; }
 .day-head .wd { margin-left: 0.3em; }
-#allday { grid-auto-rows: 1.5em; gap: 2px 0; padding: 2px 0; border-bottom: 1px solid var(--border); min-height: calc(1.5em + 4px); }
-#allday .corner { grid-column: 1; grid-row: 1; font-size: var(--fs-small); color: var(--fg-muted); padding-right: 0.4em; text-align: right; align-self: center; }
+.allday { grid-auto-rows: 1.5em; gap: 2px 0; padding: 2px 0; border-bottom: 1px solid var(--border); min-height: calc(1.5em + 4px); }
+.allday .corner { grid-column: 1; grid-row: 1; font-size: var(--fs-small); color: var(--fg-muted); padding-right: 0.4em; text-align: right; align-self: center; }
 .bar { font-size: var(--fs-small); line-height: 1.5em; padding: 0 0.4em; margin: 0 1px; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
 .bar.cont-left { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .bar.cont-right { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .bar.more { background: none; color: var(--fg-muted); cursor: default; }
-#grid { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--hour-col) repeat(var(--cols, 7), 1fr); }
+.grid { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--hour-col) repeat(var(--cols, 7), 1fr); }
 .hours { position: relative; }
 .hour-label { position: absolute; right: 0.4em; transform: translateY(-50%); font-size: var(--fs-small); color: var(--fg-muted); }
 .day-col {
@@ -173,7 +167,7 @@ button.btn.danger { color: var(--error); }
 .ev .ev-time { opacity: 0.85; margin-right: 0.3em; }
 .now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--error); pointer-events: none; z-index: 2; }
 .now-line::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--error); }
-#month { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+.month { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(6, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); }
 .mhead { background: var(--bg-panel); text-align: center; font-size: var(--fs-small); color: var(--fg-muted); padding: 0.2em 0; }
 .cell { background: var(--bg-panel); min-height: 0; overflow: hidden; padding: 2px 3px; font-size: var(--fs-small); }
 .cell.out { background: var(--bg); color: var(--fg-muted); }
@@ -235,12 +229,9 @@ textarea#gas-code { width: 100%; min-height: 12em; font-family: ui-monospace, Me
   <h1 id="range-title"></h1>
   <div id="cal-wrap">
     <div id="cal">
-      <div id="timegrid">
-        <div id="day-headers"></div>
-        <div id="allday"></div>
-        <div id="grid"></div>
-      </div>
-      <div id="month" hidden></div>
+      <div class="pane"><div class="timegrid"><div class="day-headers"></div><div class="allday"></div><div class="grid"></div></div><div class="month" hidden></div></div>
+      <div class="pane current"><div class="timegrid"><div class="day-headers"></div><div class="allday"></div><div class="grid"></div></div><div class="month" hidden></div></div>
+      <div class="pane"><div class="timegrid"><div class="day-headers"></div><div class="allday"></div><div class="grid"></div></div><div class="month" hidden></div></div>
     </div>
     <div class="swipe-hint prev" id="swipe-prev" aria-hidden="true" data-i18n="prev"></div>
     <div class="swipe-hint next" id="swipe-next" aria-hidden="true" data-i18n="next"></div>
@@ -906,13 +897,11 @@ const Logic = (() => {
   const SWIPE_MIN_DX = 60;
   const SWIPE_RATIO = 1.5;
   function isSwipe(dx, dy) { return Math.abs(dx) >= SWIPE_MIN_DX && Math.abs(dx) >= Math.abs(dy) * SWIPE_RATIO; }
-  // ドラッグ中の追従量。dx の 35% を ±80px に抑えた「引っぱり」。
+  // ドラッグ中の追従量。隣のカレンダーが指に付いてくるカルーセルなので等倍、1 枚分(max)で止める。
   // 縦が横を上回っている間は追従しない(active: false)が、その後横へ戻れば復活する一時的な状態。
-  const SWIPE_FOLLOW = 0.35;
-  const SWIPE_MAX_OFFSET = 80;
-  function swipeOffset(dx, dy) {
+  function swipeOffset(dx, dy, max) {
     if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) >= 40) return { offset: 0, armed: false, active: false };
-    const offset = Math.max(-SWIPE_MAX_OFFSET, Math.min(SWIPE_MAX_OFFSET, Math.round(dx * SWIPE_FOLLOW)));
+    const offset = Math.max(-max, Math.min(max, Math.round(dx)));
     return { offset, armed: isSwipe(dx, dy), active: true };
   }
   function normalizeHours(dayStart, dayEnd) {
@@ -1311,12 +1300,27 @@ const App = (() => {
     if (cache && !Logic.coversRange(cache, range)) { render(); fetchWindow(range); } else render();
   }
 
+  // 3 枚のうち現在の枚を描く。隣の 2 枚はフリック / 前翌ボタンの直前に描く(renderNeighbors)。
+  const panes = () => $$('#cal .pane');
+  const currentPane = () => $('#cal .pane.current');
+  let neighborsReady = false;
   function render() {
+    renderPane(currentPane(), anchor);
+    neighborsReady = false;
+  }
+  function renderNeighbors() {
+    if (neighborsReady) return;
+    const [prev, , next] = panes();
+    renderPane(prev, Logic.shiftAnchor(settings.view, anchor, -1));
+    renderPane(next, Logic.shiftAnchor(settings.view, anchor, 1));
+    neighborsReady = true;
+  }
+  function renderPane(pane, at) {
     const month = settings.view === 'month';
-    $('#timegrid').hidden = month;
-    $('#month').hidden = !month;
-    if (month) renderMonth(Logic.monthGridDays(anchor, settings.weekStart));
-    else renderTimeGrid(Logic.daysInRange(currentRange()));
+    pane.querySelector('.timegrid').hidden = month;
+    pane.querySelector('.month').hidden = !month;
+    if (month) renderMonth(pane, Logic.monthGridDays(at, settings.weekStart));
+    else renderTimeGrid(pane, Logic.daysInRange(Logic.rangeForView(settings.view, at, settings.weekStart)));
   }
 
   function calendarsFromGas() { return cache ? cache.calendars : []; }
@@ -1343,16 +1347,16 @@ const App = (() => {
     return e;
   }
 
-  function renderTimeGrid(days) {
+  function renderTimeGrid(pane, days) {
     const n = days.length;
     const now = new Date();
-    const tg = $('#timegrid');
+    const tg = pane.querySelector('.timegrid');
     tg.style.setProperty('--cols', String(n));
     tg.style.setProperty('--hours', String(settings.dayEnd - settings.dayStart));
     const events = cache ? cache.events : [];
 
     // 列見出し
-    const hdr = $('#day-headers');
+    const hdr = pane.querySelector('.day-headers');
     hdr.replaceChildren(el('div', 'corner'));
     const wd = new Intl.DateTimeFormat(locale(), { weekday: 'short' });
     for (const d of days) {
@@ -1364,7 +1368,7 @@ const App = (() => {
 
     // 終日帯(最大 ALLDAY_ROWS 行。超過は列ごとに +N)
     const bars = Logic.allDayBars(events, days);
-    const ad = $('#allday');
+    const ad = pane.querySelector('.allday');
     ad.replaceChildren(el('div', 'corner', Logic.t(settings.lang, 'all_day')));
     const overflow = bars.some((b) => b.row >= ALLDAY_ROWS);
     const extra = new Map(); // col -> count
@@ -1380,7 +1384,7 @@ const App = (() => {
     }
 
     // 時刻グリッド
-    const grid = $('#grid');
+    const grid = pane.querySelector('.grid');
     grid.replaceChildren();
     const hours = el('div', 'hours');
     const span = settings.dayEnd - settings.dayStart;
@@ -1408,22 +1412,22 @@ const App = (() => {
         b.appendChild(el('span', 'ev-title', seg.event.title || Logic.t(settings.lang, 'untitled')));
         col.appendChild(b);
       }
-      if (today) { const line = el('div', 'now-line'); line.id = 'now-line'; col.appendChild(line); }
+      if (today) col.appendChild(el('div', 'now-line'));
       grid.appendChild(col);
     }
     updateNowLine();
   }
 
   function updateNowLine() {
-    const line = $('#now-line');
-    if (!line) return;
     const pct = Logic.nowLinePct(new Date(), settings.dayStart, settings.dayEnd);
-    line.hidden = pct === null;
-    if (pct !== null) line.style.top = `${pct}%`;
+    for (const line of $$('.now-line')) {
+      line.hidden = pct === null;
+      if (pct !== null) line.style.top = `${pct}%`;
+    }
   }
 
-  function renderMonth(days) {
-    const month = $('#month');
+  function renderMonth(pane, days) {
+    const month = pane.querySelector('.month');
     month.replaceChildren();
     const wd = new Intl.DateTimeFormat(locale(), { weekday: 'short' });
     for (let i = 0; i < 7; i++) month.appendChild(el('div', 'mhead', wd.format(days[i].date)));
@@ -1451,28 +1455,58 @@ const App = (() => {
   }
 
   let returnTimer = null;
-  const SWIPE_FADE_DIVISOR = 320;   // 追従 80px で不透明度 0.75
 
-  // 前 / 翌 / フリックの移動。本体を dir の方向へ流してから再描画し、反対側から戻す。
+  // カルーセルの位置。offset は現在の枚からのずれ(px、右が正)。
   const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let leaveTimer = null;
-  function navigate(dir) {
-    const cal = $('#cal');
-    const go = () => {
+  const paneWidth = () => $('#cal-wrap').clientWidth;
+  function setTrackOffset(offset) { $('#cal').style.transform = `translateX(calc(-100% / 3 + ${offset}px))`; }
+  function resetTrack() { $('#cal').style.transform = ''; }
+
+  // 枚の役割を回す: dir > 0 なら 前 の枚を末尾へ(翌 が現在になる)、dir < 0 なら 翌 の枚を先頭へ
+  function rotatePanes(dir) {
+    const track = $('#cal');
+    const [prev, cur, next] = panes();
+    cur.classList.remove('current');
+    if (dir > 0) { track.appendChild(prev); next.classList.add('current'); }
+    else { track.insertBefore(next, prev); prev.classList.add('current'); }
+  }
+
+  let navigating = false;
+  // 前 / 翌 / フリックの移動。隣の枚へトラックを流し、着いたら役割を回して現在を描き直す。
+  function navigate(dir, fromOffset = 0) {
+    if (navigating) return;
+    hidePopover();
+    clearSwipeHints();
+    const finish = () => {
+      rotatePanes(dir);
+      const track = $('#cal');
+      track.classList.remove('animate');
+      resetTrack();
       anchor = Logic.shiftAnchor(settings.view, anchor, dir);
-      hidePopover();
+      navigating = false;
       showRange();
-      cal.className = '';
-      cal.style.transform = '';
-      cal.style.opacity = '';
-      void cal.offsetWidth;   // アニメーションを再始動させる
-      cal.classList.add(dir > 0 ? 'enter-from-right' : 'enter-from-left');
     };
-    clearTimeout(leaveTimer);
-    if (reducedMotion()) { go(); return; }
-    cal.className = 'leave';
-    cal.style.transform = `translateX(${dir > 0 ? -40 : 40}px)`;
-    leaveTimer = setTimeout(go, 150);
+    if (reducedMotion()) { finish(); return; }
+    renderNeighbors();
+    navigating = true;
+    const track = $('#cal');
+    const target = -dir * paneWidth();
+    if (fromOffset === 0) { setTrackOffset(0); void track.offsetWidth; }
+    track.classList.add('animate');
+    let done = false;
+    const onEnd = (e) => { if (e && e.target !== track) return; if (done) return; done = true; track.removeEventListener('transitionend', onEnd); finish(); };
+    track.addEventListener('transitionend', onEnd);
+    setTimeout(onEnd, 400);   // transitionend が来ない場合の保険
+    setTrackOffset(target);
+  }
+  function settleTrack() {
+    const track = $('#cal');
+    track.classList.add('animate');
+    setTrackOffset(0);
+    let done = false;
+    const onEnd = (e) => { if (e && e.target !== track) return; if (done) return; done = true; track.removeEventListener('transitionend', onEnd); track.classList.remove('animate'); resetTrack(); };
+    track.addEventListener('transitionend', onEnd);
+    setTimeout(onEnd, 400);   // transition が無効(reduced motion)でも後始末する
   }
   function showSwipeHint(dx, armed) {
     const prev = $('#swipe-prev'), next = $('#swipe-next');
@@ -1503,23 +1537,17 @@ const App = (() => {
     for (const b of $$('.view-btn')) b.addEventListener('click', () => updateSettings({ view: b.dataset.view }));
     const cal = $('#cal');
     let down = null;
-    const resetFollow = () => {
-      cal.classList.remove('settle');
-      cal.classList.add('settle');
-      cal.style.transform = '';
-      cal.style.opacity = '';
-      clearSwipeHints();
-    };
+    let offset = 0;
     // 指がカレンダーの外で離れても拾えるよう、押下中は window で move / up / cancel を受ける
     const onMove = (e) => {
       if (!down || down.id !== e.pointerId) return;
       const dx = e.clientX - down.x, dy = e.clientY - down.y;
-      const f = Logic.swipeOffset(dx, dy);
-      if (!f.active) { cal.style.transform = ''; cal.style.opacity = ''; clearSwipeHints(); return; }
-      if (reducedMotion()) { showSwipeHint(dx, f.armed); return; }
-      cal.style.transform = `translateX(${f.offset}px)`;
-      cal.style.opacity = String(1 - Math.abs(f.offset) / SWIPE_FADE_DIVISOR);
+      const f = Logic.swipeOffset(dx, dy, paneWidth());
+      if (!f.active) { offset = 0; setTrackOffset(0); clearSwipeHints(); return; }
       showSwipeHint(dx, f.armed);
+      if (reducedMotion()) return;
+      offset = f.offset;
+      setTrackOffset(offset);
     };
     const detach = () => {
       window.removeEventListener('pointermove', onMove);
@@ -1532,19 +1560,24 @@ const App = (() => {
       down = null;
       detach();
       clearSwipeHints();
-      if (Logic.isSwipe(dx, dy)) navigate(dx < 0 ? 1 : -1);
-      else resetFollow();
+      if (Logic.isSwipe(dx, dy)) navigate(dx < 0 ? 1 : -1, offset);
+      else settleTrack();
+      offset = 0;
     };
     const onCancel = (e) => {
       if (!down || down.id !== e.pointerId) return;
       down = null;
       detach();
-      resetFollow();
+      clearSwipeHints();
+      settleTrack();
+      offset = 0;
     };
     cal.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || down) return;
+      if (e.button !== 0 || down || navigating) return;
       down = { x: e.clientX, y: e.clientY, id: e.pointerId };
-      cal.className = '';
+      offset = 0;
+      renderNeighbors();
+      cal.classList.remove('animate');
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
       window.addEventListener('pointercancel', onCancel);

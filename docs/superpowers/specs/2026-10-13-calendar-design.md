@@ -80,7 +80,7 @@ calendar/
 - **現在時刻線**: 日・週表示で今日の列に赤線。1 分ごとに位置を更新。
 - **予定の色**: 予定の `color` → カレンダーの設定色(上書き)→ カレンダーの `color` → 既定アクセント、の順。文字色は背景の輝度で白/黒を選ぶ。
 - **ポップオーバー**: 予定をタップすると、その近く(画面内に収める)に 題名 / 日時 / カレンダー名 / 場所 / 説明 を表示。外側のタップか Esc で閉じる。文字列は `textContent`。
-- **ナビゲーション**: 前 / 翌 はビュー単位(日・週・月)で移動。左右フリック(`pointerdown`→`pointerup` で横 60px 以上、かつ横が縦の 1.5 倍以上。指は弧を描くので縦の絶対上限は置かない。押下中は `window` で move / up / cancel を受け、カレンダー外で離しても判定する)も同じ。 フリック中は `swipeOffset(dx, dy)`(dx の 35%、±80px 上限)で本体を横に追従させ、しきい値到達で画面端の「前」/「翌」バッジを点灯。離して成立なら本体を進行方向へ 40px 流して(150 ms)再描画し反対側から戻す(200 ms)、不成立なら 150 ms で元位置へ。縦が横を上回り 40px 以上のあいだは追従を止める(横へ戻れば復活)。`prefers-reduced-motion: reduce` ではバッジのみ。前 / 翌ボタンも同じスライド。無操作が `returnToTodayMinutes`(既定 5、0 で無効)続いたら今日に戻す。
+- **ナビゲーション**: 前 / 翌 はビュー単位(日・週・月)で移動。左右フリック(`pointerdown`→`pointerup` で横 60px 以上、かつ横が縦の 1.5 倍以上。指は弧を描くので縦の絶対上限は置かない。押下中は `window` で move / up / cancel を受け、カレンダー外で離しても判定する)も同じ。 カレンダー本体 `#cal` は 前・現在・翌 の 3 枚(`.pane`、現在は `.current`)を横に並べた幅 300% のトラックで、既定で 1 枚分左にずらして現在を見せる。フリック / 前翌ボタンの直前に隣 2 枚を描く(`renderNeighbors`、現在を描き直すたびに無効化)。フリック中は `swipeOffset(dx, dy, width)`(等倍、±1 枚分で上限)でトラックを追従させ、しきい値到達で画面端の「前」/「翌」バッジを点灯。離して成立なら隣の枚までスライド(0.25 s)し、着いたら枚の役割を回して(`rotatePanes`)現在を描き直す。不成立なら 0.25 s で元位置へ。縦が横を上回り 40px 以上のあいだは追従を止める(横へ戻れば復活)。`prefers-reduced-motion: reduce` では即時切替・バッジのみ。前 / 翌ボタンも同じスライド。無操作が `returnToTodayMinutes`(既定 5、0 で無効)続いたら今日に戻す。
 - **接続未設定**: 本体に「右上の設定 → 接続タブで GAS の URL を設定してください」と表示し、`App.setToolbarAttention(true)`。
 
 ## 設定項目
@@ -167,7 +167,7 @@ anchor(基準日), view ──> Logic.rangeForView ──> 表示範囲 R
 | `gasRequestUrl(base, params)` | base の形式検証(`https://script.google.com/macros/s/…/exec`)、クエリ付与。無効なら null |
 | `validCalendars(value)` | 配列の各要素を `{ id, name, color, enabled }` に正規化、不正は捨てる |
 | `isSwipe(dx, dy)` | `|dx| >= 60` かつ `|dx| >= 1.5 × |dy|` |
-| `swipeOffset(dx, dy)` | `{ offset, armed, active }`。`offset = clamp(round(dx × 0.35), ±80)`、`armed = isSwipe`、`|dy| > |dx|` かつ `|dy| >= 40` で `active: false`(offset 0、一時的) |
+| `swipeOffset(dx, dy, max)` | `{ offset, armed, active }`。`offset = clamp(round(dx), ±max)`、`armed = isSwipe`、`|dy| > |dx|` かつ `|dy| >= 40` で `active: false`(offset 0、一時的) |
 
 fixtures: `test/fixtures/gas-list.json`、`test/fixtures/gas-events.json`(重なり 3 件、日またぎ、終日 1 日、複数日 3 日、週をまたぐ複数日、繰り返し展開済みの同 id 連番、色なし、を含む)。
 
