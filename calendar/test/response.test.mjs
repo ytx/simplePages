@@ -100,20 +100,32 @@ test('validGasUrl / gasRequestUrl', () => {
   assert.equal(Logic.gasRequestUrl('nope', { action: 'list' }), null);
 });
 
-test('swipeOffset: damped follow, capped, armed past the swipe threshold, cancelled by vertical drift', () => {
+test('swipeOffset: damped follow, capped, armed past the swipe threshold, inactive while the drag is mostly vertical', () => {
   assert.deepEqual(Logic.swipeOffset(0, 0), { offset: 0, armed: false, active: true });
   assert.deepEqual(Logic.swipeOffset(100, 0), { offset: 35, armed: true, active: true });
   assert.deepEqual(Logic.swipeOffset(-40, 10), { offset: -14, armed: false, active: true });
   assert.deepEqual(Logic.swipeOffset(1000, 0), { offset: 80, armed: true, active: true });
   assert.deepEqual(Logic.swipeOffset(-1000, 0), { offset: -80, armed: true, active: true });
-  assert.deepEqual(Logic.swipeOffset(60, 39), { offset: 21, armed: true, active: true });
-  assert.deepEqual(Logic.swipeOffset(100, 40), { offset: 0, armed: false, active: false });
+  // a finger arc: 150px across with 70px of drift still counts
+  assert.deepEqual(Logic.swipeOffset(150, 70), { offset: 53, armed: true, active: true });
+  // too shallow an angle (less than 1.5x horizontal) follows but is not armed
+  assert.deepEqual(Logic.swipeOffset(100, 80), { offset: 35, armed: false, active: true });
+  // mostly vertical: inactive, no follow — but it is a momentary state, not a cancel
+  assert.deepEqual(Logic.swipeOffset(30, 60), { offset: 0, armed: false, active: false });
+  assert.deepEqual(Logic.swipeOffset(10, 40), { offset: 0, armed: false, active: false });
+  // small wobble near the origin stays active
+  assert.deepEqual(Logic.swipeOffset(5, 8), { offset: 2, armed: false, active: true });
 });
 
 test('isSwipe / normalizeHours / nowLinePct', () => {
   assert.equal(Logic.isSwipe(-80, 10), true);
   assert.equal(Logic.isSwipe(59, 0), false);
-  assert.equal(Logic.isSwipe(100, 40), false);
+  assert.equal(Logic.isSwipe(100, 40), true);   // angle rule: horizontal >= 1.5x vertical
+  assert.equal(Logic.isSwipe(150, 70), true);
+  assert.equal(Logic.isSwipe(150, 100), true);
+  assert.equal(Logic.isSwipe(150, 101), false);
+  assert.equal(Logic.isSwipe(-90, -60), true);
+  assert.equal(Logic.isSwipe(-90, -61), false);
   assert.deepEqual(Logic.normalizeHours(6, 23), [6, 23]);
   assert.deepEqual(Logic.normalizeHours(0, 24), [0, 24]);
   assert.deepEqual(Logic.normalizeHours(10, 10), [6, 23]);
