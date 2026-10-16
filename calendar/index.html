@@ -116,9 +116,31 @@ button.btn.danger { color: var(--error); }
 #status-dot[data-state="warn"] { background: var(--busy); }
 #content { display: flex; flex-direction: column; gap: calc(var(--gap) / 2); }
 #no-connection { flex: 1; display: grid; place-items: center; font-size: var(--fs-large); color: var(--fg-muted); text-align: center; }
-#no-connection[hidden], #cal[hidden], #range-title[hidden], #month[hidden], #timegrid[hidden], #popover[hidden] { display: none; }
+#no-connection[hidden], #cal-wrap[hidden], #range-title[hidden], #month[hidden], #timegrid[hidden], #popover[hidden] { display: none; }
 #range-title { margin: 0; text-align: center; font-size: var(--fs-large); font-weight: 600; line-height: 1.2; }
-#cal { flex: 1; min-height: 0; display: flex; flex-direction: column; touch-action: none; user-select: none; }
+#cal-wrap { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+#cal { flex: 1; min-height: 0; display: flex; flex-direction: column; touch-action: none; user-select: none; will-change: transform; }
+#cal.settle { transition: transform 0.15s ease-out, opacity 0.15s ease-out; }
+#cal.leave { transition: transform 0.15s ease-in, opacity 0.15s ease-in; opacity: 0; }
+#cal.enter-from-right { animation: cal-enter-right 0.2s ease-out; }
+#cal.enter-from-left { animation: cal-enter-left 0.2s ease-out; }
+@keyframes cal-enter-right { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes cal-enter-left { from { transform: translateX(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.swipe-hint {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; pointer-events: none;
+  padding: 0.4em 0.8em; border-radius: 999px; font-size: var(--fs-large); font-weight: 600; white-space: nowrap;
+  background: var(--bg-panel); color: var(--fg-muted); border: 2px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  opacity: 0; transition: opacity 0.15s, transform 0.15s;
+}
+.swipe-hint.prev { left: var(--gap); }
+.swipe-hint.next { right: var(--gap); }
+.swipe-hint.show { opacity: 0.6; }
+.swipe-hint.armed { opacity: 1; color: #fff; background: var(--accent); border-color: var(--accent); transform: translateY(-50%) scale(1.1); }
+@media (prefers-reduced-motion: reduce) {
+  #cal.settle, #cal.leave { transition: none; }
+  #cal.leave { opacity: 1; }
+  #cal.enter-from-right, #cal.enter-from-left { animation: none; }
+}
 #timegrid { flex: 1; min-height: 0; display: flex; flex-direction: column; --hour-col: 3.6em; }
 #day-headers, #allday { display: grid; grid-template-columns: var(--hour-col) repeat(var(--cols, 7), 1fr); }
 #day-headers { border-bottom: 1px solid var(--border); }
@@ -211,13 +233,17 @@ textarea#gas-code { width: 100%; min-height: 12em; font-family: ui-monospace, Me
 <main id="content">
   <div id="no-connection" hidden><span data-i18n="set_connection_hint"></span></div>
   <h1 id="range-title"></h1>
-  <div id="cal">
-    <div id="timegrid">
-      <div id="day-headers"></div>
-      <div id="allday"></div>
-      <div id="grid"></div>
+  <div id="cal-wrap">
+    <div id="cal">
+      <div id="timegrid">
+        <div id="day-headers"></div>
+        <div id="allday"></div>
+        <div id="grid"></div>
+      </div>
+      <div id="month" hidden></div>
     </div>
-    <div id="month" hidden></div>
+    <div class="swipe-hint prev" id="swipe-prev" aria-hidden="true" data-i18n="prev"></div>
+    <div class="swipe-hint next" id="swipe-next" aria-hidden="true" data-i18n="next"></div>
   </div>
   <nav id="nav">
     <div class="nav-group">
@@ -877,6 +903,14 @@ const Logic = (() => {
     return qs ? `${b}?${qs}` : b;
   }
   function isSwipe(dx, dy) { return Math.abs(dx) >= 60 && Math.abs(dy) < 40; }
+  // ドラッグ中の追従量。dx の 35% を ±80px に抑えた「引っぱり」。縦に 40px 以上ずれたら追従をやめる(active: false)。
+  const SWIPE_FOLLOW = 0.35;
+  const SWIPE_MAX_OFFSET = 80;
+  function swipeOffset(dx, dy) {
+    if (Math.abs(dy) >= 40) return { offset: 0, armed: false, active: false };
+    const offset = Math.max(-SWIPE_MAX_OFFSET, Math.min(SWIPE_MAX_OFFSET, Math.round(dx * SWIPE_FOLLOW)));
+    return { offset, armed: isSwipe(dx, dy), active: true };
+  }
   function normalizeHours(dayStart, dayEnd) {
     const ok = Number.isInteger(dayStart) && Number.isInteger(dayEnd) && dayStart >= 0 && dayEnd <= 24 && dayEnd > dayStart;
     return ok ? [dayStart, dayEnd] : [6, 23];
@@ -986,7 +1020,7 @@ const Logic = (() => {
 
   return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport,
     DAY_MS, WEEKDAYS_JA, startOfDay, addDays, addMonths, ymd, parseYmd, startOfWeek, monthGridDays, rangeForView, daysInRange, shiftAnchor, windowFor, coversRange, isToday, formatRangeTitle,
-    normalizeHex, normalizeResponse, validCalendars, mergeCalendarList, eventColor, textColorFor, validGasUrl, gasRequestUrl, isSwipe, normalizeHours, nowLinePct,
+    normalizeHex, normalizeResponse, validCalendars, mergeCalendarList, eventColor, textColorFor, validGasUrl, gasRequestUrl, isSwipe, swipeOffset, normalizeHours, nowLinePct,
     isAllDayLike, segmentsByDay, allDayBars, layoutColumns, clipToHours, monthCells };
 })();
 </script>
@@ -1212,7 +1246,7 @@ const App = (() => {
   async function refresh() {
     const connected = !!settings.gasUrl;
     $('#no-connection').hidden = connected;
-    $('#cal').hidden = !connected;
+    $('#cal-wrap').hidden = !connected;
     $('#range-title').hidden = !connected;
     setToolbarAttention(!connected);
     if (!connected) { setStatus('error', () => Logic.t(settings.lang, 'set_connection_hint')); return; }
@@ -1413,12 +1447,38 @@ const App = (() => {
   }
 
   let returnTimer = null;
+  const SWIPE_FADE_DIVISOR = 320;   // 追従 80px で不透明度 0.75
 
+  // 前 / 翌 / フリックの移動。本体を dir の方向へ流してから再描画し、反対側から戻す。
+  const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let leaveTimer = null;
   function navigate(dir) {
-    anchor = Logic.shiftAnchor(settings.view, anchor, dir);
-    hidePopover();
-    showRange();
+    const cal = $('#cal');
+    const go = () => {
+      anchor = Logic.shiftAnchor(settings.view, anchor, dir);
+      hidePopover();
+      showRange();
+      cal.className = '';
+      cal.style.transform = '';
+      cal.style.opacity = '';
+      void cal.offsetWidth;   // アニメーションを再始動させる
+      cal.classList.add(dir > 0 ? 'enter-from-right' : 'enter-from-left');
+    };
+    clearTimeout(leaveTimer);
+    if (reducedMotion()) { go(); return; }
+    cal.className = 'leave';
+    cal.style.transform = `translateX(${dir > 0 ? -40 : 40}px)`;
+    leaveTimer = setTimeout(go, 150);
   }
+  function showSwipeHint(dx, armed) {
+    const prev = $('#swipe-prev'), next = $('#swipe-next');
+    const hint = dx > 0 ? prev : next, other = dx > 0 ? next : prev;
+    other.classList.remove('show', 'armed');
+    if (dx === 0) { hint.classList.remove('show', 'armed'); return; }
+    hint.classList.add('show');
+    hint.classList.toggle('armed', armed);
+  }
+  function clearSwipeHints() { for (const h of $$('.swipe-hint')) h.classList.remove('show', 'armed'); }
   function goToday() {
     anchor = Logic.startOfDay(new Date());
     hidePopover();
@@ -1439,14 +1499,37 @@ const App = (() => {
     for (const b of $$('.view-btn')) b.addEventListener('click', () => updateSettings({ view: b.dataset.view }));
     const cal = $('#cal');
     let down = null;
-    cal.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, id: e.pointerId }; });
+    const resetFollow = () => {
+      cal.classList.remove('settle');
+      cal.classList.add('settle');
+      cal.style.transform = '';
+      cal.style.opacity = '';
+      clearSwipeHints();
+    };
+    cal.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      down = { x: e.clientX, y: e.clientY, id: e.pointerId };
+      cal.className = '';
+    });
+    cal.addEventListener('pointermove', (e) => {
+      if (!down || down.id !== e.pointerId) return;
+      const dx = e.clientX - down.x, dy = e.clientY - down.y;
+      const f = Logic.swipeOffset(dx, dy);
+      if (!f.active) { down = null; resetFollow(); return; }
+      if (reducedMotion()) { showSwipeHint(dx, f.armed); return; }
+      cal.style.transform = `translateX(${f.offset}px)`;
+      cal.style.opacity = String(1 - Math.abs(f.offset) / SWIPE_FADE_DIVISOR);
+      showSwipeHint(dx, f.armed);
+    });
     cal.addEventListener('pointerup', (e) => {
       if (!down || down.id !== e.pointerId) return;
       const dx = e.clientX - down.x, dy = e.clientY - down.y;
       down = null;
+      clearSwipeHints();
       if (Logic.isSwipe(dx, dy)) navigate(dx < 0 ? 1 : -1);
+      else resetFollow();
     });
-    cal.addEventListener('pointercancel', () => { down = null; });
+    cal.addEventListener('pointercancel', () => { down = null; resetFollow(); });
     let lastActivity = 0;
     const onActivity = () => { const now = Date.now(); if (now - lastActivity < 500) return; lastActivity = now; scheduleReturnToToday(); };
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, onActivity, { passive: true });

@@ -100,6 +100,16 @@ test('validGasUrl / gasRequestUrl', () => {
   assert.equal(Logic.gasRequestUrl('nope', { action: 'list' }), null);
 });
 
+test('swipeOffset: damped follow, capped, armed past the swipe threshold, cancelled by vertical drift', () => {
+  assert.deepEqual(Logic.swipeOffset(0, 0), { offset: 0, armed: false, active: true });
+  assert.deepEqual(Logic.swipeOffset(100, 0), { offset: 35, armed: true, active: true });
+  assert.deepEqual(Logic.swipeOffset(-40, 10), { offset: -14, armed: false, active: true });
+  assert.deepEqual(Logic.swipeOffset(1000, 0), { offset: 80, armed: true, active: true });
+  assert.deepEqual(Logic.swipeOffset(-1000, 0), { offset: -80, armed: true, active: true });
+  assert.deepEqual(Logic.swipeOffset(60, 39), { offset: 21, armed: true, active: true });
+  assert.deepEqual(Logic.swipeOffset(100, 40), { offset: 0, armed: false, active: false });
+});
+
 test('isSwipe / normalizeHours / nowLinePct', () => {
   assert.equal(Logic.isSwipe(-80, 10), true);
   assert.equal(Logic.isSwipe(59, 0), false);
