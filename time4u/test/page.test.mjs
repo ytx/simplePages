@@ -44,6 +44,7 @@ test('every data-i18n key and every t() key exists in ja and en', () => {
   const keys = new Set();
   for (const m of src.matchAll(/data-i18n(?:-label|-placeholder)?="([^"]+)"/g)) keys.add(m[1]);
   for (const m of src.matchAll(/\bt\(\s*[^,]+,\s*'([^']+)'/g)) keys.add(m[1]);
+  for (const m of src.matchAll(/\btr\(\s*'([^']+)'/g)) keys.add(m[1]);
   for (const k of keys) {
     assert.equal(typeof Logic.I18N.ja[k], 'string', `ja ${k}`);
     assert.equal(typeof Logic.I18N.en[k], 'string', `en ${k}`);

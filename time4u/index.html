@@ -2461,6 +2461,8 @@ const Logic = (() => {
       action_propose: '新しく提示',
       action_repropose: '再提示',
       confirm_cancel_meeting: '{name}との面会を取り消します。よろしいですか?',
+      confirm_cancel_meeting_ok: '面会を取り消す',
+      confirm_cancel_proposal_ok: '提示を取り消す',
       confirm_cancel_proposal: 'この提示を取り消します(仮押さえも解放されます)。よろしいですか?',
       client_edit: 'クライアントを編集',
       name: '名前',
@@ -2556,6 +2558,8 @@ const Logic = (() => {
       action_propose: 'Propose',
       action_repropose: 'Re-propose',
       confirm_cancel_meeting: 'Cancel the meeting with {name}?',
+      confirm_cancel_meeting_ok: 'Cancel meeting',
+      confirm_cancel_proposal_ok: 'Cancel proposal',
       confirm_cancel_proposal: 'Cancel this proposal? Held times will be released.',
       client_edit: 'Edit client',
       name: 'Name',
@@ -3085,7 +3089,8 @@ const App = (() => {
   const DATA_KEY = 'simplePages.time4u.data';
   let data = null;
   let activeTab = 'clients';
-  let lastReading = '';
+  let readingBuf = '';
+  let compReading = '';
   let composing = false;
   const sectionOpen = { confirmed: false, pending: true, past: true };
   const tr = (key, params) => Logic.t(settings.lang, key, params);
@@ -3470,6 +3475,7 @@ const App = (() => {
     const cancel = () => { clearTimeout(timer); timer = null; };
     li.addEventListener('pointerdown', (e) => {
       if (e.target.closest('.row-action, .row-more')) return;
+      li._longPressed = false;
       sx = e.clientX; sy = e.clientY;
       cancel();
       timer = setTimeout(() => { timer = null; li._longPressed = true; openClientSheet(clientId); }, 500);
@@ -3481,7 +3487,7 @@ const App = (() => {
   }
 
   async function cancelMeeting(client, block) {
-    const r = await dialog({ message: tr('confirm_cancel_meeting', { name: Logic.displayName(client, settings) }), danger: true, okLabel: tr('action_cancel') });
+    const r = await dialog({ message: tr('confirm_cancel_meeting', { name: Logic.displayName(client, settings) }), danger: true, okLabel: tr('confirm_cancel_meeting_ok') });
     if (!r.ok) return;
     const next = getData();
     next.blocks = next.blocks.filter((b) => b.id !== block.id);
@@ -3489,7 +3495,7 @@ const App = (() => {
   }
 
   async function cancelProposal(proposal) {
-    const r = await dialog({ message: tr('confirm_cancel_proposal'), danger: true, okLabel: tr('action_cancel') });
+    const r = await dialog({ message: tr('confirm_cancel_proposal'), danger: true, okLabel: tr('confirm_cancel_proposal_ok') });
     if (!r.ok) return;
     const next = getData();
     const p = next.proposals.find((x) => x.id === proposal.id);
@@ -3498,6 +3504,7 @@ const App = (() => {
   }
 
   function openClientSheet(clientId) {
+    if ($('#sheet').open) return;
     const client = data.clients.find((c) => c.id === clientId);
     if (!client) return;
     let nameInput;
@@ -3597,19 +3604,24 @@ const App = (() => {
 
   function bindClients() {
     const search = $('#client-search');
-    search.addEventListener('compositionstart', () => { composing = true; });
-    search.addEventListener('compositionupdate', (e) => { lastReading = e.data || ''; });
-    search.addEventListener('compositionend', () => { composing = false; /* lastReading は確定後も保持する */ });
+    // 読みは変換ごとに「かなだけの最後の e.data」を採り、確定時にバッファへ連結する。
+    search.addEventListener('compositionstart', () => { composing = true; compReading = ''; });
+    search.addEventListener('compositionupdate', (e) => {
+      const d = (e.data || '').trim();
+      if (d && /^[ぁ-ゖァ-ヺー\s]+$/.test(d)) compReading = d;
+    });
+    search.addEventListener('compositionend', () => { composing = false; readingBuf += compReading; compReading = ''; });
     search.addEventListener('input', () => {
-      if (!composing && /^[\x20-\x7e]*$/.test(search.value)) lastReading = '';
+      if (search.value === '' || (!composing && /^[\x20-\x7e]*$/.test(search.value))) { readingBuf = ''; compReading = ''; }
       renderClients();
     });
     $('#client-add').addEventListener('click', () => {
       const name = search.value.trim();
       if (!name) return;
-      const id = addClient(name, Logic.normalizeKana(lastReading));
+      const id = addClient(name, Logic.normalizeKana(readingBuf));
       search.value = '';
-      lastReading = '';
+      readingBuf = '';
+      compReading = '';
       renderClients();
       openSlotsFor(id);
     });
