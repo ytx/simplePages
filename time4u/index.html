@@ -2005,8 +2005,11 @@ dialog#dialog, dialog#sheet, dialog#help {
 }
 dialog#dialog[open], dialog#sheet[open], dialog#help[open] { display: block; }
 dialog#dialog::backdrop, dialog#sheet::backdrop, dialog#help::backdrop { background: rgba(0,0,0,0.5); }
-dialog#help { width: min(92vw, 36em); max-height: 85vh; overflow: auto; }
-.help-head { display: flex; align-items: center; gap: var(--gap); margin-bottom: calc(var(--gap) / 2); }
+dialog#help { width: min(92vw, 36em); max-height: 85vh; overflow: auto; padding-top: 0; }
+.help-head { position: sticky; top: 0; z-index: 1; background: var(--bg-panel); display: flex; align-items: center; gap: var(--gap); padding: var(--gap) 0 calc(var(--gap) / 2); margin: 0 0 calc(var(--gap) / 2); border-bottom: 1px solid var(--border); }
+.help-h { text-align: center; font-size: calc(var(--fs-base) * 1.15); font-weight: 400; margin: var(--gap) 0 calc(var(--gap) / 2); }
+.help-em { color: var(--error); }
+.help-body strong { font-weight: 400; color: var(--accent); }
 .help-head h2 { flex: 1; margin: 0; font-size: var(--fs-base); font-weight: 400; }
 .help-body h3 { font-size: var(--fs-base); font-weight: 400; color: var(--accent); margin: var(--gap) 0 calc(var(--gap) / 4); }
 .help-body p, .help-body li { line-height: 1.6; margin: 0 0 calc(var(--gap) / 2); }
@@ -2393,42 +2396,44 @@ h2.cal-title { cursor: default; }
 <dialog id="help">
   <div class="help-head"><h2 data-i18n="help_title"></h2><button id="help-close" class="icon-btn" type="button" data-i18n-label="close"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button></div>
   <div class="help-body" data-lang="ja">
-    <p>面会の候補日時をまとめて相手に送り、返事が来るまで枠を仮押さえしておくためのページです。データはこの端末の中にだけ保存されます。</p>
-    <h3>相手</h3>
-    <p>上の欄に名前を入れると一覧が絞り込まれます(変換前のよみでも探せます)。見つからなければ「＋」でそのまま登録できます。確定済み・調整中・過去の面会の順に並び、行の「…」から名前やよみを直せます。</p>
+    <h2 class="help-h">time4u とは</h2>
+    <p>面会の候補日時をまとめて相手に送り、返事が来るまで枠を仮押さえしておくためのページです。</p>
+    <p class="help-em">データはこの端末の中にだけ保存されます。サーバーには何も送りません。</p>
+    <h2 class="help-h">time4u の使い方</h2>
+    <h3>最初にやること</h3>
+    <p><strong>設定。</strong>設定タブで「表示」(敬称、週の始まり、表示する時間帯)、「時間」(スロットの長さとインターバル、回答期限の既定、おまかせの件数)、「文面」(提示のヘッダ・フッタとリマインドのひな形。ビジネス / フレンドリーの文例を読み込めます)を整えます。テーマ・拡大率・言語は右上のアイコンで切り替えます。</p>
+    <p><strong>面会可能時間を置く。</strong>週タブに面会できる時間帯(緑)を置きます。右下の「＋」で複数の曜日にまとめて追加、「複写」で前の週から写せます。列をタップすると 1 日の画面になり、ランチなどの予定(灰)や面会(青)を直接足せます。黄色は仮押さえ中の枠です。タイトルをタップすると今週に戻ります。月タブは見るだけで、日をタップするとその週に移ります。</p>
     <h3>提示の流れ</h3>
+    <p><strong>相手を選ぶ。</strong>相手タブの上の欄に名前を入れると一覧が絞り込まれます(変換前のよみでも探せます)。見つからなければ「＋」でそのまま登録できます。確定済み・調整中・過去の面会の順に並び、行の「…」から名前やよみを直せます。</p>
     <ol>
-      <li>相手を選ぶと空き枠が出ます。上の条件カードで期間・曜日・時間帯・長さを変えて「検索」。</li>
+      <li>相手を選ぶと空き枠が出ます。上の条件カードで期間・曜日・時間帯・長さを変えて「検索」。空き枠の件数はその場で表示されます。</li>
       <li>枠をタップして選ぶか、「おまかせ」で散らして選びます。</li>
       <li>「文面を作る」で回答期限つきの文面ができます。「コピーして仮押さえ」でクリップボードにコピーし、枠を押さえます。あとはメールや LINE に貼るだけ。</li>
       <li>返事が来たら調整中の行をタップし、決まった枠を選んで「確定」。残りの枠は解放されます。難しければ「再提示」で別の枠を探し、「取消」で全部解放します。期限が過ぎても自動では解放しません。</li>
       <li>確定した相手には「リマインド」で前日の連絡文面を作れます。</li>
     </ol>
-    <h3>週・日・月</h3>
-    <p>週タブに面会できる時間帯(緑)を置きます。右下の「＋」で複数の曜日にまとめて追加、「複写」で前の週から写せます。列をタップすると 1 日の画面になり、ランチなどの予定(灰)や面会(青)を直接足せます。黄色は仮押さえ中の枠です。タイトルをタップすると今日に戻ります。月タブは見るだけで、日をタップするとその週に移ります。</p>
-    <h3>設定</h3>
-    <p>敬称、週の始まり、表示する時間帯、スロットの長さやインターバル、回答期限の既定、文面のひな形(ビジネス / フレンドリーの文例を読み込めます)を変えられます。右上のアイコンでテーマ・拡大率・言語を切り替えます。</p>
-    <h3>データ</h3>
-    <p>設定タブの「データ」から JSON を書き出し・読み込みできます。読み込みは今の内容を置き換えます。別の端末へ移すときに使ってください。</p>
+    <h3>データの扱い</h3>
+    <p>設定タブの「データ」から JSON を書き出し・読み込みできます。読み込みは今の内容を置き換えます。別の端末へ移すときに使ってください。「全消去」で設定とデータをすべて消します。</p>
   </div>
   <div class="help-body" data-lang="en" hidden>
-    <p>Send a client several candidate meeting times at once and hold those slots until they answer. Everything is stored on this device only.</p>
-    <h3>Clients</h3>
-    <p>Type a name in the box to filter the list (readings typed before conversion work too). If nobody matches, "+" registers the name. Rows are grouped into confirmed, pending and past meetings; "…" on a row edits the name and reading.</p>
+    <h2 class="help-h">What time4u is</h2>
+    <p>A page for sending a client several candidate meeting times at once and holding those slots until they answer.</p>
+    <p class="help-em">Everything is stored on this device only. Nothing is sent to a server.</p>
+    <h2 class="help-h">How to use time4u</h2>
+    <h3>First steps</h3>
+    <p><strong>Settings.</strong> On the settings tab adjust Display (honorific, first day of the week, visible hours), Time (slot lengths and interval, default deadline, auto-pick count) and Message (header and footer of the proposal, the reminder template; load the business or friendly samples). Theme, zoom and language are the icons at the top right.</p>
+    <p><strong>Put in your available times.</strong> On the week tab add the times you can meet (green). The "+" at the bottom right adds bands to several weekdays at once; "Copy" takes them from a past week. Tap a column for the day view, where you can add busy time (grey) such as lunch, or a meeting (blue). Yellow is a held slot. Tap the title to return to this week. The month tab is read only; tapping a day opens its week.</p>
     <h3>Proposing</h3>
+    <p><strong>Choose the client.</strong> Type a name in the box on the clients tab to filter the list (readings typed before conversion work too). If nobody matches, "+" registers the name. Rows are grouped into confirmed, pending and past meetings; "…" on a row edits the name and reading.</p>
     <ol>
-      <li>Pick a client to see free slots. The card at the top changes period, weekdays, time of day and length; tap "Search".</li>
+      <li>Pick a client to see free slots. The card at the top changes period, weekdays, time of day and length; tap "Search". The number of free slots updates as you change the conditions.</li>
       <li>Tap slots to select them, or "Auto pick" spreads a few across dates.</li>
       <li>"Make message" builds the text with a reply deadline. "Copy and hold" copies it to the clipboard and holds the slots. Paste it into mail or chat.</li>
       <li>When the client answers, tap the pending row, choose the agreed slot and "Confirm". The other slots are released. "Re-propose" searches other slots, "Cancel" releases everything. Nothing is released automatically when the deadline passes.</li>
       <li>"Remind" builds a short reminder text for a confirmed meeting.</li>
     </ol>
-    <h3>Week, day, month</h3>
-    <p>Put the times you are available (green) on the week tab. The "+" at the bottom right adds bands to several weekdays at once; "Copy" takes them from a past week. Tap a column for the day view, where you can add busy time (grey) such as lunch, or a meeting (blue). Yellow is a held slot. Tap the title to return to today. The month tab is read only; tapping a day opens its week.</p>
-    <h3>Settings</h3>
-    <p>Honorific, first day of the week, visible hours, slot lengths and interval, default deadline and the message templates (load the business or friendly samples). The toolbar icons switch theme, zoom and language.</p>
-    <h3>Data</h3>
-    <p>The data section exports and imports a JSON file. Importing replaces the current content. Use it to move to another device.</p>
+    <h3>Your data</h3>
+    <p>The data section of the settings tab exports and imports a JSON file. Importing replaces the current content. Use it to move to another device. "Clear all" deletes settings and data.</p>
   </div>
 </dialog>
 <dialog id="dialog">
@@ -2666,7 +2671,7 @@ const Logic = (() => {
       add_item: '項目を追加',
       free_count: '空き枠 {n} 件',
       help: '使い方',
-      help_title: 'time4u の使い方',
+      help_title: 'time4u',
       week_add: 'この週にまとめて追加',
       select_all: '全選択',
       select_none: '全解除',
@@ -2827,7 +2832,7 @@ const Logic = (() => {
       add_item: 'Add item',
       free_count: '{n} free slots',
       help: 'Help',
-      help_title: 'How to use time4u',
+      help_title: 'time4u',
       week_add: 'Add to this week',
       select_all: 'Select all',
       select_none: 'Clear',
