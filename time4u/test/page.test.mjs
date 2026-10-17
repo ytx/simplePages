@@ -113,6 +113,10 @@ test('settings fields cannot be widened by input intrinsic width (iOS)', () => {
   assert.match(src, /\.field > input, \.field > select \{ width: 100%; min-width: 0;/);
 });
 
+test('week day headers stay visible while the grid scrolls', () => {
+  assert.match(src, /#week-grid \.dh \{ position: sticky; top: 0;/);
+});
+
 test('PWA manifest and icons', () => {
   const dir = new URL('../', import.meta.url);
   const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('manifest.webmanifest', dir)), 'utf8'));
