@@ -2032,6 +2032,39 @@ button.btn.danger { color: var(--error); }
 .about h3 { margin: var(--gap) 0 calc(var(--gap) / 3); font-size: var(--fs-base); font-weight: 400; }
 .about ul { margin: 0; padding-left: 1.2em; }
 .about a { color: var(--accent); }
+.client-search-box { display: grid; gap: calc(var(--gap) / 2); margin-bottom: var(--gap); }
+#client-search { width: 100%; min-height: 44px; box-sizing: border-box; }
+#client-add { text-align: left; }
+.client-section { margin-bottom: var(--gap); }
+.client-section[hidden] { display: none; }
+.section-head {
+  display: flex; align-items: center; gap: calc(var(--gap) / 2); width: 100%; min-height: 44px;
+  background: none; border: none; border-bottom: 1px solid var(--border); color: var(--fg);
+  font: inherit; text-align: left; padding: 0 calc(var(--gap) / 2); cursor: pointer;
+}
+.section-head.static { cursor: default; }
+.section-head svg { width: 1.2em; height: 1.2em; fill: currentColor; transition: transform 0.15s; }
+.section-head[aria-expanded="true"] svg { transform: rotate(90deg); }
+.section-count { color: var(--fg-muted); }
+.section-count:not(:empty)::before { content: "("; }
+.section-count:not(:empty)::after { content: ")"; }
+.client-rows { list-style: none; margin: 0; padding: 0; }
+.client-rows[hidden] { display: none; }
+.client-row { display: flex; align-items: center; gap: calc(var(--gap) / 2); border-bottom: 1px solid var(--border); }
+.row-body {
+  flex: 1; min-width: 0; min-height: 44px; display: grid; gap: 2px; text-align: left; padding: calc(var(--gap) / 2);
+  background: none; border: none; color: var(--fg); font: inherit; cursor: pointer;
+}
+.row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row-sub { color: var(--fg-muted); font-size: var(--fs-small); }
+.client-row.expired .row-sub { color: var(--error); }
+.row-action {
+  min-height: 44px; flex: none; font: inherit; font-size: var(--fs-small); color: var(--fg); background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0 0.7em; cursor: pointer;
+}
+.row-action[data-action^="cancel"] { color: var(--error); }
+.sheet-note { color: var(--fg-muted); font-size: var(--fs-small); margin: calc(var(--gap) / 2) 0; }
+#sheet-delete:disabled { opacity: 0.4; cursor: default; }
 </style>
 </head>
 <body>
@@ -2067,7 +2100,28 @@ button.btn.danger { color: var(--error); }
 <main id="content">
   <h1 id="page-title" data-i18n="page_title"></h1>
   <section class="tab-pane active" id="tab-clients">
-    <div class="view root active" id="view-clients-list"></div>
+    <div class="view root active" id="view-clients-list">
+      <div class="client-search-box">
+        <input id="client-search" type="search" autocomplete="off" data-i18n-placeholder="search_placeholder">
+        <button id="client-add" class="btn" type="button" hidden></button>
+      </div>
+      <section class="client-section" data-section="confirmed">
+        <button class="section-head" type="button" aria-expanded="false"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg><span class="section-label" data-i18n="section_confirmed"></span><span class="section-count"></span></button>
+        <ul class="client-rows"></ul>
+      </section>
+      <section class="client-section" data-section="pending">
+        <button class="section-head" type="button" aria-expanded="true"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg><span class="section-label" data-i18n="section_pending"></span><span class="section-count"></span></button>
+        <ul class="client-rows"></ul>
+      </section>
+      <section class="client-section" data-section="past">
+        <button class="section-head" type="button" aria-expanded="true"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg><span class="section-label" data-i18n="section_past"></span><span class="section-count"></span></button>
+        <ul class="client-rows"></ul>
+      </section>
+      <section class="client-section" data-section="other" hidden>
+        <div class="section-head static"><span class="section-label" data-i18n="section_other"></span><span class="section-count"></span></div>
+        <ul class="client-rows"></ul>
+      </section>
+    </div>
     <div class="view" id="view-slots">
       <header class="view-head"><button class="icon-btn back" type="button" data-i18n-label="back"><svg aria-hidden="true"><use href="#icon-back"></use></svg></button><h2 class="view-title"></h2></header>
     </div>
@@ -2392,6 +2446,27 @@ const Logic = (() => {
       cancel: 'キャンセル',
       delete: '削除',
       save: '保存',
+      search_placeholder: '名前・読みで検索 / 新規登録',
+      client_add_named: '＋「{name}」で新規登録',
+      section_confirmed: '確定済み',
+      section_pending: '調整中',
+      section_past: '過去の面会',
+      section_other: 'その他',
+      proposed_count: '{n} 件提示',
+      deadline_on: '期限 {date}',
+      expired_on: '期限切れ {date}',
+      last_met: '最終 {date}',
+      action_remind: 'リマインド',
+      action_cancel: '取消',
+      action_propose: '新しく提示',
+      action_repropose: '再提示',
+      confirm_cancel_meeting: '{name}との面会を取り消します。よろしいですか?',
+      confirm_cancel_proposal: 'この提示を取り消します(仮押さえも解放されます)。よろしいですか?',
+      client_edit: 'クライアントを編集',
+      name: '名前',
+      reading: '読み',
+      delete_blocked: '調整中の提示 / 今後の面会を先に取り消してください',
+      confirm_delete_client: '{name}を削除します。過去の面会と提示も消えます。よろしいですか?',
     },
     en: {
       page_title: 'time4u',
@@ -2466,6 +2541,27 @@ const Logic = (() => {
       cancel: 'Cancel',
       delete: 'Delete',
       save: 'Save',
+      search_placeholder: 'Search name or reading / add new',
+      client_add_named: '+ Add "{name}"',
+      section_confirmed: 'Confirmed',
+      section_pending: 'Pending',
+      section_past: 'Past meetings',
+      section_other: 'Others',
+      proposed_count: '{n} proposed',
+      deadline_on: 'Due {date}',
+      expired_on: 'Expired {date}',
+      last_met: 'Last {date}',
+      action_remind: 'Remind',
+      action_cancel: 'Cancel',
+      action_propose: 'Propose',
+      action_repropose: 'Re-propose',
+      confirm_cancel_meeting: 'Cancel the meeting with {name}?',
+      confirm_cancel_proposal: 'Cancel this proposal? Held times will be released.',
+      client_edit: 'Edit client',
+      name: 'Name',
+      reading: 'Reading',
+      delete_blocked: 'Cancel pending proposals and upcoming meetings first',
+      confirm_delete_client: 'Delete {name}? Past meetings and proposals will be removed too.',
     },
   };
 
@@ -2986,6 +3082,13 @@ const App = (() => {
   let idleTimer = null;
   let toolbarAttention = false;
   let storageOk = true;
+  const DATA_KEY = 'simplePages.time4u.data';
+  let data = null;
+  let activeTab = 'clients';
+  let lastReading = '';
+  let composing = false;
+  const sectionOpen = { confirmed: false, pending: true, past: true };
+  const tr = (key, params) => Logic.t(settings.lang, key, params);
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -3055,10 +3158,12 @@ const App = (() => {
   function applyI18n() {
     document.documentElement.lang = settings.lang;
     for (const el of $$('[data-i18n]')) el.textContent = Logic.t(settings.lang, el.dataset.i18n);
+    for (const el of $$('[data-i18n-placeholder]')) el.placeholder = Logic.t(settings.lang, el.dataset.i18nPlaceholder);
     for (const el of $$('[data-i18n-label]')) el.setAttribute('aria-label', Logic.t(settings.lang, el.dataset.i18nLabel));
     // data-i18n-label ループの後に実行する: 全画面ボタンのラベルを状態に合った値で上書きするため。
     updateFullscreenButton();
     if (lastStatus) setStatus(lastStatus.state, lastStatus.message);
+    if (data) renderClients();
   }
 
   function currentTheme() {
@@ -3169,6 +3274,7 @@ const App = (() => {
   // ---- タブと子ビュー ----
   function showTab(name) {
     if (!TABS.includes(name)) return;
+    activeTab = name;
     for (const b of $$('#tabbar .tab')) b.setAttribute('aria-selected', String(b.dataset.tab === name));
     for (const p of $$('.tab-pane')) p.classList.toggle('active', p.id === `tab-${name}`);
     if (name === 'settings') refreshDataText();
@@ -3191,29 +3297,329 @@ const App = (() => {
   }
 
   // ---- 小ダイアログ(confirm / prompt の代わり) ----
-  // input が null なら確認(true / false)、文字列なら入力(入力値 / キャンセルで null)。
-  function ask({ message, input = null }) {
+  // opts: { message, input?: { type, value, min, max }, okLabel?, danger? } → { ok, value }
+  function dialog({ message, input = null, okLabel = '', danger = false }) {
     return new Promise((resolve) => {
       const dlg = $('#dialog');
       const inp = $('#dialog-input');
+      const okBtn = $('#dialog-ok');
       $('#dialog-message').textContent = message;
       inp.hidden = input === null;
-      inp.value = input ?? '';
+      if (input) {
+        inp.type = input.type || 'text';
+        inp.value = input.value ?? '';
+        for (const k of ['min', 'max']) { if (input[k] !== undefined) inp.setAttribute(k, String(input[k])); else inp.removeAttribute(k); }
+      } else inp.value = '';
+      okBtn.textContent = okLabel || tr('ok');
+      okBtn.classList.toggle('danger', !!danger);
       const onClose = () => {
         dlg.removeEventListener('close', onClose);
         const ok = dlg.returnValue === 'ok';
-        resolve(input === null ? ok : (ok ? inp.value : null));
+        resolve({ ok, value: ok && input ? inp.value : null });
       };
       dlg.addEventListener('close', onClose);
       dlg.returnValue = '';
       dlg.showModal();
-      if (input !== null) { inp.focus(); inp.select(); }
+      if (input) { inp.focus(); inp.select(); }
     });
+  }
+
+  // シート: build(body) が空にした #sheet-body へ要素を足す。onOk は保存で閉じたとき、
+  // onDelete は削除ボタン(true を返すと閉じる)。deleteDisabled で削除ボタンを無効にする。
+  let sheetState = null;
+  function openSheet({ title, build, onOk, onDelete, deleteDisabled = false }) {
+    const dlg = $('#sheet');
+    const body = $('#sheet-body');
+    $('#sheet-title').textContent = title;
+    body.replaceChildren();
+    build(body);
+    const del = $('#sheet-delete');
+    del.hidden = !onDelete;
+    del.disabled = !!deleteDisabled;
+    sheetState = { onOk, onDelete };
+    dlg.returnValue = '';
+    dlg.showModal();
   }
 
   function bindDialogs() {
     $('#dialog-cancel').addEventListener('click', () => $('#dialog').close('cancel'));
     $('#sheet-cancel').addEventListener('click', () => $('#sheet').close('cancel'));
+    $('#sheet').addEventListener('close', () => {
+      const st = sheetState;
+      sheetState = null;
+      if (st && $('#sheet').returnValue === 'ok' && st.onOk) st.onOk();
+    });
+    $('#sheet-delete').addEventListener('click', async () => {
+      const st = sheetState;
+      if (!st || !st.onDelete) return;
+      if (await st.onDelete()) { sheetState = null; $('#sheet').close('cancel'); }
+    });
+  }
+
+  // ---- データストア ----
+  function loadData() {
+    let raw = null;
+    try { raw = JSON.parse(localStorage.getItem(DATA_KEY)); } catch { raw = null; }
+    data = Logic.normalizeData(raw);
+  }
+
+  function saveData() {
+    try {
+      localStorage.setItem(DATA_KEY, JSON.stringify({ ...data, version: Logic.DATA_VERSION }));
+      storageOk = true;
+    } catch { storageOk = false; }
+    showStorageStatus();
+  }
+
+  function getData() { return structuredClone(data); }
+
+  function setData(next) {
+    data = Logic.normalizeData(next);
+    saveData();
+    renderCurrentTab();
+  }
+
+  function renderCurrentTab() {
+    renderClients();
+  }
+
+  // ---- クライアントタブ ----
+  function setViewTitle(viewId, text) {
+    $(`#${viewId} .view-title`).textContent = text;
+  }
+
+  // Task 6 で置き換える仮実装。
+  function openSlotsFor(clientId, _options) {
+    const c = data.clients.find((x) => x.id === clientId);
+    setViewTitle('view-slots', c ? Logic.displayName(c, settings) : '');
+    showTab('clients');
+    showView('tab-clients', 'view-slots');
+  }
+
+  function openRespond(proposalId) {
+    const p = data.proposals.find((x) => x.id === proposalId);
+    const c = p && data.clients.find((x) => x.id === p.clientId);
+    setViewTitle('view-respond', c ? Logic.displayName(c, settings) : '');
+    showTab('clients');
+    showView('tab-clients', 'view-respond');
+  }
+
+  function openReminder(blockId) {
+    const b = data.blocks.find((x) => x.id === blockId);
+    const c = b && data.clients.find((x) => x.id === b.clientId);
+    setViewTitle('view-reminder', c ? Logic.displayName(c, settings) : '');
+    showTab('clients');
+    showView('tab-clients', 'view-reminder');
+  }
+
+  const SVG_NS = $('#btn-theme svg').namespaceURI;
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function addClient(name, reading) {
+    const next = getData();
+    const id = Logic.newId('c', new Date());
+    next.clients.push({ id, name, reading, createdAt: new Date().toISOString() });
+    setData(next);
+    return id;
+  }
+
+  function clientRow(client, sub, actions, onBody, extraClass) {
+    const li = el('li', 'client-row' + (extraClass ? ' ' + extraClass : ''));
+    li.dataset.id = client.id;
+    const body = el('button', 'row-body');
+    body.type = 'button';
+    body.append(el('span', 'row-name', Logic.displayName(client, settings)));
+    if (sub) body.append(el('span', 'row-sub', sub));
+    body.addEventListener('click', () => {
+      if (li._longPressed) { li._longPressed = false; return; }
+      onBody();
+    });
+    li.append(body);
+    for (const [action, label, fn] of actions) {
+      const b = el('button', 'row-action', label);
+      b.type = 'button';
+      b.dataset.action = action;
+      b.addEventListener('click', fn);
+      li.append(b);
+    }
+    const more = el('button', 'icon-btn row-more');
+    more.type = 'button';
+    more.setAttribute('aria-label', tr('client_edit'));
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS(SVG_NS, 'use');
+    use.setAttribute('href', '#icon-more');
+    svg.append(use);
+    more.append(svg);
+    more.addEventListener('click', () => openClientSheet(client.id));
+    li.append(more);
+    bindLongPress(li, client.id);
+    return li;
+  }
+
+  function bindLongPress(li, clientId) {
+    let timer = null;
+    let sx = 0;
+    let sy = 0;
+    const cancel = () => { clearTimeout(timer); timer = null; };
+    li.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.row-action, .row-more')) return;
+      sx = e.clientX; sy = e.clientY;
+      cancel();
+      timer = setTimeout(() => { timer = null; li._longPressed = true; openClientSheet(clientId); }, 500);
+    });
+    li.addEventListener('pointerup', cancel);
+    li.addEventListener('pointercancel', cancel);
+    li.addEventListener('pointermove', (e) => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
+    li.addEventListener('contextmenu', (e) => { e.preventDefault(); cancel(); li._longPressed = true; openClientSheet(clientId); });
+  }
+
+  async function cancelMeeting(client, block) {
+    const r = await dialog({ message: tr('confirm_cancel_meeting', { name: Logic.displayName(client, settings) }), danger: true, okLabel: tr('action_cancel') });
+    if (!r.ok) return;
+    const next = getData();
+    next.blocks = next.blocks.filter((b) => b.id !== block.id);
+    setData(next);
+  }
+
+  async function cancelProposal(proposal) {
+    const r = await dialog({ message: tr('confirm_cancel_proposal'), danger: true, okLabel: tr('action_cancel') });
+    if (!r.ok) return;
+    const next = getData();
+    const p = next.proposals.find((x) => x.id === proposal.id);
+    if (p) { p.status = 'cancelled'; p.cancelledAt = new Date().toISOString(); }
+    setData(next);
+  }
+
+  function openClientSheet(clientId) {
+    const client = data.clients.find((c) => c.id === clientId);
+    if (!client) return;
+    let nameInput;
+    let readingInput;
+    const blocked = Logic.clientHasActive(data, clientId, new Date());
+    openSheet({
+      title: tr('client_edit'),
+      deleteDisabled: blocked,
+      build(body) {
+        const f1 = el('div', 'field stack');
+        const l1 = el('label', '', tr('name'));
+        nameInput = el('input');
+        nameInput.type = 'text';
+        nameInput.id = 'sheet-name';
+        nameInput.value = client.name;
+        l1.htmlFor = nameInput.id;
+        f1.append(l1, nameInput);
+        const f2 = el('div', 'field stack');
+        const l2 = el('label', '', tr('reading'));
+        readingInput = el('input');
+        readingInput.type = 'text';
+        readingInput.id = 'sheet-reading';
+        readingInput.value = client.reading || '';
+        l2.htmlFor = readingInput.id;
+        f2.append(l2, readingInput);
+        body.append(f1, f2);
+        if (blocked) body.append(el('p', 'sheet-note', tr('delete_blocked')));
+      },
+      onOk() {
+        const name = nameInput.value.trim();
+        if (!name) return;
+        const next = getData();
+        const c = next.clients.find((x) => x.id === clientId);
+        if (!c) return;
+        c.name = name;
+        c.reading = Logic.normalizeKana(readingInput.value);
+        setData(next);
+      },
+      async onDelete() {
+        const r = await dialog({ message: tr('confirm_delete_client', { name: Logic.displayName(client, settings) }), danger: true, okLabel: tr('delete') });
+        if (!r.ok) return false;
+        setData(Logic.deleteClient(getData(), clientId));
+        return true;
+      },
+    });
+  }
+
+  function fillSection(name, rows, build) {
+    const sec = $(`.client-section[data-section="${name}"]`);
+    const ul = sec.querySelector('.client-rows');
+    ul.replaceChildren();
+    for (const r of rows) ul.append(build(r));
+    sec.querySelector('.section-count').textContent = String(rows.length);
+  }
+
+  function renderClients() {
+    if (!data) return;
+    const now = new Date();
+    const query = $('#client-search').value;
+    const lang = settings.lang;
+    const secs = Logic.clientSections(data, now, settings);
+    const keep = (r) => Logic.matchesClient(r.client, query);
+    fillSection('confirmed', secs.confirmed.filter(keep), (r) => clientRow(
+      r.client,
+      Logic.formatDateShort(r.block.date, lang) + ' ' + Logic.formatRange(r.block.start, r.block.end, lang),
+      [['remind', tr('action_remind'), () => openReminder(r.block.id)], ['cancel-meeting', tr('action_cancel'), () => cancelMeeting(r.client, r.block)]],
+      () => openSlotsFor(r.client.id)));
+    fillSection('pending', secs.pending.filter(keep), (r) => {
+      const date = Logic.formatDateShort(r.proposal.deadline, lang);
+      const sub = tr('proposed_count', { n: r.proposal.slots.length }) + ' · ' + (r.expired ? tr('expired_on', { date }) : tr('deadline_on', { date }));
+      const actions = [['cancel-proposal', tr('action_cancel'), () => cancelProposal(r.proposal)]];
+      if (r.expired) actions.push(['repropose', tr('action_repropose'), () => openSlotsFor(r.client.id, { conditions: r.proposal.conditions, reproposeId: r.proposal.id })]);
+      return clientRow(r.client, sub, actions, () => openRespond(r.proposal.id), r.expired ? 'expired' : '');
+    });
+    fillSection('past', secs.past.filter(keep), (r) => clientRow(
+      r.client,
+      tr('last_met', { date: Logic.formatDateShort(r.lastDate, lang) }),
+      [['propose', tr('action_propose'), () => openSlotsFor(r.client.id)]],
+      () => openSlotsFor(r.client.id)));
+    const showOther = query.trim() !== '';
+    $('.client-section[data-section="other"]').hidden = !showOther;
+    fillSection('other', showOther ? secs.other.filter((c) => Logic.matchesClient(c, query)).map((client) => ({ client })) : [], (r) => clientRow(
+      r.client, '',
+      [['propose', tr('action_propose'), () => openSlotsFor(r.client.id)]],
+      () => openSlotsFor(r.client.id)));
+    for (const name of Object.keys(sectionOpen)) {
+      const sec = $(`.client-section[data-section="${name}"]`);
+      sec.querySelector('.section-head').setAttribute('aria-expanded', String(sectionOpen[name]));
+      sec.querySelector('.client-rows').hidden = !sectionOpen[name];
+    }
+    const trimmed = query.trim();
+    const exists = data.clients.some((c) => Logic.normalizeKana(c.name) === Logic.normalizeKana(query));
+    const add = $('#client-add');
+    add.hidden = !trimmed || exists;
+    if (!add.hidden) add.textContent = tr('client_add_named', { name: trimmed });
+  }
+
+  function bindClients() {
+    const search = $('#client-search');
+    search.addEventListener('compositionstart', () => { composing = true; });
+    search.addEventListener('compositionupdate', (e) => { lastReading = e.data || ''; });
+    search.addEventListener('compositionend', () => { composing = false; /* lastReading は確定後も保持する */ });
+    search.addEventListener('input', () => {
+      if (!composing && /^[\x20-\x7e]*$/.test(search.value)) lastReading = '';
+      renderClients();
+    });
+    $('#client-add').addEventListener('click', () => {
+      const name = search.value.trim();
+      if (!name) return;
+      const id = addClient(name, Logic.normalizeKana(lastReading));
+      search.value = '';
+      lastReading = '';
+      renderClients();
+      openSlotsFor(id);
+    });
+    for (const head of $$('button.section-head')) {
+      head.addEventListener('click', () => {
+        const name = head.closest('.client-section').dataset.section;
+        sectionOpen[name] = !sectionOpen[name];
+        renderClients();
+      });
+    }
   }
 
   // ---- 設定タブ ----
@@ -3251,7 +3657,7 @@ const App = (() => {
   }
 
   async function loadTemplate(style) {
-    if (!(await ask({ message: Logic.t(settings.lang, 'tpl_confirm') }))) return;
+    if (!(await dialog({ message: tr('tpl_confirm') })).ok) return;
     const tpl = Logic.DEFAULT_TEMPLATES[settings.lang][style];
     updateSettings({ tplHeader: tpl.header, tplFooter: tpl.footer, tplReminder: tpl.reminder });
   }
@@ -3280,7 +3686,7 @@ const App = (() => {
     });
     $('#data-import-text').addEventListener('click', () => importText($('#data-text').value));
     $('#data-clear').addEventListener('click', async () => {
-      if (!(await ask({ message: Logic.t(settings.lang, 'confirm_clear') }))) return;
+      if (!(await dialog({ message: tr('confirm_clear') })).ok) return;
       storage.clear();
       location.href = location.pathname;
     });
@@ -3293,6 +3699,8 @@ const App = (() => {
     bindToolbar();
     bindTabs();
     bindDialogs();
+    bindClients();
+    loadData();
     applySettings();
     // 起動時に書き込めるか確かめて、状態ドットに反映する(設定は書かない)。
     storageOk = storage.probe();
@@ -3310,7 +3718,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { SCHEMA, getSettings, updateSettings, setStatus, scheduleRefresh, refresh, applyZoom, setToolbarAttention, showTab, showView, ask };
+  return { SCHEMA, getSettings, updateSettings, setStatus, scheduleRefresh, refresh, applyZoom, setToolbarAttention, showTab, showView, dialog, openSheet, getData, setData, openSlotsFor, openRespond, openReminder };
 })();
 </script>
 </body>

@@ -50,3 +50,10 @@ test('every data-i18n key and every t() key exists in ja and en', () => {
   }
   assert.deepEqual(Object.keys(Logic.I18N.ja).sort(), Object.keys(Logic.I18N.en).sort());
 });
+
+test('clients tab markup', () => {
+  for (const id of ['client-search', 'client-add']) assert.match(src, new RegExp(`id="${id}"`), id);
+  for (const s of ['confirmed', 'pending', 'past', 'other']) assert.match(src, new RegExp(`class="client-section" data-section="${s}"`), s);
+  assert.match(src, /compositionupdate/);
+  assert.match(src, /simplePages\.time4u\.data/);
+});
