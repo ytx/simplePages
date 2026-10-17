@@ -88,6 +88,9 @@ test('app-ui has no duplicate top-level function declarations', () => {
 test('follow-up UI: week bulk add, today buttons, deadline steppers, sticky footer, 相手 wording', () => {
   for (const id of ['week-add', 'deadline-prev', 'deadline-next', 'btn-help', 'help', 'help-close']) assert.match(src, new RegExp(`id="${id}"`), id);
   for (const id of ['week-today', 'month-today']) assert.doesNotMatch(src, new RegExp(`id="${id}"`), id);
+  assert.doesNotMatch(src, /btn-fullscreen|requestFullscreen/);
+  assert.match(src, /<header id="toolbar">\s*<button id="btn-help"/);
+  assert.equal(typeof Logic.I18N.ja.free_count, 'string');
   assert.match(src, /id="week-add" class="icon-btn fab"/);
   assert.match(src, /class="help-body" data-lang="ja"/);
   assert.match(src, /class="help-body" data-lang="en"/);
