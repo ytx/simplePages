@@ -11,12 +11,13 @@ index.html 1 ファイルで動く小さな Web ページの集まり。各ペ�
 | `calendar/` | Google カレンダーの予定を日・週・月で常時表示 | Google Apps Script ウェブアプリ(`calendar/gas/Code.gs`、CalendarApp) |
 | `k_timer/` | キッチンタイマー(アナログ時計 + プリセット/± 調整、終了音ループ) | なし(`k_timer/audio/*.wav` を同梱) |
 | `l_timer/` | 講義用タイマー(講義/休憩サイクル、予鈴・終了音・経過音、演習サブタイマー、メモエディタ) | なし(`l_timer/audio/*.wav` を同梱) |
+| `time4u/` | 面会日程の候補提示ツール(週単位の面会可能帯、空き枠の提示文面、仮押さえ・確定) | なし(書体 `time4u/fonts/` を同梱) |
 
 ## 共通規約(要約)
 
 詳細は `docs/superpowers/specs/2026-10-12-simplepages-conventions-design.md`。
 
-- 1 ページ = `<page>/index.html` 単体。外部 `<link>`/`<script src>`/CDN/Web フォント禁止。例外として同じページディレクトリ内のメディア(音声・画像)は相対パスで読み込んでよい。`src` に入れるパスは index.html 内の定数リストに限り、設定値や URL の文字列を直接渡さない。
+- 1 ページ = `<page>/index.html` 単体。外部 `<link>`/`<script src>`/CDN/Web フォント禁止。例外として同じページディレクトリ内のメディア(音声・画像・書体ファイル)は相対パスで読み込んでよい。`src` に入れるパスは index.html 内の定数リストに限り、設定値や URL の文字列を直接渡さない。
 - `<script id="app-logic">` に DOM に触らない純粋関数を置き `Logic` を公開。`<script id="app-ui">` に DOM・fetch・タイマーを置き `App` を公開。グローバルはこの 2 つだけ。
 - 外部由来の文字列は `textContent` で挿入する。
 - CSS は `:root` の変数に集約。テーマは `html[data-theme="light"|"dark"]` で変数を上書き。

@@ -53,7 +53,7 @@ simplePages/
 - 色、余白、角丸、フォントサイズは `:root` の CSS 変数に集約する。コンポーネントは変数のみを参照する。
 - テーマは `html[data-theme="light"]` と `html[data-theme="dark"]` で変数を上書きする。
   初期値は `prefers-color-scheme` に従い、ユーザーが切り替えた場合は設定に保存して優先する。
-- フォントはシステムフォントスタック(`system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif`)。Web フォントは使わない。
+- フォントはシステムフォントスタック(`system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif`)。外部ドメインの Web フォントは使わない。書体ファイルを同梱する場合は同じページディレクトリに置き、`@font-face` の `url()` は相対パスの定数とする(time4u の Zen Kurenaido)。
 - 常時表示ページは `clamp()` と `vw`/`vh` で文字サイズを画面に追従させ、スクロールなしで収める。
 - アイコンはインライン SVG(`<symbol>` を `<svg style="display:none">` に定義し `<use href="#id">` で参照)。`fill="currentColor"` でテーマ色に追従させる。共通ボタンのアイコンは Material Icons(Apache 2.0)のパスを埋め込む。
 - サイズ系の変数(`--gap`、`--fs-*`)は `calc(... * var(--zoom))` の形にし、拡縮ボタンで `--zoom` を変える。
