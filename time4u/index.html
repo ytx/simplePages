@@ -2062,6 +2062,8 @@ button.btn.danger { color: var(--error); }
   font: inherit; text-align: left; padding: 0 calc(var(--gap) / 2); cursor: pointer;
 }
 .section-head.static { cursor: default; }
+.section-head-row { display: flex; align-items: center; gap: calc(var(--gap) / 2); }
+.section-head-row .section-head { flex: 1; width: auto; min-width: 0; }
 .section-head svg { width: 1.2em; height: 1.2em; fill: currentColor; transition: transform 0.15s; }
 .section-head[aria-expanded="true"] svg { transform: rotate(90deg); }
 .section-count { color: var(--fg-muted); }
@@ -2206,7 +2208,7 @@ h2.cal-title { cursor: default; }
         <button id="client-add" class="btn" type="button" hidden></button>
       </div>
       <section class="client-section" data-section="confirmed">
-        <button class="section-head" type="button" aria-expanded="false"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg><span class="section-label" data-i18n="section_confirmed"></span><span class="section-count"></span></button>
+        <div class="section-head-row"><button class="section-head" type="button" aria-expanded="false"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg><span class="section-label" data-i18n="section_confirmed"></span><span class="section-count"></span></button><button id="confirmed-copy" class="icon-btn" type="button" data-i18n-label="copy_all_confirmed" hidden><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
         <ul class="client-rows"></ul>
       </section>
       <section class="client-section" data-section="pending">
@@ -2413,7 +2415,7 @@ h2.cal-title { cursor: default; }
     <p><strong>設定。</strong>設定タブで「表示」(敬称、週の始まり、表示する時間帯)、「時間」(スロットの長さとインターバル、回答期限の既定、おまかせの件数)、「文面」(提示のヘッダ・フッタとリマインドのひな形。ビジネス / フレンドリーの文例を読み込めます)を整えます。テーマ・拡大率・言語は右上のアイコンで切り替えます。</p>
     <p><strong>面会可能時間を置く。</strong>週タブに面会できる時間帯(緑)を置きます。右下の「＋」で複数の曜日にまとめて追加、「複写」で前の週から写せます。列をタップすると 1 日の画面になり、ランチなどの予定(灰)や面会(青)を直接足せます。黄色は仮押さえ中の枠です。タイトルをタップすると今週に戻ります。月タブは見るだけで、日をタップするとその週に移ります。</p>
     <h3>提示の流れ</h3>
-    <p><strong>相手を選ぶ。</strong>相手タブの上の欄に名前を入れると一覧が絞り込まれます(変換前のよみでも探せます)。見つからなければ「＋」でそのまま登録できます。確定済み・調整中・過去の面会の順に並びます。確定済みの行をタップすると、テキストのコピー・リマインド文面・別の予定の調整・取り消し・名前やよみの編集を選べます。他の行では「…」から名前やよみを直せます。</p>
+    <p><strong>相手を選ぶ。</strong>相手タブの上の欄に名前を入れると一覧が絞り込まれます(変換前のよみでも探せます)。見つからなければ「＋」でそのまま登録できます。確定済み・調整中・過去の面会の順に並びます。確定済みの行をタップすると、テキストのコピー・リマインド文面・別の予定の調整・取り消し・名前やよみの編集を選べます。見出し右のコピーボタンで確定済みをまとめて 1 行ずつコピーできます。他の行では「…」から名前やよみを直せます。</p>
     <ol>
       <li>相手を選ぶと空き枠が出ます。上の条件カードで期間・曜日・時間帯・長さを変えて「検索」。空き枠の件数はその場で表示されます。</li>
       <li>枠をタップして選ぶか、「おまかせ」で散らして選びます。</li>
@@ -2434,7 +2436,7 @@ h2.cal-title { cursor: default; }
     <p><strong>Settings.</strong> On the settings tab adjust Display (honorific, first day of the week, visible hours), Time (slot lengths and interval, default deadline, auto-pick count) and Message (header and footer of the proposal, the reminder template; load the business or friendly samples). Theme, zoom and language are the icons at the top right.</p>
     <p><strong>Put in your available times.</strong> On the week tab add the times you can meet (green). The "+" at the bottom right adds bands to several weekdays at once; "Copy" takes them from a past week. Tap a column for the day view, where you can add busy time (grey) such as lunch, or a meeting (blue). Yellow is a held slot. Tap the title to return to this week. The month tab is read only; tapping a day opens its week.</p>
     <h3>Proposing</h3>
-    <p><strong>Choose the client.</strong> Type a name in the box on the clients tab to filter the list (readings typed before conversion work too). If nobody matches, "+" registers the name. Rows are grouped into confirmed, pending and past meetings. Tapping a confirmed row offers copy as text, reminder text, arranging another meeting, cancelling, and editing the name and reading; other rows have "…" for the name and reading.</p>
+    <p><strong>Choose the client.</strong> Type a name in the box on the clients tab to filter the list (readings typed before conversion work too). If nobody matches, "+" registers the name. Rows are grouped into confirmed, pending and past meetings. Tapping a confirmed row offers copy as text, reminder text, arranging another meeting, cancelling, and editing the name and reading; the copy button beside the section heading copies all confirmed meetings, one per line; other rows have "…" for the name and reading.</p>
     <ol>
       <li>Pick a client to see free slots. The card at the top changes period, weekdays, time of day and length; tap "Search". The number of free slots updates as you change the conditions.</li>
       <li>Tap slots to select them, or "Auto pick" spreads a few across dates.</li>
@@ -2614,6 +2616,8 @@ const Logic = (() => {
       last_met: '最終 {date}',
       action_remind: 'リマインド文面',
       copy_text: 'テキストをコピー',
+      copy_all_confirmed: '確定済みをまとめてコピー',
+      copied_n: '{n} 件をコピーしました',
       action_adjust_next: '別の予定を調整',
       action_cancel_meeting: '面会を取り消し',
       copy_failed_short: 'コピーできませんでした',
@@ -2779,6 +2783,8 @@ const Logic = (() => {
       last_met: 'Last {date}',
       action_remind: 'Reminder text',
       copy_text: 'Copy as text',
+      copy_all_confirmed: 'Copy all confirmed meetings',
+      copied_n: 'Copied {n} meetings',
       action_adjust_next: 'Arrange another meeting',
       action_cancel_meeting: 'Cancel meeting',
       copy_failed_short: 'Could not copy',
@@ -4416,6 +4422,15 @@ const App = (() => {
     });
   }
 
+  let confirmedRows = [];
+  async function copyAllConfirmed() {
+    if (!confirmedRows.length) return;
+    const text = confirmedRows.map((r) => Logic.meetingLine(r.client, r.block, settings)).join('\n');
+    const ok = await copyText(text);
+    if (ok) setStatus('ok', () => tr('copied_n', { n: confirmedRows.length }));
+    else setStatus('warn', () => tr('copy_failed_short'));
+  }
+
   function fillSection(name, rows, build) {
     const sec = $(`.client-section[data-section="${name}"]`);
     const ul = sec.querySelector('.client-rows');
@@ -4431,7 +4446,9 @@ const App = (() => {
     const lang = settings.lang;
     const secs = Logic.clientSections(data, now, settings);
     const keep = (r) => Logic.matchesClient(r.client, query);
-    fillSection('confirmed', secs.confirmed.filter(keep), (r) => clientRow(
+    confirmedRows = secs.confirmed.filter(keep);
+    $('#confirmed-copy').hidden = confirmedRows.length === 0;
+    fillSection('confirmed', confirmedRows, (r) => clientRow(
       r.client,
       Logic.formatDateShort(r.block.date, lang) + ' ' + Logic.formatRange(r.block.start, r.block.end, lang),
       [],
@@ -4467,6 +4484,7 @@ const App = (() => {
   }
 
   function bindClients() {
+    $('#confirmed-copy').addEventListener('click', copyAllConfirmed);
     const search = $('#client-search');
     // 読みは変換ごとに「かなだけの最後の e.data」を採り、確定時にバッファへ連結する。
     search.addEventListener('compositionstart', () => { composing = true; compReading = ''; });

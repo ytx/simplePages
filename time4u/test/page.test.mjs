@@ -117,6 +117,12 @@ test('week day headers stay visible while the grid scrolls', () => {
   assert.match(src, /#week-grid \.dh \{ position: sticky; top: 0;/);
 });
 
+test('confirmed section has a copy-all button', () => {
+  assert.match(src, /id="confirmed-copy"/);
+  assert.equal(typeof Logic.I18N.ja.copy_all_confirmed, 'string');
+  assert.equal(typeof Logic.I18N.en.copied_n, 'string');
+});
+
 test('PWA manifest and icons', () => {
   const dir = new URL('../', import.meta.url);
   const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('manifest.webmanifest', dir)), 'utf8'));
