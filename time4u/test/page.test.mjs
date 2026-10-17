@@ -81,3 +81,14 @@ test('app-ui has no duplicate top-level function declarations', () => {
   const dup = names.filter((n, i) => names.indexOf(n) !== i);
   assert.deepEqual(dup, []);
 });
+
+test('follow-up UI: week bulk add, today buttons, deadline steppers, sticky footer, 相手 wording', () => {
+  for (const id of ['week-add', 'week-today', 'month-today', 'deadline-prev', 'deadline-next']) assert.match(src, new RegExp(`id="${id}"`), id);
+  assert.match(src, /class="sticky-foot"/);
+  assert.doesNotMatch(src, /#to-message \{[^}]*position: sticky/);
+  assert.doesNotMatch(src, /クライアント/);
+  for (const k of ['select_all', 'select_none', 'search', 'week_add']) {
+    assert.equal(typeof Logic.I18N.ja[k], 'string', k);
+    assert.equal(typeof Logic.I18N.en[k], 'string', k);
+  }
+});

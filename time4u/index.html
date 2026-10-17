@@ -2074,7 +2074,11 @@ button.btn.danger { color: var(--error); }
 .slot-row, .radio-row { display: block; width: 100%; min-height: 44px; margin-bottom: calc(var(--gap) / 3); text-align: left; font: inherit; color: var(--fg); background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; padding: 0 var(--gap); cursor: pointer; }
 .slot-row[aria-pressed="true"], .radio-row[aria-checked="true"] { background: var(--c-meeting); color: var(--c-meeting-text); border-color: var(--accent); }
 #to-message, #respond-confirm, #copy-hold, #reminder-copy { width: 100%; margin: var(--gap) 0; display: flex; align-items: center; justify-content: center; gap: 0.4em; }
-#to-message { position: sticky; bottom: 0; background: var(--bg); padding-top: var(--gap); z-index: 1; }
+.sticky-foot { position: sticky; bottom: 0; background: var(--bg); padding-top: calc(var(--gap) / 2); z-index: 1; }
+.date-step { display: flex; align-items: center; gap: calc(var(--gap) / 3); }
+.date-step input { flex: 1; min-width: 0; }
+.toggle-row .toggle.all { margin-left: auto; }
+.cal-head .btn.today-btn { min-height: 44px; padding: 0 0.6em; }
 #to-message:disabled, #respond-confirm:disabled { opacity: 0.4; cursor: default; }
 button.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 #copy-hold svg, #reminder-copy svg { width: 1.2em; height: 1.2em; fill: currentColor; }
@@ -2199,13 +2203,13 @@ h2.cal-title { cursor: default; }
         <button id="pick-clear" class="btn" type="button" data-i18n="pick_clear"></button>
       </div>
       <div id="slot-list"></div>
-      <button id="to-message" class="btn primary" type="button" disabled></button>
+      <div class="sticky-foot"><button id="to-message" class="btn primary" type="button" disabled></button></div>
     </div>
     <div class="view" id="view-message" data-back="view-slots">
       <header class="view-head"><button class="icon-btn back" type="button" data-i18n-label="back"><svg aria-hidden="true"><use href="#icon-back"></use></svg></button><h2 class="view-title"></h2></header>
       <div class="field stack">
         <label for="deadline" data-i18n="reply_deadline"></label>
-        <input id="deadline" type="date">
+        <div class="date-step"><button id="deadline-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><input id="deadline" type="date"><button id="deadline-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button></div>
         <span id="deadline-hint" class="hint"></span>
       </div>
       <textarea id="message-text" rows="12"></textarea>
@@ -2232,7 +2236,7 @@ h2.cal-title { cursor: default; }
   </section>
   <section class="tab-pane" id="tab-week">
 <div class="view root active" id="view-week">
-      <div class="cal-head"><button id="week-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><button id="week-title" class="cal-title" type="button" data-i18n-label="today"></button><button id="week-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button><button id="week-copy" class="icon-btn" type="button" data-i18n-label="week_copy"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
+      <div class="cal-head"><button id="week-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><button id="week-title" class="cal-title" type="button" data-i18n-label="today"></button><button id="week-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button><button id="week-today" class="btn today-btn" type="button" data-i18n="today"></button><button id="week-add" class="icon-btn" type="button" data-i18n-label="week_add"><svg aria-hidden="true"><use href="#icon-add"></use></svg></button><button id="week-copy" class="icon-btn" type="button" data-i18n-label="week_copy"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
       <div id="week-grid"></div>
     </div>
     <div class="view" id="view-day">
@@ -2242,7 +2246,7 @@ h2.cal-title { cursor: default; }
     </div>
   </section>
   <section class="tab-pane" id="tab-month">
-    <div class="cal-head"><button id="month-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><button id="month-title" class="cal-title" type="button" data-i18n-label="today"></button><button id="month-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button></div>
+    <div class="cal-head"><button id="month-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><button id="month-title" class="cal-title" type="button" data-i18n-label="today"></button><button id="month-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button><button id="month-today" class="btn today-btn" type="button" data-i18n="today"></button></div>
     <div id="month-grid"></div>
   </section>
   <section class="tab-pane" id="tab-settings">
@@ -2479,7 +2483,7 @@ const Logic = (() => {
     ja: {
       page_title: 'time4u',
       settings: '設定',
-      tab_clients: 'クライアント',
+      tab_clients: '相手',
       tab_week: '週',
       tab_month: '月',
       tab_settings: '設定',
@@ -2568,7 +2572,7 @@ const Logic = (() => {
       confirm_cancel_meeting_ok: '面会を取り消す',
       confirm_cancel_proposal_ok: '提示を取り消す',
       confirm_cancel_proposal: 'この提示を取り消します(仮押さえも解放されます)。よろしいですか?',
-      client_edit: 'クライアントを編集',
+      client_edit: '相手を編集',
       name: '名前',
       reading: '読み',
       delete_blocked: '調整中の提示 / 今後の面会を先に取り消してください',
@@ -2619,15 +2623,20 @@ const Logic = (() => {
       start: '開始',
       end: '終了',
       title: 'タイトル',
-      client: 'クライアント',
+      client: '相手',
       new_client_name: '新しい名前(入力すると新規登録)',
       invalid_range: '終了は開始より後にしてください',
-      client_required: 'クライアントを選ぶか名前を入力してください',
+      client_required: '相手を選ぶか名前を入力してください',
       confirm_delete_item: 'この項目を削除しますか?',
       fixed: '確定',
       hold_suffix: '(仮)',
       today: '今日',
       add_item: '項目を追加',
+      week_add: 'この週にまとめて追加',
+      select_all: '全選択',
+      select_none: '全解除',
+      search: '検索',
+      err_days: '日を 1 つ以上選んでください',
       prev_label: '前へ',
       next_label: '次へ',
     },
@@ -2783,6 +2792,11 @@ const Logic = (() => {
       hold_suffix: ' (hold)',
       today: 'Today',
       add_item: 'Add item',
+      week_add: 'Add to this week',
+      select_all: 'Select all',
+      select_none: 'Clear',
+      search: 'Search',
+      err_days: 'Select at least one day',
       prev_label: 'Previous',
       next_label: 'Next',
     },
@@ -3587,10 +3601,11 @@ const App = (() => {
   // シート: build(body) が空にした #sheet-body へ要素を足す。onOk は保存で閉じたとき、
   // onDelete は削除ボタン(true を返すと閉じる)。deleteDisabled で削除ボタンを無効にする。
   let sheetState = null;
-  function openSheet({ title, build, onOk, onDelete, deleteDisabled = false, validate = null, okHidden = false }) {
+  function openSheet({ title, build, onOk, onDelete, deleteDisabled = false, validate = null, okHidden = false, okLabel = 'save' }) {
     const dlg = $('#sheet');
     const body = $('#sheet-body');
     $('#sheet-title').textContent = title;
+    $('#sheet-ok').textContent = tr(okLabel);
     body.replaceChildren();
     sheetValidate = validate;
     $('#sheet-ok').hidden = !!okHidden;
@@ -3648,7 +3663,7 @@ const App = (() => {
     else if (activeTab === 'month') renderMonth();
   }
 
-  // ---- クライアントタブ ----
+  // ---- 相手タブ ----
   function setViewTitle(viewId, text) {
     $(`#${viewId} .view-title`).textContent = text;
   }
@@ -3751,7 +3766,7 @@ const App = (() => {
 
   function renderSlots() {
     const lang = settings.lang;
-    flow.slots = Logic.freeSlots(data, flow.conditions, settings, new Date(), flow.reproposeId);
+    flow.slots = Logic.freeSlots(data, flow.conditions, settings, new Date(), flow.reproposeId || flow.savedId);
     const keys = new Set(flow.slots.map(Logic.slotKey));
     flow.selected = flow.selected.filter((s) => keys.has(Logic.slotKey(s)));
     $('#cond-summary').textContent = conditionsSummary();
@@ -3795,6 +3810,49 @@ const App = (() => {
     return b;
   }
 
+  // 行末の「全選択 / 全解除」。buttons は aria-pressed のトグル群。
+  function allToggle(buttons) {
+    const b = el('button', 'toggle all', '');
+    b.type = 'button';
+    const allOn = () => buttons.every((x) => x.getAttribute('aria-pressed') === 'true');
+    const relabel = () => { b.textContent = tr(allOn() ? 'select_none' : 'select_all'); };
+    b.addEventListener('click', () => {
+      const on = !allOn();
+      for (const x of buttons) x.setAttribute('aria-pressed', String(on));
+      relabel();
+    });
+    for (const x of buttons) x.addEventListener('click', relabel);
+    relabel();
+    return b;
+  }
+
+  // 日付入力の両脇に ‹ › を置き、1 日ずつ動かす。onChange(newValue) は値が変わったときだけ呼ぶ。
+  function dateStepper(input, onChange) {
+    const wrap = el('div', 'date-step');
+    const ns = $('svg').namespaceURI;
+    const mk = (dir, icon) => {
+      const b = el('button', 'icon-btn');
+      b.type = 'button';
+      b.setAttribute('aria-label', tr(dir < 0 ? 'prev_label' : 'next_label'));
+      const svg = document.createElementNS(ns, 'svg');
+      svg.setAttribute('aria-hidden', 'true');
+      const use = document.createElementNS(ns, 'use');
+      use.setAttribute('href', icon);
+      svg.append(use);
+      b.append(svg);
+      b.addEventListener('click', () => {
+        if (!input.value) return;
+        const v = Logic.addDays(input.value, dir);
+        if (input.min && v < input.min) return;
+        input.value = v;
+        onChange(v);
+      });
+      return b;
+    };
+    wrap.append(mk(-1, '#icon-chevron-left'), input, mk(1, '#icon-chevron-right'));
+    return wrap;
+  }
+
   function openConditions() {
     const c = flow.conditions;
     const lens = Logic.parseSlotList(settings.slots);
@@ -3803,15 +3861,21 @@ const App = (() => {
     const refs = {};
     openSheet({
       title: tr('conditions'),
+      okLabel: 'search',
       build(body) {
         const label = (key) => body.append(el('div', 'sheet-label', tr(key)));
         label('period');
-        const dates = el('div', 'toggle-row sheet-body-row');
         refs.from = el('input');
         refs.to = el('input');
         for (const [inp, v] of [[refs.from, c.from], [refs.to, c.to]]) { inp.type = 'date'; inp.value = v; }
-        dates.append(refs.from, el('span', '', '〜'), refs.to);
-        body.append(dates);
+        const keepOrder = (changed) => {
+          if (refs.from.value && refs.to.value && refs.from.value > refs.to.value) {
+            if (changed === 'from') refs.to.value = refs.from.value; else refs.from.value = refs.to.value;
+          }
+        };
+        refs.from.addEventListener('change', () => keepOrder('from'));
+        refs.to.addEventListener('change', () => keepOrder('to'));
+        body.append(dateStepper(refs.from, () => keepOrder('from')), el('div', 'sheet-label', '〜'), dateStepper(refs.to, () => keepOrder('to')));
         label('weekdays');
         const wrow = el('div', 'toggle-row');
         refs.wd = WEEK_ORDER.map((w) => {
@@ -3820,6 +3884,7 @@ const App = (() => {
           wrow.append(b);
           return b;
         });
+        wrow.append(allToggle(refs.wd));
         body.append(wrow);
         label('time_of_day');
         const trow = el('div', 'toggle-row');
@@ -3829,6 +3894,7 @@ const App = (() => {
           trow.append(b);
           return b;
         });
+        trow.append(allToggle(refs.tod));
         body.append(trow);
         label('slot_length');
         const lrow = el('div', 'toggle-row');
@@ -3897,7 +3963,7 @@ const App = (() => {
     if (flow.savedId) {
       const upd = getData();
       const sp = upd.proposals.find((x) => x.id === flow.savedId);
-      if (sp) { sp.message = text; sp.deadline = flow.deadline; setData(upd); }
+      if (sp) { sp.message = text; sp.deadline = flow.deadline; sp.slots = sortSlots(flow.selected); sp.conditions = { ...flow.conditions }; setData(upd); }
     } else {
       const now = new Date();
       const next = getData();
@@ -3947,10 +4013,11 @@ const App = (() => {
     $('#pick-clear').addEventListener('click', () => { flow.selected = []; renderSlots(); });
     $('#to-message').addEventListener('click', () => {
       if (flow.selected.length === 0) return;
-      flow.deadline = Logic.addDays(Logic.todayStr(new Date()), settings.deadlineDays);
+      const saved = flow.savedId ? data.proposals.find((x) => x.id === flow.savedId && x.status === 'pending') : null;
+      if (!saved) flow.savedId = null;
+      flow.deadline = saved ? saved.deadline : Logic.addDays(Logic.todayStr(new Date()), settings.deadlineDays);
       flow.edited = false;
-      flow.savedId = null;
-      setCopyLabel('copy-hold', 'copy-hold-label', 'copy_hold', false);
+      setCopyLabel('copy-hold', 'copy-hold-label', saved ? 'copy_again' : 'copy_hold', false);
       renderMessage();
       showView('tab-clients', 'view-message');
     });
@@ -3962,6 +4029,16 @@ const App = (() => {
       if ((await dialog({ message: tr('confirm_regenerate') })).ok) { flow.deadline = v; regenerateMessage(); }
       else flow.deadline = v;
     });
+    for (const [id, dir] of [['#deadline-prev', -1], ['#deadline-next', 1]]) {
+      $(id).addEventListener('click', () => {
+        const inp = $('#deadline');
+        if (!inp.value) return;
+        const v = Logic.addDays(inp.value, dir);
+        if (inp.min && v < inp.min) return;
+        inp.value = v;
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
     $('#copy-hold').addEventListener('click', copyAndHold);
     $('#respond-confirm').addEventListener('click', confirmRespond);
     $('#respond-show-message').addEventListener('click', showSavedMessage);
@@ -4737,6 +4814,83 @@ const App = (() => {
     });
   }
 
+  // ---- 週にまとめて追加(可能帯 / 予定あり、複数の曜日に同時) ----
+  function openWeekBulkAdd() {
+    const lang = settings.lang;
+    const dates = Logic.weekDates(weekStartDate);
+    const refs = { kind: 'band' };
+    const startMin = Math.max(settings.dayStart * 60, 9 * 60);
+    openSheet({
+      title: tr('week_add'),
+      build(body) {
+        const label = (key) => body.append(el('div', 'sheet-label', tr(key)));
+        const seg = el('div', 'toggle-row');
+        seg.setAttribute('role', 'radiogroup');
+        const segBtns = ['band', 'busy'].map((k) => {
+          const b = el('button', 'toggle', tr(`item_${k}`));
+          b.type = 'button';
+          b.setAttribute('role', 'radio');
+          b.setAttribute('aria-checked', String(k === refs.kind));
+          b.addEventListener('click', () => {
+            refs.kind = k;
+            for (const o of segBtns) o.setAttribute('aria-checked', String(o === b));
+            refs.busyBox.hidden = refs.kind !== 'busy';
+          });
+          seg.append(b);
+          return b;
+        });
+        body.append(seg);
+        label('weekdays');
+        const drow = el('div', 'toggle-row');
+        refs.days = dates.map((d) => {
+          const b = toggleButton(Logic.weekdayLabel(d, lang) + ' ' + String(Number(d.slice(8))), false);
+          b.dataset.value = d;
+          drow.append(b);
+          return b;
+        });
+        drow.append(allToggle(refs.days));
+        body.append(drow);
+        label('start');
+        refs.start = el('select');
+        timeOptions(refs.start, Logic.toHHMM(startMin));
+        body.append(refs.start);
+        label('end');
+        refs.end = el('select');
+        timeOptions(refs.end, Logic.toHHMM(defaultEnd(startMin)));
+        body.append(refs.end);
+        refs.busyBox = el('div');
+        refs.busyBox.append(el('div', 'sheet-label', tr('title')));
+        refs.title = el('input');
+        refs.title.type = 'text';
+        refs.busyBox.append(refs.title);
+        refs.busyBox.hidden = true;
+        body.append(refs.busyBox);
+        refs.err = el('div', 'sheet-error');
+        body.append(refs.err);
+      },
+      validate() {
+        let msg = '';
+        if (Logic.toMin(refs.end.value) <= Logic.toMin(refs.start.value)) msg = tr('invalid_range');
+        else if (!refs.days.some((b) => b.getAttribute('aria-pressed') === 'true')) msg = tr('err_days');
+        refs.err.textContent = msg;
+        return msg === '';
+      },
+      onOk() {
+        const next = getData();
+        const start = refs.start.value;
+        const end = refs.end.value;
+        const now = new Date();
+        const picked = refs.days.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.value);
+        for (const date of picked) {
+          if (refs.kind === 'band') next.bands.push({ id: Logic.newId('b', now) + '_' + date, date, start, end });
+          else next.blocks.push({ id: Logic.newId('k', now) + '_' + date, kind: 'busy', date, start, end, title: refs.title.value.trim() });
+        }
+        if (refs.kind === 'band') next.bands = Logic.mergeBands(next.bands);
+        setData(next);
+      },
+    });
+  }
+
   // ---- 週複写 ----
   function openWeekCopy() {
     const weeks = Logic.weeksWithBands(data, weekStartDate, settings.weekStart, 8);
@@ -4821,6 +4975,8 @@ const App = (() => {
     $('#week-next').addEventListener('click', () => shiftWeek(1));
     $('#week-title').addEventListener('click', () => { weekStartDate = Logic.todayStr(new Date()); renderWeek(); });
     $('#week-copy').addEventListener('click', openWeekCopy);
+    $('#week-add').addEventListener('click', openWeekBulkAdd);
+    $('#week-today').addEventListener('click', () => { weekStartDate = Logic.todayStr(new Date()); renderWeek(); });
     $('#week-grid').addEventListener('click', (e) => {
       if (justSwiped()) return;
       const t = e.target.closest('[data-date]');
@@ -4836,6 +4992,7 @@ const App = (() => {
     $('#month-prev').addEventListener('click', () => shiftMonth(-1));
     $('#month-next').addEventListener('click', () => shiftMonth(1));
     $('#month-title').addEventListener('click', () => { monthState = null; renderMonth(); });
+    $('#month-today').addEventListener('click', () => { monthState = null; renderMonth(); });
   }
 
   function init() {
