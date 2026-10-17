@@ -2090,10 +2090,11 @@ button.btn.primary { background: var(--accent); color: #fff; border-color: var(-
 .cal-head { display: flex; align-items: center; gap: calc(var(--gap) / 2); margin-bottom: calc(var(--gap) / 2); }
 .cal-title { flex: 1; min-height: 44px; margin: 0; font: inherit; font-size: var(--fs-base); font-weight: 400; text-align: center; color: var(--fg); background: none; border: none; cursor: pointer; }
 h2.cal-title { cursor: default; }
-#week-grid { --hour-h: 2.6em; --hours: 13; display: grid; grid-template-columns: 2em repeat(7, 1fr); column-gap: 2px; padding-bottom: var(--gap); touch-action: pan-y; }
-.dh { text-align: center; font-size: var(--fs-small); color: var(--fg-muted); padding-bottom: 0.6em; cursor: pointer; min-height: 44px; display: flex; align-items: flex-end; justify-content: center; }
+#week-grid { --hour-h: 2.6em; --hours: 13; display: grid; grid-template-columns: auto repeat(7, minmax(0, 1fr)); column-gap: 2px; padding-bottom: var(--gap); touch-action: pan-y; }
+.dh { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; overflow: hidden; white-space: nowrap; min-width: 0; text-align: center; font-size: var(--fs-small); color: var(--fg-muted); padding-bottom: 0.6em; cursor: pointer; min-height: 44px; }
 .dh.corner { cursor: default; }
 .dh.today { color: var(--accent); }
+.axis { min-width: 1.8em; }
 .axis, .col { position: relative; height: calc(var(--hour-h) * var(--hours)); }
 .col { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; overflow: hidden; }
 .col.today { border-color: var(--accent); }
@@ -2906,6 +2907,7 @@ const Logic = (() => {
     const w = WD[lang === 'en' ? 'en' : 'ja'][weekdayOf(date)];
     return lang === 'en' ? w + ' ' + md(date) : md(date) + '(' + w + ')';
   }
+  function weekdayLabel(date, lang) { return WD[lang === 'en' ? 'en' : 'ja'][weekdayOf(date)]; }
   function formatDateLong(date, lang) {
     const [, m, d] = date.split('-').map(Number);
     if (lang === 'en') return WD.en[weekdayOf(date)] + ', ' + MONTHS_EN[m - 1].slice(0, 3) + ' ' + d;
@@ -3254,7 +3256,7 @@ const Logic = (() => {
     return { header: settings.tplHeader, footer: settings.tplFooter, reminder: settings.tplReminder };
   }
 
-  return { toMin, toHHMM, todayStr, addDays, weekStartOf, weekDates, weekdayOf, formatDateShort, formatDateLong, formatRange, formatSlotLong, formatWeekTitle, formatMonthTitle, isExpired, daysUntil, timeOfDay, normalizeKana, matchesClient, displayName, emptyData, normalizeData, newId, mergeBands, copyWeekBands, weeksWithBands, holds, clientSections, clientHasActive, deleteClient, itemsForDay, itemsForWeek, axisRange, pct, monthCells, freeIntervals, freeSlots, defaultConditions, slotKey, pickSpread, buildMessage, buildReminder, templatesFrom, VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport };
+  return { toMin, toHHMM, todayStr, addDays, weekStartOf, weekDates, weekdayOf, weekdayLabel, formatDateShort, formatDateLong, formatRange, formatSlotLong, formatWeekTitle, formatMonthTitle, isExpired, daysUntil, timeOfDay, normalizeKana, matchesClient, displayName, emptyData, normalizeData, newId, mergeBands, copyWeekBands, weeksWithBands, holds, clientSections, clientHasActive, deleteClient, itemsForDay, itemsForWeek, axisRange, pct, monthCells, freeIntervals, freeSlots, defaultConditions, slotKey, pickSpread, buildMessage, buildReminder, templatesFrom, VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport };
 })();
 </script>
 <script id="app-ui">
@@ -4360,8 +4362,10 @@ const App = (() => {
 
   function round10(min) { return Math.round(min / 10) * 10; }
 
+  let activeSwipe = null;
   function bindSwipe(target, onPrev, onNext) {
     target.addEventListener('pointerdown', (e) => {
+      if (activeSwipe) activeSwipe();
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       const x0 = e.clientX;
       const y0 = e.clientY;
@@ -4369,7 +4373,9 @@ const App = (() => {
         window.removeEventListener('pointerup', up);
         window.removeEventListener('pointercancel', cleanup);
         window.removeEventListener('pointermove', move);
+        if (activeSwipe === cleanup) activeSwipe = null;
       };
+      activeSwipe = cleanup;
       // 縦スクロールなど明らかに横ではない動きは、離す前に追跡を打ち切る
       const move = (ev) => {
         const dy = Math.abs(ev.clientY - y0);
@@ -4424,7 +4430,8 @@ const App = (() => {
     grid.append(el('div', 'dh corner'));
     const dates = Logic.weekDates(weekStartDate);
     for (const d of dates) {
-      const h = el('div', 'dh' + (d === today ? ' today' : ''), Logic.formatDateShort(d, lang));
+      const h = el('div', 'dh' + (d === today ? ' today' : ''));
+      h.append(el('span', 'dh-w', Logic.weekdayLabel(d, lang)), el('span', 'dh-d', String(Number(d.slice(8)))));
       h.dataset.date = d;
       grid.append(h);
     }
