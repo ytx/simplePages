@@ -1907,7 +1907,7 @@
   --zoom: 1;
   --radius: 10px;
   --gap: calc(clamp(8px, 1vw, 16px) * var(--zoom));
-  --fs-base: calc(clamp(14px, 1.2vw, 20px) * var(--zoom));
+  --fs-base: calc(clamp(16px, 1.2vw, 20px) * var(--zoom));
   --fs-small: calc(var(--fs-base) * 0.8);
   --fs-large: calc(var(--fs-base) * 1.6);
   --font: 'Zen Kurenaido', system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
@@ -2022,6 +2022,7 @@ select, input, textarea, button.btn {
   border-radius: 6px; padding: 0.4em 0.6em;
 }
 textarea { width: 100%; resize: vertical; }
+input, select, textarea { font-size: max(16px, var(--fs-base)); }
 textarea#data-text { min-height: 10em; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: var(--fs-small); }
 button.btn { cursor: pointer; min-height: 44px; }
 button.btn.danger { color: var(--error); }
@@ -2073,6 +2074,7 @@ button.btn.danger { color: var(--error); }
 .slot-row, .radio-row { display: block; width: 100%; min-height: 44px; margin-bottom: calc(var(--gap) / 3); text-align: left; font: inherit; color: var(--fg); background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; padding: 0 var(--gap); cursor: pointer; }
 .slot-row[aria-pressed="true"], .radio-row[aria-checked="true"] { background: var(--c-meeting); color: var(--c-meeting-text); border-color: var(--accent); }
 #to-message, #respond-confirm, #copy-hold, #reminder-copy { width: 100%; margin: var(--gap) 0; display: flex; align-items: center; justify-content: center; gap: 0.4em; }
+#to-message { position: sticky; bottom: 0; background: var(--bg); padding-top: var(--gap); z-index: 1; }
 #to-message:disabled, #respond-confirm:disabled { opacity: 0.4; cursor: default; }
 button.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 #copy-hold svg, #reminder-copy svg { width: 1.2em; height: 1.2em; fill: currentColor; }
@@ -3494,7 +3496,8 @@ const App = (() => {
 
   // time4u は外部データを取得しない。更新処理は何もしない。
   async function refresh() {
-    return;
+    renderCurrentTab();
+    refreshFlow();
   }
 
   // ページ固有: 設定タブに項目を追加する。
@@ -3891,7 +3894,11 @@ const App = (() => {
     if (btn.disabled) return;
     btn.disabled = true;
     const text = $('#message-text').value;
-    if (!flow.savedId) {
+    if (flow.savedId) {
+      const upd = getData();
+      const sp = upd.proposals.find((x) => x.id === flow.savedId);
+      if (sp) { sp.message = text; sp.deadline = flow.deadline; setData(upd); }
+    } else {
       const now = new Date();
       const next = getData();
       const id = Logic.newId('p', now);
@@ -3959,7 +3966,7 @@ const App = (() => {
     $('#respond-confirm').addEventListener('click', confirmRespond);
     $('#respond-show-message').addEventListener('click', showSavedMessage);
     $('#respond-extend').addEventListener('click', extendDeadline);
-    $('#respond-cancel').addEventListener('click', cancelProposal);
+    $('#respond-cancel').addEventListener('click', cancelRespondProposal);
     $('#respond-repropose').addEventListener('click', () => {
       const p = data.proposals.find((x) => x.id === respondId);
       if (p) openSlotsFor(p.clientId, { conditions: p.conditions, reproposeId: p.id });
@@ -4048,6 +4055,7 @@ const App = (() => {
         });
         body.append(ta, copy);
       },
+      okHidden: true,
       onOk() {},
     });
   }
@@ -4066,7 +4074,7 @@ const App = (() => {
     renderRespond();
   }
 
-  async function cancelProposal() {
+  async function cancelRespondProposal() {
     if (!respondId) return;
     if (!(await dialog({ message: tr('confirm_cancel_proposal'), okLabel: tr('confirm_cancel_proposal_ok'), danger: true })).ok) return;
     const next = getData();
@@ -4849,7 +4857,7 @@ const App = (() => {
     scheduleRefresh(0);
     tickClock();
     setInterval(tickClock, 1000);
-    setInterval(() => { if (document.visibilityState === 'visible') renderCurrentTab(); }, 60000);
+    setInterval(() => { if (document.visibilityState === 'visible') { renderCurrentTab(); refreshFlow(); } }, 60000);
     document.addEventListener('visibilitychange', onVisibility);
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });

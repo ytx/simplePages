@@ -73,3 +73,11 @@ test('calendar markup', () => {
   }
   assert.match(src, /window\.addEventListener\('pointerup'/);
 });
+
+test('app-ui has no duplicate top-level function declarations', () => {
+  const m = src.match(/<script id="app-ui">([\s\S]*?)<\/script>/);
+  assert.ok(m);
+  const names = [...m[1].matchAll(/^  (?:async )?function (\w+)\(/gm)].map((x) => x[1]);
+  const dup = names.filter((n, i) => names.indexOf(n) !== i);
+  assert.deepEqual(dup, []);
+});
