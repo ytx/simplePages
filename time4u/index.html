@@ -2082,7 +2082,8 @@ button.btn.primary { background: var(--accent); color: #fff; border-color: var(-
 .empty-slots { color: var(--fg-muted); }
 .toggle-row { display: flex; flex-wrap: wrap; gap: calc(var(--gap) / 3); margin-bottom: var(--gap); }
 .toggle { min-width: 44px; min-height: 44px; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 0.6em; cursor: pointer; }
-.toggle[aria-pressed="true"] { background: var(--c-meeting); color: var(--c-meeting-text); border-color: var(--accent); }
+.toggle[aria-pressed="true"], .toggle[aria-checked="true"] { background: var(--c-meeting); color: var(--c-meeting-text); border-color: var(--accent); }
+.label { color: var(--fg-muted); font-size: var(--fs-small); margin-bottom: calc(var(--gap) / 4); }
 .sheet-label { color: var(--fg-muted); font-size: var(--fs-small); margin: calc(var(--gap) / 2) 0 calc(var(--gap) / 4); }
 .sheet-error { color: var(--error); min-height: 1.4em; }
 .sheet-body-row input[type=date] { min-height: 44px; box-sizing: border-box; }
@@ -2153,7 +2154,7 @@ button.btn.primary { background: var(--accent); color: #fff; border-color: var(-
       <div id="slot-list"></div>
       <button id="to-message" class="btn primary" type="button" disabled></button>
     </div>
-    <div class="view" id="view-message">
+    <div class="view" id="view-message" data-back="view-slots">
       <header class="view-head"><button class="icon-btn back" type="button" data-i18n-label="back"><svg aria-hidden="true"><use href="#icon-back"></use></svg></button><h2 class="view-title"></h2></header>
       <div class="field stack">
         <label for="deadline" data-i18n="reply_deadline"></label>
@@ -2166,6 +2167,7 @@ button.btn.primary { background: var(--accent); color: #fff; border-color: var(-
     <div class="view" id="view-respond">
       <header class="view-head"><button class="icon-btn back" type="button" data-i18n-label="back"><svg aria-hidden="true"><use href="#icon-back"></use></svg></button><h2 class="view-title"></h2></header>
       <div id="respond-head" class="respond-head"></div>
+      <div class="label" data-i18n="proposed_slots"></div>
       <div id="respond-slots" role="radiogroup"></div>
       <button id="respond-confirm" class="btn primary" type="button" disabled data-i18n="respond_confirm"></button>
       <div class="row flow-actions">
@@ -2546,6 +2548,7 @@ const Logic = (() => {
       repropose: '再提示',
       reminder: 'リマインド文面',
       copy: 'コピー',
+      copy_again: 'もう一度コピー',
       err_range: '開始日は終了日以前にしてください',
       err_weekday: '曜日を 1 つ以上選んでください',
       err_tod: '時間帯を 1 つ以上選んでください',
@@ -2677,6 +2680,7 @@ const Logic = (() => {
       repropose: 'Re-propose',
       reminder: 'Reminder',
       copy: 'Copy',
+      copy_again: 'Copy again',
       err_range: 'The start date must not be after the end date',
       err_weekday: 'Select at least one weekday',
       err_tod: 'Select at least one time of day',
@@ -3409,6 +3413,12 @@ const App = (() => {
     for (const b of $$('.view .back')) {
       b.addEventListener('click', () => {
         const pane = b.closest('.tab-pane');
+        const back = b.closest('.view').dataset.back;
+        if (back) {
+          if (back === 'view-slots' && flow.conditions) renderSlots();
+          showView(pane.id, back);
+          return;
+        }
         const root = pane.querySelector(':scope > .view.root');
         showView(pane.id, root.id);
       });
@@ -3508,7 +3518,7 @@ const App = (() => {
   }
 
   // ---- 提示フロー(空き枠 → 文面 → 仮押さえ / 回答反映 / リマインド) ----
-  const flow = { clientId: null, conditions: null, selected: [], reproposeId: null, deadline: '', edited: false, slots: [] };
+  const flow = { clientId: null, conditions: null, selected: [], reproposeId: null, deadline: '', edited: false, slots: [], savedId: null };
   let respondId = null;
   let reminderBlockId = null;
   let sheetValidate = null;
@@ -3531,7 +3541,9 @@ const App = (() => {
 
   async function copyText(text, area) {
     try {
-      await navigator.clipboard.writeText(text);
+      let timer;
+      const timeout = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), 1500); });
+      try { await Promise.race([navigator.clipboard.writeText(text), timeout]); } finally { clearTimeout(timer); }
       return true;
     } catch { /* フォールバックへ */ }
     let tmp = null;
@@ -3584,6 +3596,7 @@ const App = (() => {
     flow.clientId = clientId;
     flow.conditions = opts.conditions && opts.conditions.from ? { ...base, ...opts.conditions } : base;
     flow.reproposeId = opts.reproposeId || null;
+    flow.savedId = null;
     flow.selected = [];
     flow.edited = false;
     setViewTitle('view-slots', clientName(clientId));
@@ -3745,33 +3758,40 @@ const App = (() => {
     if (btn.disabled) return;
     btn.disabled = true;
     const text = $('#message-text').value;
-    const ok = await copyText(text, $('#message-text'));
-    const now = new Date();
-    const next = getData();
-    next.proposals.push({
-      id: Logic.newId('p', now),
-      clientId: flow.clientId,
-      status: 'pending',
-      slots: sortSlots(flow.selected),
-      deadline: flow.deadline,
-      message: text,
-      conditions: { ...flow.conditions },
-      createdAt: now.toISOString(),
-    });
-    if (flow.reproposeId) {
-      const old = next.proposals.find((x) => x.id === flow.reproposeId);
-      if (old) { old.status = 'cancelled'; old.cancelledAt = now.toISOString(); }
+    if (!flow.savedId) {
+      const now = new Date();
+      const next = getData();
+      const id = Logic.newId('p', now);
+      next.proposals.push({
+        id,
+        clientId: flow.clientId,
+        status: 'pending',
+        slots: sortSlots(flow.selected),
+        deadline: flow.deadline,
+        message: text,
+        conditions: { ...flow.conditions },
+        createdAt: now.toISOString(),
+      });
+      if (flow.reproposeId) {
+        const old = next.proposals.find((x) => x.id === flow.reproposeId);
+        if (old) { old.status = 'cancelled'; old.cancelledAt = now.toISOString(); }
+      }
+      flow.savedId = id;
+      flow.reproposeId = null;
+      setData(next);
     }
-    flow.reproposeId = null;
-    setData(next);
+    const ok = await copyText(text, $('#message-text'));
     if (ok) {
       flashCopied('copy-hold', 'copy-hold-label', 'copy_hold', () => {
         btn.disabled = false;
-        showView('tab-clients', 'view-clients-list');
-        renderClients();
+        if ($('#view-message').classList.contains('active')) {
+          showView('tab-clients', 'view-clients-list');
+          renderClients();
+        }
       });
     } else {
       btn.disabled = false;
+      setCopyLabel('copy-hold', 'copy-hold-label', 'copy_again', false);
       setStatus('warn', () => tr('copy_failed'));
     }
   }
@@ -3789,6 +3809,8 @@ const App = (() => {
       if (flow.selected.length === 0) return;
       flow.deadline = Logic.addDays(Logic.todayStr(new Date()), settings.deadlineDays);
       flow.edited = false;
+      flow.savedId = null;
+      setCopyLabel('copy-hold', 'copy-hold-label', 'copy_hold', false);
       renderMessage();
       showView('tab-clients', 'view-message');
     });
@@ -3798,7 +3820,7 @@ const App = (() => {
       if (!v) { e.target.value = flow.deadline; return; }
       if (!flow.edited) { flow.deadline = v; regenerateMessage(); return; }
       if ((await dialog({ message: tr('confirm_regenerate') })).ok) { flow.deadline = v; regenerateMessage(); }
-      else e.target.value = flow.deadline;
+      else flow.deadline = v;
     });
     $('#copy-hold').addEventListener('click', copyAndHold);
     $('#respond-confirm').addEventListener('click', confirmRespond);
