@@ -1999,12 +1999,20 @@ body {
 }
 .tab svg { width: 1.6em; height: 1.6em; fill: currentColor; }
 .tab[aria-selected="true"] { color: var(--accent); }
-dialog#dialog, dialog#sheet {
+dialog#dialog, dialog#sheet, dialog#help {
   background: var(--bg-panel); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius);
   width: min(90vw, 24em); padding: var(--gap); display: none;
 }
-dialog#dialog[open], dialog#sheet[open] { display: block; }
-dialog#dialog::backdrop, dialog#sheet::backdrop { background: rgba(0,0,0,0.5); }
+dialog#dialog[open], dialog#sheet[open], dialog#help[open] { display: block; }
+dialog#dialog::backdrop, dialog#sheet::backdrop, dialog#help::backdrop { background: rgba(0,0,0,0.5); }
+dialog#help { width: min(92vw, 36em); max-height: 85vh; overflow: auto; }
+.help-head { display: flex; align-items: center; gap: var(--gap); margin-bottom: calc(var(--gap) / 2); }
+.help-head h2 { flex: 1; margin: 0; font-size: var(--fs-base); font-weight: 400; }
+.help-body h3 { font-size: var(--fs-base); font-weight: 400; color: var(--accent); margin: var(--gap) 0 calc(var(--gap) / 4); }
+.help-body p, .help-body li { line-height: 1.6; margin: 0 0 calc(var(--gap) / 2); }
+.help-body ol { padding-left: 1.4em; }
+.page-head { display: flex; align-items: center; gap: calc(var(--gap) / 2); }
+.page-head #page-title { margin: 0; }
 #dialog-message { margin: 0 0 var(--gap); white-space: pre-wrap; }
 #dialog-input { width: 100%; margin-bottom: var(--gap); }
 #dialog-input[hidden] { display: none; }
@@ -2077,8 +2085,14 @@ button.btn.danger { color: var(--error); }
 .sticky-foot { position: sticky; bottom: 0; background: var(--bg); padding-top: calc(var(--gap) / 2); z-index: 1; }
 .date-step { display: flex; align-items: center; gap: calc(var(--gap) / 3); }
 .date-step input { flex: 1; min-width: 0; }
+.date-step.stacked { flex-direction: column; align-items: stretch; flex: 1; min-width: 0; }
+.date-step.stacked input { width: 100%; }
+.date-step-row { display: flex; justify-content: space-around; }
+.date-pair { display: flex; align-items: flex-start; gap: calc(var(--gap) / 3); margin-bottom: var(--gap); }
+.date-sep { align-self: center; padding-top: 0; }
 .toggle-row .toggle.all { margin-left: auto; }
-.cal-head .btn.today-btn { min-height: 44px; padding: 0 0.6em; }
+#view-week { overflow: hidden; display: flex; flex-direction: column; }
+#view-week #week-grid { flex: 1; min-height: 0; overflow: auto; }
 #to-message:disabled, #respond-confirm:disabled { opacity: 0.4; cursor: default; }
 button.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 #copy-hold svg, #reminder-copy svg { width: 1.2em; height: 1.2em; fill: currentColor; }
@@ -2095,6 +2109,7 @@ button.btn.primary { background: var(--accent); color: #fff; border-color: var(-
 .sheet-body-row input[type=date] { min-height: 44px; box-sizing: border-box; }
 .cal-head { display: flex; align-items: center; gap: calc(var(--gap) / 2); margin-bottom: calc(var(--gap) / 2); }
 .cal-title { flex: 1; min-height: 44px; margin: 0; font: inherit; font-size: var(--fs-base); font-weight: 400; text-align: center; color: var(--fg); background: none; border: none; cursor: pointer; }
+button.cal-title { color: var(--accent); text-decoration: underline dotted; text-underline-offset: 0.3em; }
 h2.cal-title { cursor: default; }
 #week-grid { --hour-h: 2.6em; --hours: 13; display: grid; grid-template-columns: auto repeat(7, minmax(0, 1fr)); column-gap: 2px; padding-bottom: var(--gap); touch-action: pan-y; }
 .dh { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; overflow: hidden; white-space: nowrap; min-width: 0; text-align: center; font-size: var(--fs-small); color: var(--fg-muted); padding-bottom: 0.6em; cursor: pointer; min-height: 44px; }
@@ -2150,6 +2165,7 @@ h2.cal-title { cursor: default; }
   <symbol id="icon-fullscreen-exit" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></symbol>
   <symbol id="icon-translate" viewBox="0 0 24 24"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></symbol>
   <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M19.4 13a7.9 7.9 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a8 8 0 0 0-1.7-1L15 3.3H9l-.3 2.6a8 8 0 0 0-1.7 1l-2.5-1-2 3.5L4.6 11a7.9 7.9 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a8 8 0 0 0 1.7 1l.3 2.6h6l.3-2.6a8 8 0 0 0 1.7-1l2.5 1 2-3.5L19.4 13zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></symbol>
+  <symbol id="icon-help" viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></symbol>
   <symbol id="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
   <symbol id="icon-person" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></symbol>
   <symbol id="icon-week" viewBox="0 0 24 24"><path d="M3 5v14h18V5H3zm5.67 12H5V7h3.67v10zm5 0h-3.34V7h3.34v10zM19 17h-3.67V7H19v10z"/></symbol>
@@ -2171,7 +2187,7 @@ h2.cal-title { cursor: default; }
   <button id="btn-settings" class="icon-btn" type="button" data-i18n-label="settings"><svg aria-hidden="true"><use href="#icon-settings"></use></svg></button>
 </header>
 <main id="content">
-  <h1 id="page-title" data-i18n="page_title"></h1>
+  <div class="page-head"><button id="btn-help" class="icon-btn" type="button" data-i18n-label="help"><svg aria-hidden="true"><use href="#icon-help"></use></svg></button><h1 id="page-title" data-i18n="page_title"></h1></div>
   <section class="tab-pane active" id="tab-clients">
     <div class="view root active" id="view-clients-list">
       <div class="client-search-box">
@@ -2236,8 +2252,9 @@ h2.cal-title { cursor: default; }
   </section>
   <section class="tab-pane" id="tab-week">
 <div class="view root active" id="view-week">
-      <div class="cal-head"><button id="week-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><button id="week-title" class="cal-title" type="button" data-i18n-label="today"></button><button id="week-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button><button id="week-today" class="btn today-btn" type="button" data-i18n="today"></button><button id="week-add" class="icon-btn" type="button" data-i18n-label="week_add"><svg aria-hidden="true"><use href="#icon-add"></use></svg></button><button id="week-copy" class="icon-btn" type="button" data-i18n-label="week_copy"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
+      <div class="cal-head"><button id="week-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><button id="week-title" class="cal-title" type="button" data-i18n-label="today"></button><button id="week-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button><button id="week-copy" class="icon-btn" type="button" data-i18n-label="week_copy"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
       <div id="week-grid"></div>
+      <button id="week-add" class="icon-btn fab" type="button" data-i18n-label="week_add"><svg aria-hidden="true"><use href="#icon-add"></use></svg></button>
     </div>
     <div class="view" id="view-day">
       <div class="cal-head"><button id="day-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><h2 id="day-title" class="cal-title"></h2><button id="day-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button><button id="day-close" class="icon-btn" type="button" data-i18n-label="close"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button></div>
@@ -2246,38 +2263,15 @@ h2.cal-title { cursor: default; }
     </div>
   </section>
   <section class="tab-pane" id="tab-month">
-    <div class="cal-head"><button id="month-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><button id="month-title" class="cal-title" type="button" data-i18n-label="today"></button><button id="month-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button><button id="month-today" class="btn today-btn" type="button" data-i18n="today"></button></div>
+    <div class="cal-head"><button id="month-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><button id="month-title" class="cal-title" type="button" data-i18n-label="today"></button><button id="month-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button></div>
     <div id="month-grid"></div>
   </section>
   <section class="tab-pane" id="tab-settings">
-    <details class="settings-section" data-section="general" open>
-      <summary data-i18n="tab_general"></summary>
-      <div class="field">
-        <label for="set-lang" data-i18n="language"></label>
-        <select id="set-lang" data-setting="lang">
-          <option value="ja">日本語</option>
-          <option value="en">English</option>
-        </select>
-      </div>
+    <details class="settings-section" data-section="display" open>
+      <summary data-i18n="tab_display"></summary>
       <div class="field">
         <label for="set-honorific" data-i18n="honorific"></label>
         <input id="set-honorific" type="text" maxlength="10" data-setting="honorific">
-      </div>
-      <div id="settings-extra-general"></div>
-    </details>
-    <details class="settings-section" data-section="display">
-      <summary data-i18n="tab_display"></summary>
-      <div class="field">
-        <label for="set-theme" data-i18n="theme"></label>
-        <select id="set-theme" data-setting="theme">
-          <option value="auto" data-i18n="theme_auto"></option>
-          <option value="light" data-i18n="theme_light"></option>
-          <option value="dark" data-i18n="theme_dark"></option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="set-zoom" data-i18n="zoom"></label>
-        <input id="set-zoom" type="number" min="50" max="200" data-setting="zoom">
       </div>
       <div class="field">
         <label for="set-weekStart" data-i18n="weekStart"></label>
@@ -2295,27 +2289,6 @@ h2.cal-title { cursor: default; }
         <input id="set-dayEnd" type="number" min="1" max="24" data-setting="dayEnd">
       </div>
       <div id="settings-extra-display"></div>
-    </details>
-    <details class="settings-section" data-section="message">
-      <summary data-i18n="tab_message"></summary>
-      <div class="field stack">
-        <label for="set-tplHeader" data-i18n="tplHeader"></label>
-        <textarea id="set-tplHeader" rows="4" spellcheck="false" data-setting="tplHeader"></textarea>
-      </div>
-      <div class="field stack">
-        <label for="set-tplFooter" data-i18n="tplFooter"></label>
-        <textarea id="set-tplFooter" rows="4" spellcheck="false" data-setting="tplFooter"></textarea>
-      </div>
-      <div class="field stack">
-        <label for="set-tplReminder" data-i18n="tplReminder"></label>
-        <textarea id="set-tplReminder" rows="4" spellcheck="false" data-setting="tplReminder"></textarea>
-      </div>
-      <div class="row">
-        <span data-i18n="tpl_load"></span>
-        <button type="button" class="btn" id="tpl-load-business" data-i18n="tpl_business"></button>
-        <button type="button" class="btn" id="tpl-load-friendly" data-i18n="tpl_friendly"></button>
-      </div>
-      <p class="hint" data-i18n="tpl_hint"></p>
     </details>
     <details class="settings-section" data-section="time">
       <summary data-i18n="tab_time"></summary>
@@ -2355,6 +2328,27 @@ h2.cal-title { cursor: default; }
         <label for="set-eveStart" data-i18n="eveStart"></label>
         <input id="set-eveStart" type="number" min="2" max="24" data-setting="eveStart">
       </div>
+    </details>
+    <details class="settings-section" data-section="message">
+      <summary data-i18n="tab_message"></summary>
+      <div class="field stack">
+        <label for="set-tplHeader" data-i18n="tplHeader"></label>
+        <textarea id="set-tplHeader" rows="4" spellcheck="false" data-setting="tplHeader"></textarea>
+      </div>
+      <div class="field stack">
+        <label for="set-tplFooter" data-i18n="tplFooter"></label>
+        <textarea id="set-tplFooter" rows="4" spellcheck="false" data-setting="tplFooter"></textarea>
+      </div>
+      <div class="field stack">
+        <label for="set-tplReminder" data-i18n="tplReminder"></label>
+        <textarea id="set-tplReminder" rows="4" spellcheck="false" data-setting="tplReminder"></textarea>
+      </div>
+      <div class="row">
+        <span data-i18n="tpl_load"></span>
+        <button type="button" class="btn" id="tpl-load-business" data-i18n="tpl_business"></button>
+        <button type="button" class="btn" id="tpl-load-friendly" data-i18n="tpl_friendly"></button>
+      </div>
+      <p class="hint" data-i18n="tpl_hint"></p>
     </details>
     <details class="settings-section" data-section="data">
       <summary data-i18n="tab_data"></summary>
@@ -2397,6 +2391,47 @@ h2.cal-title { cursor: default; }
   <button class="tab" type="button" role="tab" data-tab="month" aria-selected="false"><svg aria-hidden="true"><use href="#icon-month"></use></svg><span data-i18n="tab_month"></span></button>
   <button class="tab" type="button" role="tab" data-tab="settings" aria-selected="false"><svg aria-hidden="true"><use href="#icon-settings"></use></svg><span data-i18n="tab_settings"></span></button>
 </nav>
+<dialog id="help">
+  <div class="help-head"><h2 data-i18n="help_title"></h2><button id="help-close" class="icon-btn" type="button" data-i18n-label="close"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button></div>
+  <div class="help-body" data-lang="ja">
+    <p>面会の候補日時をまとめて相手に送り、返事が来るまで枠を仮押さえしておくためのページです。データはこの端末の中にだけ保存されます。</p>
+    <h3>相手</h3>
+    <p>上の欄に名前を入れると一覧が絞り込まれます(変換前のよみでも探せます)。見つからなければ「＋」でそのまま登録できます。確定済み・調整中・過去の面会の順に並び、行の「…」から名前やよみを直せます。</p>
+    <h3>提示の流れ</h3>
+    <ol>
+      <li>相手を選ぶと空き枠が出ます。上の条件カードで期間・曜日・時間帯・長さを変えて「検索」。</li>
+      <li>枠をタップして選ぶか、「おまかせ」で散らして選びます。</li>
+      <li>「文面を作る」で回答期限つきの文面ができます。「コピーして仮押さえ」でクリップボードにコピーし、枠を押さえます。あとはメールや LINE に貼るだけ。</li>
+      <li>返事が来たら調整中の行をタップし、決まった枠を選んで「確定」。残りの枠は解放されます。難しければ「再提示」で別の枠を探し、「取消」で全部解放します。期限が過ぎても自動では解放しません。</li>
+      <li>確定した相手には「リマインド」で前日の連絡文面を作れます。</li>
+    </ol>
+    <h3>週・日・月</h3>
+    <p>週タブに面会できる時間帯(緑)を置きます。右下の「＋」で複数の曜日にまとめて追加、「複写」で前の週から写せます。列をタップすると 1 日の画面になり、ランチなどの予定(灰)や面会(青)を直接足せます。黄色は仮押さえ中の枠です。タイトルをタップすると今日に戻ります。月タブは見るだけで、日をタップするとその週に移ります。</p>
+    <h3>設定</h3>
+    <p>敬称、週の始まり、表示する時間帯、スロットの長さやインターバル、回答期限の既定、文面のひな形(ビジネス / フレンドリーの文例を読み込めます)を変えられます。右上のアイコンでテーマ・拡大率・言語を切り替えます。</p>
+    <h3>データ</h3>
+    <p>設定タブの「データ」から JSON を書き出し・読み込みできます。読み込みは今の内容を置き換えます。別の端末へ移すときに使ってください。</p>
+  </div>
+  <div class="help-body" data-lang="en" hidden>
+    <p>Send a client several candidate meeting times at once and hold those slots until they answer. Everything is stored on this device only.</p>
+    <h3>Clients</h3>
+    <p>Type a name in the box to filter the list (readings typed before conversion work too). If nobody matches, "+" registers the name. Rows are grouped into confirmed, pending and past meetings; "…" on a row edits the name and reading.</p>
+    <h3>Proposing</h3>
+    <ol>
+      <li>Pick a client to see free slots. The card at the top changes period, weekdays, time of day and length; tap "Search".</li>
+      <li>Tap slots to select them, or "Auto pick" spreads a few across dates.</li>
+      <li>"Make message" builds the text with a reply deadline. "Copy and hold" copies it to the clipboard and holds the slots. Paste it into mail or chat.</li>
+      <li>When the client answers, tap the pending row, choose the agreed slot and "Confirm". The other slots are released. "Re-propose" searches other slots, "Cancel" releases everything. Nothing is released automatically when the deadline passes.</li>
+      <li>"Remind" builds a short reminder text for a confirmed meeting.</li>
+    </ol>
+    <h3>Week, day, month</h3>
+    <p>Put the times you are available (green) on the week tab. The "+" at the bottom right adds bands to several weekdays at once; "Copy" takes them from a past week. Tap a column for the day view, where you can add busy time (grey) such as lunch, or a meeting (blue). Yellow is a held slot. Tap the title to return to today. The month tab is read only; tapping a day opens its week.</p>
+    <h3>Settings</h3>
+    <p>Honorific, first day of the week, visible hours, slot lengths and interval, default deadline and the message templates (load the business or friendly samples). The toolbar icons switch theme, zoom and language.</p>
+    <h3>Data</h3>
+    <p>The data section exports and imports a JSON file. Importing replaces the current content. Use it to move to another device.</p>
+  </div>
+</dialog>
 <dialog id="dialog">
   <form method="dialog">
     <p id="dialog-message"></p>
@@ -2632,6 +2667,8 @@ const Logic = (() => {
       hold_suffix: '(仮)',
       today: '今日',
       add_item: '項目を追加',
+      help: '使い方',
+      help_title: 'time4u の使い方',
       week_add: 'この週にまとめて追加',
       select_all: '全選択',
       select_none: '全解除',
@@ -2792,6 +2829,8 @@ const Logic = (() => {
       hold_suffix: ' (hold)',
       today: 'Today',
       add_item: 'Add item',
+      help: 'Help',
+      help_title: 'How to use time4u',
       week_add: 'Add to this week',
       select_all: 'Select all',
       select_none: 'Clear',
@@ -3312,7 +3351,7 @@ const App = (() => {
     credits: ['credit_icons', 'credit_font'],
   };
   const HONORIFIC_DEFAULT = Logic.detectLang(navigator.language) === 'ja' ? 'さん' : '';
-  const TPL_DEFAULT = Logic.DEFAULT_TEMPLATES[Logic.detectLang(navigator.language)].business;
+  const TPL_DEFAULT = Logic.DEFAULT_TEMPLATES[Logic.detectLang(navigator.language)].friendly;
   const SCHEMA = {
     lang: { type: 'enum', values: ['ja', 'en'], default: Logic.detectLang(navigator.language) },
     theme: { type: 'enum', values: ['auto', 'light', 'dark'], default: 'auto' },
@@ -3425,6 +3464,7 @@ const App = (() => {
     for (const el of $$('[data-i18n]')) el.textContent = Logic.t(settings.lang, el.dataset.i18n);
     for (const el of $$('[data-i18n-placeholder]')) el.placeholder = Logic.t(settings.lang, el.dataset.i18nPlaceholder);
     for (const el of $$('[data-i18n-label]')) el.setAttribute('aria-label', Logic.t(settings.lang, el.dataset.i18nLabel));
+    for (const el of $$('.help-body')) el.hidden = el.dataset.lang !== settings.lang;
     // data-i18n-label ループの後に実行する: 全画面ボタンのラベルを状態に合った値で上書きするため。
     updateFullscreenButton();
     if (lastStatus) setStatus(lastStatus.state, lastStatus.message);
@@ -3766,7 +3806,8 @@ const App = (() => {
 
   function renderSlots() {
     const lang = settings.lang;
-    flow.slots = Logic.freeSlots(data, flow.conditions, settings, new Date(), flow.reproposeId || flow.savedId);
+    // 再提示では元の提示の枠は相手が難しかった日程なので除外したまま(仮押さえのまま隠れる)。
+    flow.slots = Logic.freeSlots(data, flow.conditions, settings, new Date(), flow.savedId);
     const keys = new Set(flow.slots.map(Logic.slotKey));
     flow.selected = flow.selected.filter((s) => keys.has(Logic.slotKey(s)));
     $('#cond-summary').textContent = conditionsSummary();
@@ -3827,8 +3868,9 @@ const App = (() => {
   }
 
   // 日付入力の両脇に ‹ › を置き、1 日ずつ動かす。onChange(newValue) は値が変わったときだけ呼ぶ。
+  // 日付欄の下に ‹ › を並べる(stacked)。onChange(newValue) は値が変わったときだけ呼ぶ。
   function dateStepper(input, onChange) {
-    const wrap = el('div', 'date-step');
+    const wrap = el('div', 'date-step stacked');
     const ns = $('svg').namespaceURI;
     const mk = (dir, icon) => {
       const b = el('button', 'icon-btn');
@@ -3849,7 +3891,9 @@ const App = (() => {
       });
       return b;
     };
-    wrap.append(mk(-1, '#icon-chevron-left'), input, mk(1, '#icon-chevron-right'));
+    const row = el('div', 'date-step-row');
+    row.append(mk(-1, '#icon-chevron-left'), mk(1, '#icon-chevron-right'));
+    wrap.append(input, row);
     return wrap;
   }
 
@@ -3875,7 +3919,9 @@ const App = (() => {
         };
         refs.from.addEventListener('change', () => keepOrder('from'));
         refs.to.addEventListener('change', () => keepOrder('to'));
-        body.append(dateStepper(refs.from, () => keepOrder('from')), el('div', 'sheet-label', '〜'), dateStepper(refs.to, () => keepOrder('to')));
+        const dates = el('div', 'date-pair');
+        dates.append(dateStepper(refs.from, () => keepOrder('from')), el('span', 'date-sep', '〜'), dateStepper(refs.to, () => keepOrder('to')));
+        body.append(dates);
         label('weekdays');
         const wrow = el('div', 'toggle-row');
         refs.wd = WEEK_ORDER.map((w) => {
@@ -4093,7 +4139,7 @@ const App = (() => {
       list.append(b);
     });
     $('#respond-confirm').disabled = respondChoice < 0 || p.status !== 'pending';
-    $('#respond-repropose').hidden = !expired;
+    $('#respond-repropose').hidden = false;
   }
 
   async function confirmRespond() {
@@ -4476,7 +4522,7 @@ const App = (() => {
     $('#data-clear').addEventListener('click', async () => {
       if (!(await dialog({ message: tr('confirm_clear') })).ok) return;
       storage.clear();
-      try { localStorage.removeItem(DATA_KEY); } catch { /* ignore */ }
+      try { localStorage.removeItem(DATA_KEY); localStorage.removeItem(HELP_SEEN_KEY); } catch { /* ignore */ }
       location.href = location.pathname;
     });
     renderAbout();
@@ -4976,7 +5022,6 @@ const App = (() => {
     $('#week-title').addEventListener('click', () => { weekStartDate = Logic.todayStr(new Date()); renderWeek(); });
     $('#week-copy').addEventListener('click', openWeekCopy);
     $('#week-add').addEventListener('click', openWeekBulkAdd);
-    $('#week-today').addEventListener('click', () => { weekStartDate = Logic.todayStr(new Date()); renderWeek(); });
     $('#week-grid').addEventListener('click', (e) => {
       if (justSwiped()) return;
       const t = e.target.closest('[data-date]');
@@ -4992,7 +5037,20 @@ const App = (() => {
     $('#month-prev').addEventListener('click', () => shiftMonth(-1));
     $('#month-next').addEventListener('click', () => shiftMonth(1));
     $('#month-title').addEventListener('click', () => { monthState = null; renderMonth(); });
-    $('#month-today').addEventListener('click', () => { monthState = null; renderMonth(); });
+  }
+
+  const HELP_SEEN_KEY = 'simplePages.time4u.helpSeen';
+  function openHelp() {
+    const dlg = $('#help');
+    if (!dlg.open) dlg.showModal();
+  }
+  function bindHelp() {
+    $('#btn-help').addEventListener('click', openHelp);
+    $('#help-close').addEventListener('click', () => $('#help').close());
+    $('#help').addEventListener('close', () => { try { localStorage.setItem(HELP_SEEN_KEY, '1'); } catch { /* ignore */ } });
+  }
+  function firstLaunch() {
+    try { return !localStorage.getItem(HELP_SEEN_KEY) && !localStorage.getItem(STORAGE_KEY) && !localStorage.getItem(DATA_KEY); } catch { return false; }
   }
 
   function init() {
@@ -5004,6 +5062,7 @@ const App = (() => {
     bindClients();
     bindFlow();
     bindCalendar();
+    bindHelp();
     loadData();
     applySettings();
     // 起動時に書き込めるか確かめて、状態ドットに反映する(設定は書かない)。
@@ -5012,6 +5071,7 @@ const App = (() => {
     const initialTab = new URLSearchParams(location.search).get('tab');
     showTab(TABS.includes(initialTab) ? initialTab : 'clients');
     scheduleRefresh(0);
+    if (firstLaunch()) openHelp();
     tickClock();
     setInterval(tickClock, 1000);
     setInterval(() => { if (document.visibilityState === 'visible') { renderCurrentTab(); refreshFlow(); } }, 60000);

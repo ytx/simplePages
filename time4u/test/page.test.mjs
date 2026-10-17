@@ -34,7 +34,10 @@ test('tabs, views, dialogs and settings sections exist; no settings modal', () =
   for (const id of ['tab-clients', 'tab-week', 'tab-month', 'tab-settings', 'view-clients-list', 'view-slots', 'view-message', 'view-respond', 'view-reminder', 'view-week', 'view-day', 'dialog', 'sheet', 'status-bar', 'clock']) {
     assert.match(src, new RegExp(`id="${id}"`), id);
   }
-  for (const s of ['general', 'display', 'message', 'time', 'data', 'about']) assert.match(src, new RegExp(`data-section="${s}"`), s);
+  for (const s of ['display', 'time', 'message', 'data', 'about']) assert.match(src, new RegExp(`data-section="${s}"`), s);
+  assert.doesNotMatch(src, /data-section="general"/);
+  for (const k of ['lang', 'theme', 'zoom']) assert.doesNotMatch(src, new RegExp(`data-setting="${k}"`), k);
+  assert.ok(src.indexOf('data-section="time"') < src.indexOf('data-section="message"'), 'time before message');
   for (const t of ['clients', 'week', 'month', 'settings']) assert.match(src, new RegExp(`data-tab="${t}"`), t);
   assert.doesNotMatch(src, /<dialog id="settings"/);
   for (const icon of ['icon-person', 'icon-week', 'icon-month', 'icon-back', 'icon-add', 'icon-more', 'icon-copy', 'icon-chevron-left', 'icon-chevron-right', 'icon-check']) assert.match(src, new RegExp(`<symbol id="${icon}"`), icon);
@@ -83,7 +86,13 @@ test('app-ui has no duplicate top-level function declarations', () => {
 });
 
 test('follow-up UI: week bulk add, today buttons, deadline steppers, sticky footer, 相手 wording', () => {
-  for (const id of ['week-add', 'week-today', 'month-today', 'deadline-prev', 'deadline-next']) assert.match(src, new RegExp(`id="${id}"`), id);
+  for (const id of ['week-add', 'deadline-prev', 'deadline-next', 'btn-help', 'help', 'help-close']) assert.match(src, new RegExp(`id="${id}"`), id);
+  for (const id of ['week-today', 'month-today']) assert.doesNotMatch(src, new RegExp(`id="${id}"`), id);
+  assert.match(src, /id="week-add" class="icon-btn fab"/);
+  assert.match(src, /class="help-body" data-lang="ja"/);
+  assert.match(src, /class="help-body" data-lang="en"/);
+  assert.match(src, /simplePages\.time4u\.helpSeen/);
+  assert.match(src, /TPL_DEFAULT = Logic\.DEFAULT_TEMPLATES\[[^\]]+\]\.friendly/);
   assert.match(src, /class="sticky-foot"/);
   assert.doesNotMatch(src, /#to-message \{[^}]*position: sticky/);
   assert.doesNotMatch(src, /クライアント/);
