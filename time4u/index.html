@@ -2556,7 +2556,86 @@ const Logic = (() => {
     return { ok: true, settings };
   }
 
-  return { VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport };
+  // 日付・書式
+  const WD = { ja: ['日', '月', '火', '水', '木', '金', '土'], en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] };
+  const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function toMin(hhmm) {
+    const [h, m] = String(hhmm).split(':').map(Number);
+    return h * 60 + m;
+  }
+  function toHHMM(min) { return pad2(Math.floor(min / 60)) + ':' + pad2(min % 60); }
+  function ymd(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function noon(date) {
+    const [y, m, d] = date.split('-').map(Number);
+    return new Date(y, m - 1, d, 12);
+  }
+  function todayStr(now) { return ymd(now); }
+  function addDays(date, n) {
+    const d = noon(date);
+    d.setDate(d.getDate() + n);
+    return ymd(d);
+  }
+  function weekdayOf(date) { return noon(date).getDay(); }
+  function weekStartOf(date, weekStart) {
+    return addDays(date, -((weekdayOf(date) - weekStart + 7) % 7));
+  }
+  function weekDates(weekStartDate) {
+    return [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(weekStartDate, i));
+  }
+  function md(date) {
+    const [, m, d] = date.split('-').map(Number);
+    return m + '/' + d;
+  }
+  function formatDateShort(date, lang) {
+    const w = WD[lang === 'en' ? 'en' : 'ja'][weekdayOf(date)];
+    return lang === 'en' ? w + ' ' + md(date) : md(date) + '(' + w + ')';
+  }
+  function formatDateLong(date, lang) {
+    const [, m, d] = date.split('-').map(Number);
+    if (lang === 'en') return WD.en[weekdayOf(date)] + ', ' + MONTHS_EN[m - 1].slice(0, 3) + ' ' + d;
+    return m + '月' + d + '日(' + WD.ja[weekdayOf(date)] + ')';
+  }
+  function formatRange(start, end, lang) {
+    return start + (lang === 'en' ? '–' : '〜') + end;
+  }
+  function formatSlotLong(slot, lang) {
+    return formatDateLong(slot.date, lang) + ' ' + formatRange(slot.start, slot.end, lang);
+  }
+  function formatWeekTitle(weekStartDate) {
+    return md(weekStartDate) + ' – ' + md(addDays(weekStartDate, 6));
+  }
+  function formatMonthTitle(year, month, lang) {
+    return lang === 'en' ? MONTHS_EN[month - 1] + ' ' + year : year + '年' + month + '月';
+  }
+  function isExpired(proposal, today) { return today > proposal.deadline; }
+  function daysUntil(deadline, today) {
+    return Math.round((noon(deadline) - noon(today)) / 86400000);
+  }
+  function timeOfDay(start, settings) {
+    const m = toMin(start);
+    if (m >= settings.eveStart * 60) return 'eve';
+    if (m >= settings.pmStart * 60) return 'pm';
+    return 'am';
+  }
+  function displayName(client, settings) { return client.name + settings.honorific; }
+
+  // 検索
+  function normalizeKana(s) {
+    return String(s == null ? '' : s)
+      .normalize('NFKC')
+      .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
+      .replace(/\s+/g, '')
+      .toLowerCase();
+  }
+  function matchesClient(client, query) {
+    const q = normalizeKana(query);
+    if (!q) return true;
+    return normalizeKana(client.name).includes(q) || normalizeKana(client.reading || '').includes(q);
+  }
+
+  return { toMin, toHHMM, todayStr, addDays, weekStartOf, weekDates, weekdayOf, formatDateShort, formatDateLong, formatRange, formatSlotLong, formatWeekTitle, formatMonthTitle, isExpired, daysUntil, timeOfDay, normalizeKana, matchesClient, displayName, VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport };
 })();
 </script>
 <script id="app-ui">
