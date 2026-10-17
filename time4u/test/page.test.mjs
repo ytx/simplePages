@@ -22,7 +22,7 @@ test('no emoji and no bold', () => {
 
 test('font faces reference files that exist', () => {
   const faces = src.match(/@font-face/g) || [];
-  assert.equal(faces.length, 124);
+  assert.equal(faces.length, 122);
   const urls = [...new Set([...src.matchAll(/url\((fonts\/zen-kurenaido\/zk-\d{3}\.woff2)\)/g)].map((m) => m[1]))];
   assert.equal(urls.length, 122);
   for (const u of urls) assert.ok(existsSync(fileURLToPath(new URL('../' + u, import.meta.url))), u);

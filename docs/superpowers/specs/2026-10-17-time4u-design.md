@@ -65,7 +65,7 @@ time4u/
 
 ### 書体
 
-- 全体に **Zen Kurenaido**(ペン字。SIL OFL 1.1)。`../green`(`packages/client/public/fonts/zen-kurenaido/`、`src/styles/fonts.css`)が自前配信している Google Fonts のサブセット分割 122 本をそのままコピーし、`fonts.css` の 124 個の `@font-face` を index.html の `<style>` に埋め込む。`url()` は `fonts/zen-kurenaido/zk-NNN.woff2` の相対パス、`font-display: swap`。unicode-range による分割なので、実際に読み込まれるのは画面に出た文字の分だけ。
+- 全体に **Zen Kurenaido**(ペン字。SIL OFL 1.1)。`../green`(`packages/client/public/fonts/zen-kurenaido/`、`src/styles/fonts.css`)が自前配信している Google Fonts のサブセット分割 122 本をそのままコピーし、`fonts.css` の 122 個の `@font-face` を index.html の `<style>` に埋め込む。`url()` は `fonts/zen-kurenaido/zk-NNN.woff2` の相対パス、`font-display: swap`。unicode-range による分割なので、実際に読み込まれるのは画面に出た文字の分だけ。
 - フォールバックは共通のシステムフォントスタック。`--font: 'Zen Kurenaido', system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif`。
 - weight は 400 しかないので **太字は使わない**。強調は文字サイズと色で付ける。数字は `font-variant-numeric: tabular-nums`。
 - これは共通規約「Web フォントは使わない」の例外。音声・画像と同じく「同じページディレクトリ内のメディアを相対パスで読み込む」例外に書体ファイルを加える形で `CLAUDE.md` と共通規約の該当行を更新する(外部ドメイン・CDN は引き続き禁止)。About のクレジットに Zen Kurenaido(SIL OFL)を載せる。
