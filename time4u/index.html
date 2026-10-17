@@ -2635,7 +2635,214 @@ const Logic = (() => {
     return normalizeKana(client.name).includes(q) || normalizeKana(client.reading || '').includes(q);
   }
 
-  return { toMin, toHHMM, todayStr, addDays, weekStartOf, weekDates, weekdayOf, formatDateShort, formatDateLong, formatRange, formatSlotLong, formatWeekTitle, formatMonthTitle, isExpired, daysUntil, timeOfDay, normalizeKana, matchesClient, displayName, VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport };
+  // データ
+  const RE_DATE = /^\d{4}-\d{2}-\d{2}$/;
+  const RE_TIME = /^\d{2}:\d{2}$/;
+  const isObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
+  const isDate = (s) => typeof s === 'string' && RE_DATE.test(s);
+  const validSpan = (o) => isObj(o) && isDate(o.date) && typeof o.start === 'string' && typeof o.end === 'string' && RE_TIME.test(o.start) && RE_TIME.test(o.end) && o.start < o.end;
+  const str = (s) => (typeof s === 'string' ? s : '');
+
+  function emptyData() { return { version: 1, clients: [], bands: [], blocks: [], proposals: [] }; }
+
+  function normalizeData(raw) {
+    const out = emptyData();
+    if (!isObj(raw)) return out;
+    const arr = (x) => (Array.isArray(x) ? x : []);
+    for (const c of arr(raw.clients)) {
+      if (!isObj(c) || typeof c.id !== 'string' || !c.id || typeof c.name !== 'string') continue;
+      out.clients.push({ id: c.id, name: c.name, reading: str(c.reading), createdAt: str(c.createdAt) });
+    }
+    const ids = new Set(out.clients.map((c) => c.id));
+    for (const b of arr(raw.bands)) {
+      if (!validSpan(b) || typeof b.id !== 'string' || !b.id) continue;
+      out.bands.push({ id: b.id, date: b.date, start: b.start, end: b.end });
+    }
+    for (const k of arr(raw.blocks)) {
+      if (!validSpan(k) || typeof k.id !== 'string' || !k.id) continue;
+      if (k.kind !== 'busy' && k.kind !== 'meeting') continue;
+      const blk = { id: k.id, date: k.date, start: k.start, end: k.end, kind: k.kind, title: str(k.title) };
+      if (k.kind === 'meeting') {
+        if (typeof k.clientId !== 'string' || !ids.has(k.clientId)) continue;
+        blk.clientId = k.clientId;
+        if (typeof k.proposalId === 'string') blk.proposalId = k.proposalId;
+      }
+      out.blocks.push(blk);
+    }
+    for (const p of arr(raw.proposals)) {
+      if (!isObj(p) || typeof p.id !== 'string' || !p.id) continue;
+      if (typeof p.clientId !== 'string' || !ids.has(p.clientId) || !isDate(p.deadline)) continue;
+      const prop = {
+        id: p.id,
+        clientId: p.clientId,
+        status: ['pending', 'confirmed', 'cancelled'].includes(p.status) ? p.status : 'cancelled',
+        slots: arr(p.slots).filter(validSpan).map((s) => ({ date: s.date, start: s.start, end: s.end })),
+        deadline: p.deadline,
+        message: str(p.message),
+        conditions: isObj(p.conditions) ? JSON.parse(JSON.stringify(p.conditions)) : {},
+        createdAt: str(p.createdAt),
+      };
+      if (Number.isInteger(p.confirmedSlot)) prop.confirmedSlot = p.confirmedSlot;
+      if (typeof p.confirmedAt === 'string') prop.confirmedAt = p.confirmedAt;
+      if (typeof p.cancelledAt === 'string') prop.cancelledAt = p.cancelledAt;
+      out.proposals.push(prop);
+    }
+    return out;
+  }
+
+  function newId(prefix, now, rand = Math.random) {
+    return prefix + '_' + now.getTime() + '_' + String(Math.floor(rand() * 10000)).padStart(4, '0');
+  }
+
+  function mergeBands(bands) {
+    const sorted = bands.map((b) => ({ ...b })).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : toMin(a.start) - toMin(b.start)));
+    const out = [];
+    for (const b of sorted) {
+      const last = out[out.length - 1];
+      if (last && last.date === b.date && toMin(b.start) <= toMin(last.end)) {
+        if (toMin(b.end) > toMin(last.end)) last.end = b.end;
+      } else {
+        out.push(b);
+      }
+    }
+    return out;
+  }
+
+  function copyWeekBands(data, fromWeekStart, toWeekStart, mode) {
+    const fromDates = new Set(weekDates(fromWeekStart));
+    const toDates = new Set(weekDates(toWeekStart));
+    const shift = Math.round((noon(toWeekStart) - noon(fromWeekStart)) / 86400000);
+    const copied = data.bands
+      .filter((b) => fromDates.has(b.date))
+      .map((b, n) => ({ ...b, id: b.id + '_c' + n, date: addDays(b.date, shift) }));
+    const kept = mode === 'replace' ? data.bands.filter((b) => !toDates.has(b.date)) : data.bands;
+    return { ...data, bands: mergeBands([...kept, ...copied]) };
+  }
+
+  function weeksWithBands(data, beforeWeekStart, weekStart, limit = 8) {
+    const counts = new Map();
+    for (const b of data.bands) {
+      const w = weekStartOf(b.date, weekStart);
+      if (w < beforeWeekStart) counts.set(w, (counts.get(w) || 0) + 1);
+    }
+    return [...counts.keys()].sort().reverse().slice(0, limit).map((w) => ({ weekStart: w, count: counts.get(w) }));
+  }
+
+  function holds(data, excludeProposalId) {
+    const out = [];
+    for (const p of data.proposals) {
+      if (p.status !== 'pending' || p.id === excludeProposalId) continue;
+      for (const s of p.slots) out.push({ date: s.date, start: s.start, end: s.end, proposalId: p.id, clientId: p.clientId, deadline: p.deadline });
+    }
+    return out;
+  }
+
+  function isFuture(block, now) {
+    const t = todayStr(now);
+    return block.date > t || (block.date === t && toMin(block.end) > now.getHours() * 60 + now.getMinutes());
+  }
+
+  function clientSections(data, now, settings) {
+    const byId = new Map(data.clients.map((c) => [c.id, c]));
+    const today = todayStr(now);
+    const meetings = data.blocks.filter((b) => b.kind === 'meeting' && byId.has(b.clientId));
+    const confirmed = meetings
+      .filter((b) => isFuture(b, now))
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : toMin(a.start) - toMin(b.start)))
+      .map((b) => ({ client: byId.get(b.clientId), block: b }));
+    const pending = data.proposals
+      .filter((p) => p.status === 'pending' && byId.has(p.clientId))
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
+      .map((p) => ({ client: byId.get(p.clientId), proposal: p, expired: isExpired(p, today) }));
+    const last = new Map();
+    for (const b of meetings) {
+      if (isFuture(b, now)) continue;
+      if (!last.has(b.clientId) || b.date > last.get(b.clientId)) last.set(b.clientId, b.date);
+    }
+    const past = [...last.entries()]
+      .sort((a, b) => (a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0))
+      .map(([id, lastDate]) => ({ client: byId.get(id), lastDate }));
+    const used = new Set([...confirmed, ...pending, ...past].map((r) => r.client.id));
+    const other = data.clients.filter((c) => !used.has(c.id));
+    return { confirmed, pending, past, other };
+  }
+
+  function clientHasActive(data, clientId, now) {
+    return data.proposals.some((p) => p.clientId === clientId && p.status === 'pending')
+      || data.blocks.some((b) => b.kind === 'meeting' && b.clientId === clientId && isFuture(b, now));
+  }
+
+  function deleteClient(data, clientId) {
+    return {
+      ...data,
+      clients: data.clients.filter((c) => c.id !== clientId),
+      blocks: data.blocks.filter((b) => b.clientId !== clientId),
+      proposals: data.proposals.filter((p) => p.clientId !== clientId),
+    };
+  }
+
+  // カレンダー投影
+  function itemsForDay(data, date, excludeProposalId) {
+    const bands = data.bands.filter((b) => b.date === date)
+      .map((b) => ({ kind: 'band', id: b.id, start: b.start, end: b.end }))
+      .sort((a, b) => toMin(a.start) - toMin(b.start));
+    const rest = [];
+    for (const k of data.blocks) {
+      if (k.date !== date) continue;
+      const it = { kind: k.kind, id: k.id, start: k.start, end: k.end, title: k.title };
+      if (k.clientId !== undefined) it.clientId = k.clientId;
+      if (k.proposalId !== undefined) it.proposalId = k.proposalId;
+      rest.push(it);
+    }
+    holds(data, excludeProposalId).forEach((h) => {
+      if (h.date !== date) return;
+      rest.push({ kind: 'hold', id: h.proposalId + ':' + rest.length, start: h.start, end: h.end, clientId: h.clientId, proposalId: h.proposalId, deadline: h.deadline });
+    });
+    rest.sort((a, b) => toMin(a.start) - toMin(b.start));
+    return [...bands, ...rest];
+  }
+
+  function itemsForWeek(data, weekStartDate) {
+    const out = {};
+    for (const d of weekDates(weekStartDate)) out[d] = itemsForDay(data, d);
+    return out;
+  }
+
+  function axisRange(itemsByDate, dayStart, dayEnd) {
+    let startMin = dayStart * 60;
+    let endMin = dayEnd * 60;
+    for (const items of Object.values(itemsByDate)) {
+      for (const it of items) {
+        startMin = Math.min(startMin, Math.floor(toMin(it.start) / 60) * 60);
+        endMin = Math.max(endMin, Math.ceil(toMin(it.end) / 60) * 60);
+      }
+    }
+    return { startMin, endMin };
+  }
+
+  function pct(min, startMin, endMin) {
+    return Math.max(0, Math.min(100, ((min - startMin) / (endMin - startMin)) * 100));
+  }
+
+  function monthCells(data, year, month, weekStart, today) {
+    const first = year + '-' + pad2(month) + '-01';
+    const start = weekStartOf(first, weekStart);
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+      const date = addDays(start, i);
+      cells.push({
+        date,
+        inMonth: date.slice(0, 7) === first.slice(0, 7),
+        isToday: date === today,
+        hasBand: data.bands.some((b) => b.date === date),
+        meetings: data.blocks.filter((b) => b.kind === 'meeting' && b.date === date).length,
+        holds: holds(data).filter((h) => h.date === date).length,
+      });
+    }
+    return cells;
+  }
+
+  return { toMin, toHHMM, todayStr, addDays, weekStartOf, weekDates, weekdayOf, formatDateShort, formatDateLong, formatRange, formatSlotLong, formatWeekTitle, formatMonthTitle, isExpired, daysUntil, timeOfDay, normalizeKana, matchesClient, displayName, emptyData, normalizeData, newId, mergeBands, copyWeekBands, weeksWithBands, holds, clientSections, clientHasActive, deleteClient, itemsForDay, itemsForWeek, axisRange, pct, monthCells, VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport };
 })();
 </script>
 <script id="app-ui">
