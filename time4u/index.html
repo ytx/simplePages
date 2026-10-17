@@ -2842,7 +2842,105 @@ const Logic = (() => {
     return cells;
   }
 
-  return { toMin, toHHMM, todayStr, addDays, weekStartOf, weekDates, weekdayOf, formatDateShort, formatDateLong, formatRange, formatSlotLong, formatWeekTitle, formatMonthTitle, isExpired, daysUntil, timeOfDay, normalizeKana, matchesClient, displayName, emptyData, normalizeData, newId, mergeBands, copyWeekBands, weeksWithBands, holds, clientSections, clientHasActive, deleteClient, itemsForDay, itemsForWeek, axisRange, pct, monthCells, VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport };
+  // 空き枠
+  // 面会・仮押さえの前後にだけ interval を置く。busy ブロックと帯の端には置かない。
+  function freeIntervals(data, date, interval, excludeProposalId) {
+    let free = mergeBands(data.bands.filter((b) => b.date === date)).map((b) => [toMin(b.start), toMin(b.end)]);
+    const spacing = [
+      ...data.blocks.filter((k) => k.date === date && k.kind === 'meeting'),
+      ...holds(data, excludeProposalId).filter((h) => h.date === date),
+    ].map((k) => [toMin(k.start), toMin(k.end)]);
+    const plain = data.blocks.filter((k) => k.date === date && k.kind !== 'meeting').map((k) => [toMin(k.start), toMin(k.end)]);
+    for (const [os, oe] of [...spacing, ...plain]) {
+      const next = [];
+      for (const [s, e] of free) {
+        if (oe <= s || os >= e) { next.push([s, e]); continue; }
+        if (os > s) next.push([s, os]);
+        if (oe < e) next.push([oe, e]);
+      }
+      free = next;
+    }
+    return free
+      .map(([s, e]) => [spacing.some(([, oe]) => oe === s) ? s + interval : s, spacing.some(([os]) => os === e) ? e - interval : e])
+      .filter(([s, e]) => e - s > 0)
+      .sort((a, b) => a[0] - b[0])
+      .map(([s, e]) => ({ start: toHHMM(s), end: toHHMM(e) }));
+  }
+
+  function freeSlots(data, conditions, settings, now, excludeProposalId) {
+    const today = todayStr(now);
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const out = [];
+    for (let date = conditions.from; date <= conditions.to; date = addDays(date, 1)) {
+      if (date < today || !conditions.weekdays.includes(weekdayOf(date))) continue;
+      for (const iv of freeIntervals(data, date, settings.interval, excludeProposalId)) {
+        const end = toMin(iv.end);
+        for (let t = toMin(iv.start); t + conditions.slotMin <= end; t += conditions.slotMin + settings.interval) {
+          if (date === today && t <= nowMin) continue;
+          if (!conditions.timeOfDay.includes(timeOfDay(toHHMM(t), settings))) continue;
+          out.push({ date, start: toHHMM(t), end: toHHMM(t + conditions.slotMin) });
+        }
+      }
+    }
+    return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : toMin(a.start) - toMin(b.start)));
+  }
+
+  function defaultConditions(settings, today) {
+    const from = addDays(today, settings.rangeStartDays);
+    return { from, to: addDays(from, settings.rangeDays - 1), weekdays: [1, 2, 3, 4, 5], timeOfDay: ['am', 'pm'], slotMin: settings.defaultSlot };
+  }
+
+  function slotKey(slot) { return slot.date + ' ' + slot.start; }
+
+  function dayIndex(date) { return Math.round(noon(date).getTime() / 86400000); }
+  function roughTimeOfDay(start) {
+    const m = toMin(start);
+    return m >= 17 * 60 ? 'eve' : m >= 12 * 60 ? 'pm' : 'am';
+  }
+
+  // 選択を保ったまま n 件まで追加。日付が離れているもの → 未使用の時間帯 → 早いもの。
+  function pickSpread(slots, selected, n) {
+    const out = [...selected];
+    const keys = new Set(out.map(slotKey));
+    while (out.length < n) {
+      let best = null;
+      let bestScore = null;
+      for (const c of slots) {
+        if (keys.has(slotKey(c))) continue;
+        const dist = out.length === 0 ? Infinity : Math.min(...out.map((o) => Math.abs(dayIndex(o.date) - dayIndex(c.date))));
+        const fresh = out.some((o) => roughTimeOfDay(o.start) === roughTimeOfDay(c.start)) ? 0 : 1;
+        const better = !best || dist > bestScore.dist
+          || (dist === bestScore.dist && (fresh > bestScore.fresh
+            || (fresh === bestScore.fresh && slotKey(c) < slotKey(best))));
+        if (better) { best = c; bestScore = { dist, fresh }; }
+      }
+      if (!best) break;
+      out.push(best);
+      keys.add(slotKey(best));
+    }
+    return out;
+  }
+
+  // 文面
+  function buildMessage(templates, slots, deadline, lang) {
+    const bullet = lang === 'en' ? '- ' : '・';
+    const dl = formatDateLong(deadline, lang);
+    return [
+      templates.header,
+      slots.map((s) => bullet + formatSlotLong(s, lang)).join('\n'),
+      templates.footer.replaceAll('{期限}', dl),
+    ].filter((p) => p.length > 0).join('\n\n');
+  }
+
+  function buildReminder(templates, slot, lang) {
+    return templates.reminder.replaceAll('{日時}', formatSlotLong(slot, lang));
+  }
+
+  function templatesFrom(settings) {
+    return { header: settings.tplHeader, footer: settings.tplFooter, reminder: settings.tplReminder };
+  }
+
+  return { toMin, toHHMM, todayStr, addDays, weekStartOf, weekDates, weekdayOf, formatDateShort, formatDateLong, formatRange, formatSlotLong, formatWeekTitle, formatMonthTitle, isExpired, daysUntil, timeOfDay, normalizeKana, matchesClient, displayName, emptyData, normalizeData, newId, mergeBands, copyWeekBands, weeksWithBands, holds, clientSections, clientHasActive, deleteClient, itemsForDay, itemsForWeek, axisRange, pct, monthCells, freeIntervals, freeSlots, defaultConditions, slotKey, pickSpread, buildMessage, buildReminder, templatesFrom, VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport };
 })();
 </script>
 <script id="app-ui">
