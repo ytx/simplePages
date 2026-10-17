@@ -57,7 +57,7 @@
 ```
 time4u/
   index.html                       ページ本体
-  fonts/zen-kurenaido/zk-000.woff2 … zk-123.woff2   書体(124 ファイル、合計約 2.1 MB)
+  fonts/zen-kurenaido/zk-000.woff2 … zk-121.woff2   書体(122 ファイル、合計約 2.1 MB)
   fonts/zen-kurenaido/OFL.txt      SIL Open Font License 1.1
   test/                            Logic のテスト
   README.md
@@ -65,7 +65,7 @@ time4u/
 
 ### 書体
 
-- 全体に **Zen Kurenaido**(ペン字。SIL OFL 1.1)。`../green`(`packages/client/public/fonts/zen-kurenaido/`、`src/styles/fonts.css`)が自前配信している Google Fonts のサブセット分割 124 本をそのままコピーし、`fonts.css` の 124 個の `@font-face` を index.html の `<style>` に埋め込む。`url()` は `fonts/zen-kurenaido/zk-NNN.woff2` の相対パス、`font-display: swap`。unicode-range による分割なので、実際に読み込まれるのは画面に出た文字の分だけ。
+- 全体に **Zen Kurenaido**(ペン字。SIL OFL 1.1)。`../green`(`packages/client/public/fonts/zen-kurenaido/`、`src/styles/fonts.css`)が自前配信している Google Fonts のサブセット分割 122 本をそのままコピーし、`fonts.css` の 124 個の `@font-face` を index.html の `<style>` に埋め込む。`url()` は `fonts/zen-kurenaido/zk-NNN.woff2` の相対パス、`font-display: swap`。unicode-range による分割なので、実際に読み込まれるのは画面に出た文字の分だけ。
 - フォールバックは共通のシステムフォントスタック。`--font: 'Zen Kurenaido', system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif`。
 - weight は 400 しかないので **太字は使わない**。強調は文字サイズと色で付ける。数字は `font-variant-numeric: tabular-nums`。
 - これは共通規約「Web フォントは使わない」の例外。音声・画像と同じく「同じページディレクトリ内のメディアを相対パスで読み込む」例外に書体ファイルを加える形で `CLAUDE.md` と共通規約の該当行を更新する(外部ドメイン・CDN は引き続き禁止)。About のクレジットに Zen Kurenaido(SIL OFL)を載せる。
@@ -189,7 +189,7 @@ time4u/
 
 ### リマインド文面画面(`#view-reminder`)
 
-確定済みの行の [リマインド] から開く。設定 `templates.reminder` の `{日時}` を `Logic.formatSlotLong(slot, lang)`(例 `10月22日(木) 13:00〜14:30`)で置換した文面を textarea に出し、[コピー] ボタンを置く。保存はしない。
+確定済みの行の [リマインド] から開く。設定 `tplReminder` の `{日時}` を `Logic.formatSlotLong(slot, lang)`(例 `10月22日(木) 13:00〜14:30`)で置換した文面を textarea に出し、[コピー] ボタンを置く。保存はしない。
 
 ## 週タブ(`#tab-week`)
 
@@ -250,7 +250,7 @@ localStorage キー `simplePages.time4u`、`version: 1`。全キーが表示だ�
 | 表示 | `weekStart` | 0 \| 1 | 1(月曜) | 週・月の始まりの曜日 |
 | 表示 | `dayStart` | 0〜23 | 8 | 週・日ビューの軸の開始時 |
 | 表示 | `dayEnd` | 1〜24 | 21 | 同終了時。`dayStart` 以下なら既定に戻す |
-| 時間 | `slots` | 整数配列(各 10〜480) | `[60, 90, 120]` | 選べるスロット長(分)。1〜6 個。昇順に正規化 |
+| 時間 | `slots` | 文字列(カンマ区切りの整数、各 10〜480) | `'60,90,120'` | 選べるスロット長(分)。1〜6 個。`parseSlotList` で配列にして使う。保存時に昇順・重複除去に正規化 |
 | 時間 | `defaultSlot` | 整数 | 90 | `slots` に含まれない値なら先頭に補正 |
 | 時間 | `interval` | 0〜120 | 10 | スロット間のインターバル(分) |
 | 時間 | `deadlineDays` | 0〜30 | 3 | 回答期限の既定(日後) |
@@ -259,9 +259,9 @@ localStorage キー `simplePages.time4u`、`version: 1`。全キーが表示だ�
 | 時間 | `rangeDays` | 1〜90 | 21 | 条件の既定期間の長さ(日) |
 | 時間 | `pmStart` | 1〜23 | 12 | 「午後」の開始時 |
 | 時間 | `eveStart` | 2〜24 | 17 | 「夜」の開始時。`pmStart` 以下なら既定に戻す |
-| 文面 | `templates.header` | 文字列 | ビジネス文例 | 提示ヘッダ |
-| 文面 | `templates.footer` | 文字列 | ビジネス文例 | 提示フッタ。`{期限}` を差し込む |
-| 文面 | `templates.reminder` | 文字列 | ビジネス文例 | リマインド。`{日時}` を差し込む |
+| 文面 | `tplHeader` | 文字列 | ビジネス文例 | 提示ヘッダ |
+| 文面 | `tplFooter` | 文字列 | ビジネス文例 | 提示フッタ。`{期限}` を差し込む |
+| 文面 | `tplReminder` | 文字列 | ビジネス文例 | リマインド。`{日時}` を差し込む |
 
 - 文面セクションには 3 つの textarea と、「文例を読み込む: [ビジネス] [フレンドリー]」ボタン。押すとダイアログで確認して 3 つを現在言語の文例で上書きする。初回起動時の既定はビジネス文例(現在言語)。差し込み記法は言語に関係なく `{期限}` と `{日時}`(英語の文例にも同じ記法を使う。表示ラベルで説明する)。
 - 文例(ja、ビジネス):
@@ -273,7 +273,7 @@ localStorage キー `simplePages.time4u`、`version: 1`。全キーが表示だ�
   - footer: `{期限} までに返事をもらえると助かります。\nどれも難しければ、また相談しましょう。`
   - reminder: `こんにちは!\n{日時} の面会、楽しみにしています。\nよろしくお願いします。`
 - 英語の文例は上を自然な英語にしたもの(ビジネス・フレンドリー各 3 本)。実装者が書く。
-- `slots` は設定 UI では「60, 90, 120」のようなカンマ区切りテキストで編集し、`Logic.parseSlotList` で正規化する。
+- `slots` は設定 UI でもカンマ区切りテキストのまま編集し、`Logic.parseSlotList` で正規化する。
 - データセクション(共通の「データ」タブ相当)のエクスポートは `{ version, settings, data }` を 1 つの JSON にする。インポートは `settings` と `data` のどちらか/両方を受け付け、含まれていた方を**丸ごと置き換える**(足し合わせない。端末間の移行が用途のため)。置き換え前にダイアログで確認する。全消去は設定とデータの両方を消す。
 
 ## データ(`simplePages.time4u.data`)
