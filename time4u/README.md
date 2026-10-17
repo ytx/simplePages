@@ -63,7 +63,7 @@ localStorage に次の 2 つのキーで保存します。
 - `simplePages.time4u` — `{ version, settings }`。上の設定項目。
 - `simplePages.time4u.data` — `{ version, clients, bands, blocks, proposals }`。相手、面会可能帯、予定、提示(仮押さえ・確定)。
 
-書き出しは設定とデータを 1 つにまとめた JSON で、ファイル名は `time4u-YYYYMMDD.json`。
+書き出しは設定とデータを 1 つにまとめた JSON で、ファイル名は `time4u-YYYYMMDD.json`。データタブのテキスト欄にも同じ JSON が表示され、「テキストをコピー」でクリップボードへ、「テキストから読み込む」で貼り付けた JSON を取り込める。
 
 ```json
 {

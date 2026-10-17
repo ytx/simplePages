@@ -123,6 +123,10 @@ test('confirmed section has a copy-all button', () => {
   assert.equal(typeof Logic.I18N.en.copied_n, 'string');
 });
 
+test('data tab has a copy-text button before import-from-text', () => {
+  assert.match(src, /id="data-copy-text"[^>]*>[\s\S]{0,200}id="data-import-text"/);
+});
+
 test('PWA manifest and icons', () => {
   const dir = new URL('../', import.meta.url);
   const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('manifest.webmanifest', dir)), 'utf8'));

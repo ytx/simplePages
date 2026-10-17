@@ -2374,6 +2374,7 @@ h2.cal-title { cursor: default; }
       <p class="hint" data-i18n="data_hint"></p>
       <textarea id="data-text" spellcheck="false"></textarea>
       <div class="row">
+        <button type="button" class="btn" id="data-copy-text" data-i18n="copy_text"></button>
         <button type="button" class="btn" id="data-import-text" data-i18n="import_text"></button>
       </div>
       <div id="data-message" data-state="none"></div>
@@ -4601,6 +4602,11 @@ const App = (() => {
       ev.target.value = '';
     });
     $('#data-import-text').addEventListener('click', () => importText($('#data-text').value));
+    $('#data-copy-text').addEventListener('click', async () => {
+      const ta = $('#data-text');
+      const ok = await copyText(ta.value, ta);
+      setDataMessage(ok ? 'ok' : 'error', tr(ok ? 'copied' : 'copy_failed_short'));
+    });
     $('#data-clear').addEventListener('click', async () => {
       if (!(await dialog({ message: tr('confirm_clear') })).ok) return;
       storage.clear();
