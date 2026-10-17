@@ -2528,11 +2528,12 @@ const Logic = (() => {
       export_file: 'ファイルに書き出す',
       import_file: 'ファイルから読み込む',
       import_text: 'テキストから読み込む',
-      data_hint: '現在の設定(JSON)。編集して「テキストから読み込む」で反映できます。',
+      data_hint: '現在の設定とデータ(JSON)。編集して「テキストから読み込む」で反映できます。読み込むと該当部分は置き換えられます。',
+      confirm_import_replace: '現在の内容を読み込む内容で置き換えます(統合はしません)。よろしいですか?',
       import_ok: '読み込みました',
       import_failed_json: '読み込み失敗: JSON として解釈できません',
-      import_failed_format: '読み込み失敗: 設定ファイルの形式ではありません',
-      about_description: '面会の候補日時を、相手に送る文面にまとめるツールです。週ごとの面会可能帯から空き枠を出し、仮押さえと確定を記録します。',
+      import_failed_format: '読み込み失敗: time4u のファイルの形式ではありません',
+      about_description: '面会の日程調整ツール。週ごとに面会可能な時間帯を置き、空き枠から候補を選んでメールや LINE に貼る文面を作ります。提示した枠は回答まで仮押さえし、確定で残りを解放します。データは端末内にだけ保存します。',
       about_links: 'リンク',
       about_repo: 'GitHub リポジトリ',
       about_page: 'このページのソース',
@@ -2540,7 +2541,7 @@ const Logic = (() => {
       about_credits: 'クレジット',
       credit_icons: 'アイコン: Material Icons (Google) — Apache License 2.0',
       credit_font: '書体: Zen Kurenaido — SIL Open Font License 1.1',
-      confirm_clear: '保存した設定をすべて消去します。よろしいですか?',
+      confirm_clear: '保存した設定とデータをすべて消去します。よろしいですか?',
       back: '戻る',
       close: '閉じる',
       ok: 'OK',
@@ -2682,11 +2683,12 @@ const Logic = (() => {
       export_file: 'Export to file',
       import_file: 'Import from file',
       import_text: 'Import from text',
-      data_hint: 'Current settings as JSON. Edit and press "Import from text" to apply.',
+      data_hint: 'Current settings and data as JSON. Edit and press "Import from text" to apply. Imported parts replace the current ones.',
+      confirm_import_replace: 'Replace the current content with the imported content (no merging)?',
       import_ok: 'Imported',
       import_failed_json: 'Import failed: not valid JSON',
-      import_failed_format: 'Import failed: not a settings file',
-      about_description: 'Turns your free time into candidate meeting slots you can send to someone. Weekly availability bands produce open slots, and holds and confirmations are recorded.',
+      import_failed_format: 'Import failed: not a time4u file',
+      about_description: 'A scheduling tool for meetings. Set your available hours each week, pick candidate slots, and build a message to paste into email or chat. Offered slots are held until the reply, and confirming releases the rest. Data stays on this device only.',
       about_links: 'Links',
       about_repo: 'GitHub repository',
       about_page: 'Source of this page',
@@ -2694,7 +2696,7 @@ const Logic = (() => {
       about_credits: 'Credits',
       credit_icons: 'Icons: Material Icons (Google) — Apache License 2.0',
       credit_font: 'Font: Zen Kurenaido — SIL Open Font License 1.1',
-      confirm_clear: 'Delete all saved settings?',
+      confirm_clear: 'Delete all saved settings and data?',
       back: 'Back',
       close: 'Close',
       ok: 'OK',
@@ -2869,6 +2871,31 @@ const Logic = (() => {
     const settings = migrateStored(raw, version);
     if (Object.keys(settings).length === 0) return { ok: false, reason: 'unrecognized_format' };
     return { ok: true, settings };
+  }
+
+  // 設定とデータの両方、またはどちらかを受け付けるインポート解析。DOM に触らない。
+  function parseImportAll(text, settingsVersion, dataVersion) {
+    let raw;
+    try {
+      raw = JSON.parse(String(text));
+    } catch {
+      return { ok: false, reason: 'invalid_json' };
+    }
+    const bad = { ok: false, reason: 'unrecognized_format' };
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return bad;
+    if (!Number.isInteger(raw.version) || raw.version > settingsVersion) return bad;
+    const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+    const hasSettings = raw.settings !== undefined;
+    const hasData = raw.data !== undefined;
+    if (!hasSettings && !hasData) return bad;
+    if ((hasSettings && !isObj(raw.settings)) || (hasData && !isObj(raw.data))) return bad;
+    const out = { ok: true };
+    if (hasSettings) out.settings = migrateStored(raw, settingsVersion);
+    if (hasData) {
+      if (Number.isInteger(raw.data.version) && raw.data.version > dataVersion) return bad;
+      out.data = normalizeData(raw.data);
+    }
+    return out;
   }
 
   // 日付・書式
@@ -3256,7 +3283,7 @@ const Logic = (() => {
     return { header: settings.tplHeader, footer: settings.tplFooter, reminder: settings.tplReminder };
   }
 
-  return { toMin, toHHMM, todayStr, addDays, weekStartOf, weekDates, weekdayOf, weekdayLabel, formatDateShort, formatDateLong, formatRange, formatSlotLong, formatWeekTitle, formatMonthTitle, isExpired, daysUntil, timeOfDay, normalizeKana, matchesClient, displayName, emptyData, normalizeData, newId, mergeBands, copyWeekBands, weeksWithBands, holds, clientSections, clientHasActive, deleteClient, itemsForDay, itemsForWeek, axisRange, pct, monthCells, freeIntervals, freeSlots, defaultConditions, slotKey, pickSpread, buildMessage, buildReminder, templatesFrom, VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport };
+  return { toMin, toHHMM, todayStr, addDays, weekStartOf, weekDates, weekdayOf, weekdayLabel, formatDateShort, formatDateLong, formatRange, formatSlotLong, formatWeekTitle, formatMonthTitle, isExpired, daysUntil, timeOfDay, normalizeKana, matchesClient, displayName, emptyData, normalizeData, newId, mergeBands, copyWeekBands, weeksWithBands, holds, clientSections, clientHasActive, deleteClient, itemsForDay, itemsForWeek, axisRange, pct, monthCells, freeIntervals, freeSlots, defaultConditions, slotKey, pickSpread, buildMessage, buildReminder, templatesFrom, VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport, parseImportAll };
 })();
 </script>
 <script id="app-ui">
@@ -3355,6 +3382,7 @@ const App = (() => {
     const list = Logic.parseSlotList(out.slots);
     out.slots = list.join(',');
     if (!list.includes(out.defaultSlot)) out.defaultSlot = list[0];
+    out.honorific = String(out.honorific).slice(0, 10);
     return out;
   }
 
@@ -3411,6 +3439,7 @@ const App = (() => {
     applyZoom(settings.zoom);
     for (const el of $$('[data-setting]')) el.value = settings[el.dataset.setting];
     renderSettingsExtra(settings);
+    syncDataText();
   }
 
   function updateFullscreenButton() {
@@ -3607,6 +3636,7 @@ const App = (() => {
     data = Logic.normalizeData(next);
     saveData();
     renderCurrentTab();
+    syncDataText();
   }
 
   function renderCurrentTab() {
@@ -4278,8 +4308,17 @@ const App = (() => {
 
   // ---- 設定タブ ----
   function refreshDataText() {
-    $('#data-text').value = JSON.stringify({ version: Logic.VERSION, settings }, null, 2);
+    $('#data-text').value = exportAll();
     setDataMessage('none', '');
+  }
+
+  function exportAll() {
+    return JSON.stringify({ version: Logic.VERSION, settings, data: { version: Logic.DATA_VERSION, ...data } }, null, 2);
+  }
+
+  // 設定タブ表示中は、設定・データの変更に追従して #data-text を更新する(メッセージは残す)。
+  function syncDataText() {
+    if (activeTab === 'settings' && data) $('#data-text').value = exportAll();
   }
 
   function setDataMessage(state, text) {
@@ -4288,15 +4327,25 @@ const App = (() => {
     el.textContent = text;
   }
 
-  function importText(text) {
-    const result = Logic.parseImport(text, Logic.VERSION);
+  async function importText(text) {
+    const result = Logic.parseImportAll(text, Logic.VERSION, Logic.DATA_VERSION);
     if (!result.ok) {
-      setDataMessage('error', Logic.t(settings.lang, result.reason === 'invalid_json' ? 'import_failed_json' : 'import_failed_format'));
+      setDataMessage('error', tr(result.reason === 'invalid_json' ? 'import_failed_json' : 'import_failed_format'));
       return;
     }
-    updateSettings(result.settings);
+    if (!(await dialog({ message: tr('confirm_import_replace'), danger: true })).ok) return;
+    if (result.settings) replaceSettings(result.settings);
+    if (result.data) setData(result.data);
     refreshDataText();
-    setDataMessage('ok', Logic.t(settings.lang, 'import_ok'));
+    setDataMessage('ok', tr('import_ok'));
+  }
+
+  // 置き換え: 現在の設定に重ねず、既定値に取り込み分だけを適用する。
+  function replaceSettings(next) {
+    settings = fixup(Logic.resolveSettings(SCHEMA, next, {}));
+    persist();
+    applySettings();
+    scheduleRefresh(0);
   }
 
   function renderAbout() {
@@ -4323,12 +4372,12 @@ const App = (() => {
     $('#tpl-load-business').addEventListener('click', () => loadTemplate('business'));
     $('#tpl-load-friendly').addEventListener('click', () => loadTemplate('friendly'));
     $('#data-export').addEventListener('click', () => {
-      const blob = new Blob([JSON.stringify({ version: Logic.VERSION, settings }, null, 2)], { type: 'application/json' });
+      const blob = new Blob([exportAll()], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       const d = new Date();
       const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-      a.download = `simplePages-${PAGE}-${ymd}.json`;
+      a.download = `time4u-${ymd}.json`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     });
@@ -4342,6 +4391,7 @@ const App = (() => {
     $('#data-clear').addEventListener('click', async () => {
       if (!(await dialog({ message: tr('confirm_clear') })).ok) return;
       storage.clear();
+      try { localStorage.removeItem(DATA_KEY); } catch { /* ignore */ }
       location.href = location.pathname;
     });
     renderAbout();
@@ -4808,7 +4858,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { SCHEMA, getSettings, updateSettings, setStatus, scheduleRefresh, refresh, applyZoom, setToolbarAttention, showTab, showView, dialog, openSheet, getData, setData, openSlotsFor, openRespond, openReminder, copyText, showWeek, showDay };
+  return { SCHEMA, getSettings, updateSettings, setStatus, scheduleRefresh, refresh, applyZoom, setToolbarAttention, showTab, showView, dialog, openSheet, getData, setData, exportAll, openSlotsFor, openRespond, openReminder, copyText, showWeek, showDay };
 })();
 </script>
 </body>

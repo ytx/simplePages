@@ -44,3 +44,17 @@ test('settings resolve with spec defaults', () => {
     assert.match(schema, new RegExp(`${k}:[^\\n]*default: ${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`), k);
   }
 });
+
+test('parseImportAll accepts settings, data or both; replaces, never merges', () => {
+  const both = JSON.stringify({ version: 1, settings: { zoom: 120 }, data: { version: 1, clients: [{ id: 'c_1', name: 'A' }], bands: [], blocks: [], proposals: [] } });
+  const r = Logic.parseImportAll(both, 1, 1);
+  assert.equal(r.ok, true);
+  assert.equal(r.settings.zoom, 120);
+  assert.equal(r.data.clients.length, 1);
+  const onlyData = Logic.parseImportAll(JSON.stringify({ version: 1, data: { version: 1, clients: [], bands: [], blocks: [], proposals: [] } }), 1, 1);
+  assert.equal(onlyData.ok, true);
+  assert.equal(onlyData.settings, undefined);
+  assert.equal(Logic.parseImportAll('nope', 1, 1).ok, false);
+  assert.equal(Logic.parseImportAll(JSON.stringify({ version: 9, settings: {} }), 1, 1).ok, false);
+  assert.equal(Logic.parseImportAll(JSON.stringify({ version: 1 }), 1, 1).ok, false);
+});
