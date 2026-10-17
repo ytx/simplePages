@@ -58,3 +58,11 @@ test('clients tab markup', () => {
   assert.match(src, /compositionupdate/);
   assert.match(src, /simplePages\.time4u\.data/);
 });
+
+test('proposal flow markup', () => {
+  for (const id of ['cond-card', 'cond-summary', 'pick-auto', 'pick-clear', 'slot-list', 'to-message', 'deadline', 'message-text', 'copy-hold', 'respond-slots', 'respond-confirm', 'respond-extend', 'respond-cancel', 'respond-repropose', 'reminder-text', 'reminder-copy']) {
+    assert.match(src, new RegExp(`id="${id}"`), id);
+  }
+  assert.match(src, /navigator\.clipboard/);
+  assert.match(src, /execCommand\('copy'\)/);
+});

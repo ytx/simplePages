@@ -2065,6 +2065,27 @@ button.btn.danger { color: var(--error); }
 .row-action[data-action^="cancel"] { color: var(--error); }
 .sheet-note { color: var(--fg-muted); font-size: var(--fs-small); margin: calc(var(--gap) / 2) 0; }
 #sheet-delete:disabled { opacity: 0.4; cursor: default; }
+.cond-card { display: grid; gap: 2px; width: 100%; min-height: 44px; text-align: left; font: inherit; color: var(--fg); background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: calc(var(--gap) / 2) var(--gap); cursor: pointer; margin-bottom: var(--gap); }
+.cond-label { color: var(--fg-muted); font-size: var(--fs-small); }
+.flow-actions { margin-bottom: var(--gap); }
+.flow-actions .btn[hidden] { display: none; }
+#slot-list h3 { margin: var(--gap) 0 calc(var(--gap) / 2); font-size: var(--fs-small); font-weight: 400; color: var(--fg-muted); }
+.slot-row, .radio-row { display: block; width: 100%; min-height: 44px; margin-bottom: calc(var(--gap) / 3); text-align: left; font: inherit; color: var(--fg); background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px; padding: 0 var(--gap); cursor: pointer; }
+.slot-row[aria-pressed="true"], .radio-row[aria-checked="true"] { background: var(--c-meeting); color: var(--c-meeting-text); border-color: var(--accent); }
+#to-message, #respond-confirm, #copy-hold, #reminder-copy { width: 100%; margin: var(--gap) 0; display: flex; align-items: center; justify-content: center; gap: 0.4em; }
+#to-message:disabled, #respond-confirm:disabled { opacity: 0.4; cursor: default; }
+button.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+#copy-hold svg, #reminder-copy svg { width: 1.2em; height: 1.2em; fill: currentColor; }
+#message-text, #reminder-text, .sheet-textarea { box-sizing: border-box; min-height: 8em; }
+.respond-head { margin-bottom: var(--gap); }
+.respond-head .expired { color: var(--error); }
+.empty-slots { color: var(--fg-muted); }
+.toggle-row { display: flex; flex-wrap: wrap; gap: calc(var(--gap) / 3); margin-bottom: var(--gap); }
+.toggle { min-width: 44px; min-height: 44px; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 0.6em; cursor: pointer; }
+.toggle[aria-pressed="true"] { background: var(--c-meeting); color: var(--c-meeting-text); border-color: var(--accent); }
+.sheet-label { color: var(--fg-muted); font-size: var(--fs-small); margin: calc(var(--gap) / 2) 0 calc(var(--gap) / 4); }
+.sheet-error { color: var(--error); min-height: 1.4em; }
+.sheet-body-row input[type=date] { min-height: 44px; box-sizing: border-box; }
 </style>
 </head>
 <body>
@@ -2124,15 +2145,40 @@ button.btn.danger { color: var(--error); }
     </div>
     <div class="view" id="view-slots">
       <header class="view-head"><button class="icon-btn back" type="button" data-i18n-label="back"><svg aria-hidden="true"><use href="#icon-back"></use></svg></button><h2 class="view-title"></h2></header>
+      <button id="cond-card" class="cond-card" type="button"><span class="cond-label" data-i18n="conditions"></span><span id="cond-summary"></span></button>
+      <div class="row flow-actions">
+        <button id="pick-auto" class="btn" type="button" data-i18n="pick_auto"></button>
+        <button id="pick-clear" class="btn" type="button" data-i18n="pick_clear"></button>
+      </div>
+      <div id="slot-list"></div>
+      <button id="to-message" class="btn primary" type="button" disabled></button>
     </div>
     <div class="view" id="view-message">
       <header class="view-head"><button class="icon-btn back" type="button" data-i18n-label="back"><svg aria-hidden="true"><use href="#icon-back"></use></svg></button><h2 class="view-title"></h2></header>
+      <div class="field stack">
+        <label for="deadline" data-i18n="reply_deadline"></label>
+        <input id="deadline" type="date">
+        <span id="deadline-hint" class="hint"></span>
+      </div>
+      <textarea id="message-text" rows="12"></textarea>
+      <button id="copy-hold" class="btn primary" type="button"><svg aria-hidden="true"><use href="#icon-copy"></use></svg><span id="copy-hold-label" data-i18n="copy_hold"></span></button>
     </div>
     <div class="view" id="view-respond">
       <header class="view-head"><button class="icon-btn back" type="button" data-i18n-label="back"><svg aria-hidden="true"><use href="#icon-back"></use></svg></button><h2 class="view-title"></h2></header>
+      <div id="respond-head" class="respond-head"></div>
+      <div id="respond-slots" role="radiogroup"></div>
+      <button id="respond-confirm" class="btn primary" type="button" disabled data-i18n="respond_confirm"></button>
+      <div class="row flow-actions">
+        <button id="respond-show-message" class="btn" type="button" data-i18n="show_message"></button>
+        <button id="respond-extend" class="btn" type="button" data-i18n="extend_deadline"></button>
+        <button id="respond-cancel" class="btn danger" type="button" data-i18n="cancel_release"></button>
+        <button id="respond-repropose" class="btn" type="button" data-i18n="repropose" hidden></button>
+      </div>
     </div>
     <div class="view" id="view-reminder">
       <header class="view-head"><button class="icon-btn back" type="button" data-i18n-label="back"><svg aria-hidden="true"><use href="#icon-back"></use></svg></button><h2 class="view-title"></h2></header>
+      <textarea id="reminder-text" rows="8" readonly></textarea>
+      <button id="reminder-copy" class="btn primary" type="button"><svg aria-hidden="true"><use href="#icon-copy"></use></svg><span id="reminder-copy-label" data-i18n="copy"></span></button>
     </div>
   </section>
   <section class="tab-pane" id="tab-week">
@@ -2469,6 +2515,40 @@ const Logic = (() => {
       reading: '読み',
       delete_blocked: '調整中の提示 / 今後の面会を先に取り消してください',
       confirm_delete_client: '{name}を削除します。過去の面会と提示も消えます。よろしいですか?',
+      conditions: '提示条件',
+      period: '期間',
+      weekdays: '曜日',
+      time_of_day: '時間帯',
+      slot_length: '1 枠の長さ',
+      am: '午前',
+      pm: '午後',
+      eve: '夕方以降',
+      minutes: '分',
+      pick_auto: 'おまかせ',
+      pick_clear: '選択解除',
+      make_message: '文面を作る({n} 件)',
+      no_free_slots: '条件に合う空き枠がありません。週タブで面会可能帯を追加してください。',
+      go_week: '週タブへ',
+      reply_deadline: '返信期限',
+      deadline_default_hint: '既定は {n} 日後です',
+      copy_hold: 'コピーして仮押さえ',
+      copied: 'コピーしました',
+      copy_failed: 'コピーできませんでした。文面を選択して手動でコピーしてください(仮押さえは保存済み)',
+      confirm_regenerate: '編集した文面を作り直します。よろしいですか?',
+      proposed_slots: '提示した日時',
+      deadline_remaining: '期限 {date}(あと {n} 日)',
+      expired_days: '期限切れ({n} 日経過)',
+      confirm_fix: '{slot} で確定します。よろしいですか?',
+      respond_confirm: 'この日時で確定',
+      show_message: '送った文面',
+      extend_deadline: '期限を延ばす',
+      cancel_release: '取消(仮押さえ解放)',
+      repropose: '再提示',
+      reminder: 'リマインド文面',
+      copy: 'コピー',
+      err_range: '開始日は終了日以前にしてください',
+      err_weekday: '曜日を 1 つ以上選んでください',
+      err_tod: '時間帯を 1 つ以上選んでください',
     },
     en: {
       page_title: 'time4u',
@@ -2566,6 +2646,40 @@ const Logic = (() => {
       reading: 'Reading',
       delete_blocked: 'Cancel pending proposals and upcoming meetings first',
       confirm_delete_client: 'Delete {name}? Past meetings and proposals will be removed too.',
+      conditions: 'Conditions',
+      period: 'Period',
+      weekdays: 'Weekdays',
+      time_of_day: 'Time of day',
+      slot_length: 'Slot length',
+      am: 'Morning',
+      pm: 'Afternoon',
+      eve: 'Evening',
+      minutes: ' min',
+      pick_auto: 'Auto-pick',
+      pick_clear: 'Clear',
+      make_message: 'Write message ({n})',
+      no_free_slots: 'No free slots match. Add availability in the Week tab.',
+      go_week: 'Go to Week',
+      reply_deadline: 'Reply by',
+      deadline_default_hint: 'Default is {n} days from now',
+      copy_hold: 'Copy and hold',
+      copied: 'Copied',
+      copy_failed: 'Could not copy. Select the text and copy it manually (the hold is saved).',
+      confirm_regenerate: 'Regenerate the message and discard your edits?',
+      proposed_slots: 'Proposed times',
+      deadline_remaining: 'Reply by {date} ({n} days left)',
+      expired_days: 'Expired {n} days ago',
+      confirm_fix: 'Confirm {slot}?',
+      respond_confirm: 'Confirm this time',
+      show_message: 'Sent message',
+      extend_deadline: 'Extend deadline',
+      cancel_release: 'Cancel (release holds)',
+      repropose: 'Re-propose',
+      reminder: 'Reminder',
+      copy: 'Copy',
+      err_range: 'The start date must not be after the end date',
+      err_weekday: 'Select at least one weekday',
+      err_tod: 'Select at least one time of day',
     },
   };
 
@@ -3168,7 +3282,7 @@ const App = (() => {
     // data-i18n-label ループの後に実行する: 全画面ボタンのラベルを状態に合った値で上書きするため。
     updateFullscreenButton();
     if (lastStatus) setStatus(lastStatus.state, lastStatus.message);
-    if (data) renderClients();
+    if (data) { renderClients(); refreshFlow(); }
   }
 
   function currentTheme() {
@@ -3393,26 +3507,429 @@ const App = (() => {
     $(`#${viewId} .view-title`).textContent = text;
   }
 
-  // Task 6 で置き換える仮実装。
-  function openSlotsFor(clientId, _options) {
+  // ---- 提示フロー(空き枠 → 文面 → 仮押さえ / 回答反映 / リマインド) ----
+  const flow = { clientId: null, conditions: null, selected: [], reproposeId: null, deadline: '', edited: false, slots: [] };
+  let respondId = null;
+  let reminderBlockId = null;
+  let sheetValidate = null;
+
+  const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
+  const TOD_ORDER = ['am', 'pm', 'eve'];
+
+  function clientName(clientId) {
     const c = data.clients.find((x) => x.id === clientId);
-    setViewTitle('view-slots', c ? Logic.displayName(c, settings) : '');
+    return c ? Logic.displayName(c, settings) : '';
+  }
+
+  function weekdayLabel(w, style) {
+    return new Intl.DateTimeFormat(settings.lang === 'ja' ? 'ja-JP' : 'en-US', { weekday: style }).format(new Date(2023, 11, 31 + w));
+  }
+
+  function sortSlots(slots) {
+    return [...slots].sort((a, b) => (Logic.slotKey(a) < Logic.slotKey(b) ? -1 : 1));
+  }
+
+  async function copyText(text, area) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch { /* フォールバックへ */ }
+    let tmp = null;
+    try {
+      let ta = area;
+      if (!ta) {
+        tmp = document.createElement('textarea');
+        tmp.value = text;
+        tmp.style.position = 'fixed';
+        tmp.style.opacity = '0';
+        document.body.append(tmp);
+        ta = tmp;
+      }
+      ta.focus();
+      ta.select();
+      return !!document.execCommand('copy');
+    } catch {
+      return false;
+    } finally {
+      if (tmp) tmp.remove();
+    }
+  }
+
+  function setCopyLabel(btnId, labelId, key, done) {
+    $(`#${labelId}`).textContent = tr(key);
+    $(`#${btnId} use`).setAttribute('href', done ? '#icon-check' : '#icon-copy');
+  }
+
+  function flashCopied(btnId, labelId, key, then) {
+    setCopyLabel(btnId, labelId, 'copied', true);
+    setTimeout(() => {
+      setCopyLabel(btnId, labelId, key, false);
+      if (then) then();
+    }, 2000);
+  }
+
+  // 現在表示中の提示フロー画面を言語切替などで描き直す。
+  function refreshFlow() {
+    const active = $('#tab-clients > .view.active');
+    if (!active || !flow.conditions) return;
+    if (active.id === 'view-slots') renderSlots();
+    else if (active.id === 'view-message') renderMessageHint();
+    else if (active.id === 'view-respond') renderRespond();
+  }
+
+  function openSlotsFor(clientId, options) {
+    const opts = options || {};
+    const today = Logic.todayStr(new Date());
+    const base = Logic.defaultConditions(settings, today);
+    flow.clientId = clientId;
+    flow.conditions = opts.conditions && opts.conditions.from ? { ...base, ...opts.conditions } : base;
+    flow.reproposeId = opts.reproposeId || null;
+    flow.selected = [];
+    flow.edited = false;
+    setViewTitle('view-slots', clientName(clientId));
+    renderSlots();
     showTab('clients');
     showView('tab-clients', 'view-slots');
   }
 
+  function conditionsSummary() {
+    const c = flow.conditions;
+    const lang = settings.lang;
+    const wd = WEEK_ORDER.filter((w) => c.weekdays.includes(w)).map((w) => weekdayLabel(w, 'narrow')).join('');
+    const tod = TOD_ORDER.filter((k) => c.timeOfDay.includes(k)).map((k) => tr(k)).join(' ');
+    return Logic.formatDateShort(c.from, lang) + '〜' + Logic.formatDateShort(c.to, lang) + ' · ' + wd + ' · ' + tod + ' · ' + c.slotMin + tr('minutes');
+  }
+
+  function renderSlots() {
+    const lang = settings.lang;
+    flow.slots = Logic.freeSlots(data, flow.conditions, settings, new Date(), flow.reproposeId);
+    const keys = new Set(flow.slots.map(Logic.slotKey));
+    flow.selected = flow.selected.filter((s) => keys.has(Logic.slotKey(s)));
+    $('#cond-summary').textContent = conditionsSummary();
+    const list = $('#slot-list');
+    list.replaceChildren();
+    if (flow.slots.length === 0) {
+      list.append(el('p', 'empty-slots', tr('no_free_slots')));
+      const go = el('button', 'btn', tr('go_week'));
+      go.type = 'button';
+      go.addEventListener('click', () => showTab('week'));
+      list.append(go);
+    }
+    const chosen = new Set(flow.selected.map(Logic.slotKey));
+    let lastDate = '';
+    for (const s of flow.slots) {
+      if (s.date !== lastDate) {
+        list.append(el('h3', '', Logic.formatDateShort(s.date, lang)));
+        lastDate = s.date;
+      }
+      const b = el('button', 'slot-row', s.start + ' – ' + s.end);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(chosen.has(Logic.slotKey(s))));
+      b.addEventListener('click', () => {
+        const k = Logic.slotKey(s);
+        flow.selected = chosen.has(k) ? flow.selected.filter((x) => Logic.slotKey(x) !== k) : [...flow.selected, s];
+        renderSlots();
+      });
+      list.append(b);
+    }
+    const n = flow.selected.length;
+    const next = $('#to-message');
+    next.disabled = n === 0;
+    next.textContent = tr('make_message', { n });
+  }
+
+  function toggleButton(label, pressed) {
+    const b = el('button', 'toggle', label);
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(pressed));
+    b.addEventListener('click', () => b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')));
+    return b;
+  }
+
+  function openConditions() {
+    const c = flow.conditions;
+    const lens = Logic.parseSlotList(settings.slots);
+    if (!lens.includes(c.slotMin)) lens.push(c.slotMin);
+    lens.sort((a, b) => a - b);
+    const refs = {};
+    openSheet({
+      title: tr('conditions'),
+      build(body) {
+        const label = (key) => body.append(el('div', 'sheet-label', tr(key)));
+        label('period');
+        const dates = el('div', 'toggle-row sheet-body-row');
+        refs.from = el('input');
+        refs.to = el('input');
+        for (const [inp, v] of [[refs.from, c.from], [refs.to, c.to]]) { inp.type = 'date'; inp.value = v; }
+        dates.append(refs.from, el('span', '', '〜'), refs.to);
+        body.append(dates);
+        label('weekdays');
+        const wrow = el('div', 'toggle-row');
+        refs.wd = WEEK_ORDER.map((w) => {
+          const b = toggleButton(weekdayLabel(w, 'short'), c.weekdays.includes(w));
+          b.dataset.value = String(w);
+          wrow.append(b);
+          return b;
+        });
+        body.append(wrow);
+        label('time_of_day');
+        const trow = el('div', 'toggle-row');
+        refs.tod = TOD_ORDER.map((k) => {
+          const b = toggleButton(tr(k), c.timeOfDay.includes(k));
+          b.dataset.value = k;
+          trow.append(b);
+          return b;
+        });
+        body.append(trow);
+        label('slot_length');
+        const lrow = el('div', 'toggle-row');
+        refs.len = c.slotMin;
+        const lenBtns = lens.map((m) => {
+          const b = el('button', 'toggle', m + tr('minutes'));
+          b.type = 'button';
+          b.dataset.value = String(m);
+          b.setAttribute('role', 'radio');
+          b.addEventListener('click', () => {
+            refs.len = m;
+            for (const o of lenBtns) o.setAttribute('aria-checked', String(o === b));
+          });
+          b.setAttribute('aria-checked', String(m === c.slotMin));
+          lrow.append(b);
+          return b;
+        });
+        lrow.setAttribute('role', 'radiogroup');
+        body.append(lrow);
+        refs.err = el('div', 'sheet-error');
+        body.append(refs.err);
+        sheetValidate = () => {
+          let msg = '';
+          if (!refs.from.value || !refs.to.value || refs.from.value > refs.to.value) msg = tr('err_range');
+          else if (!refs.wd.some((b) => b.getAttribute('aria-pressed') === 'true')) msg = tr('err_weekday');
+          else if (!refs.tod.some((b) => b.getAttribute('aria-pressed') === 'true')) msg = tr('err_tod');
+          refs.err.textContent = msg;
+          return msg === '';
+        };
+      },
+      onOk() {
+        flow.conditions = {
+          from: refs.from.value,
+          to: refs.to.value,
+          weekdays: refs.wd.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => Number(b.dataset.value)),
+          timeOfDay: refs.tod.filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.value),
+          slotMin: refs.len,
+        };
+        renderSlots();
+      },
+    });
+  }
+
+  function renderMessageHint() {
+    $('#deadline-hint').textContent = tr('deadline_default_hint', { n: settings.deadlineDays });
+  }
+
+  function regenerateMessage() {
+    $('#message-text').value = Logic.buildMessage(Logic.templatesFrom(settings), sortSlots(flow.selected), flow.deadline, settings.lang);
+    flow.edited = false;
+  }
+
+  function renderMessage() {
+    $('#deadline').value = flow.deadline;
+    $('#deadline').min = Logic.todayStr(new Date());
+    renderMessageHint();
+    setViewTitle('view-message', clientName(flow.clientId));
+    regenerateMessage();
+  }
+
+  async function copyAndHold() {
+    const btn = $('#copy-hold');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    const text = $('#message-text').value;
+    const ok = await copyText(text, $('#message-text'));
+    const now = new Date();
+    const next = getData();
+    next.proposals.push({
+      id: Logic.newId('p', now),
+      clientId: flow.clientId,
+      status: 'pending',
+      slots: sortSlots(flow.selected),
+      deadline: flow.deadline,
+      message: text,
+      conditions: { ...flow.conditions },
+      createdAt: now.toISOString(),
+    });
+    if (flow.reproposeId) {
+      const old = next.proposals.find((x) => x.id === flow.reproposeId);
+      if (old) { old.status = 'cancelled'; old.cancelledAt = now.toISOString(); }
+    }
+    flow.reproposeId = null;
+    setData(next);
+    if (ok) {
+      flashCopied('copy-hold', 'copy-hold-label', 'copy_hold', () => {
+        btn.disabled = false;
+        showView('tab-clients', 'view-clients-list');
+        renderClients();
+      });
+    } else {
+      btn.disabled = false;
+      setStatus('warn', () => tr('copy_failed'));
+    }
+  }
+
+  function bindFlow() {
+    $('#cond-card').addEventListener('click', openConditions);
+    $('#sheet-ok').addEventListener('click', (e) => { if (sheetValidate && !sheetValidate()) e.preventDefault(); });
+    $('#sheet').addEventListener('close', () => { sheetValidate = null; });
+    $('#pick-auto').addEventListener('click', () => {
+      flow.selected = Logic.pickSpread(flow.slots, flow.selected, settings.pickCount);
+      renderSlots();
+    });
+    $('#pick-clear').addEventListener('click', () => { flow.selected = []; renderSlots(); });
+    $('#to-message').addEventListener('click', () => {
+      if (flow.selected.length === 0) return;
+      flow.deadline = Logic.addDays(Logic.todayStr(new Date()), settings.deadlineDays);
+      flow.edited = false;
+      renderMessage();
+      showView('tab-clients', 'view-message');
+    });
+    $('#message-text').addEventListener('input', () => { flow.edited = true; });
+    $('#deadline').addEventListener('change', async (e) => {
+      const v = e.target.value;
+      if (!v) { e.target.value = flow.deadline; return; }
+      if (!flow.edited) { flow.deadline = v; regenerateMessage(); return; }
+      if ((await dialog({ message: tr('confirm_regenerate') })).ok) { flow.deadline = v; regenerateMessage(); }
+      else e.target.value = flow.deadline;
+    });
+    $('#copy-hold').addEventListener('click', copyAndHold);
+    $('#respond-confirm').addEventListener('click', confirmRespond);
+    $('#respond-show-message').addEventListener('click', showSavedMessage);
+    $('#respond-extend').addEventListener('click', extendDeadline);
+    $('#respond-cancel').addEventListener('click', cancelProposal);
+    $('#respond-repropose').addEventListener('click', () => {
+      const p = data.proposals.find((x) => x.id === respondId);
+      if (p) openSlotsFor(p.clientId, { conditions: p.conditions, reproposeId: p.id });
+    });
+    $('#reminder-copy').addEventListener('click', async () => {
+      const ok = await copyText($('#reminder-text').value, $('#reminder-text'));
+      if (ok) flashCopied('reminder-copy', 'reminder-copy-label', 'copy');
+      else setStatus('warn', () => tr('copy_failed'));
+    });
+  }
+
+  // ---- 回答反映 ----
+  let respondChoice = -1;
+
   function openRespond(proposalId) {
     const p = data.proposals.find((x) => x.id === proposalId);
-    const c = p && data.clients.find((x) => x.id === p.clientId);
-    setViewTitle('view-respond', c ? Logic.displayName(c, settings) : '');
+    if (!p) return;
+    respondId = proposalId;
+    respondChoice = -1;
+    setViewTitle('view-respond', clientName(p.clientId));
+    renderRespond();
     showTab('clients');
     showView('tab-clients', 'view-respond');
   }
 
+  function renderRespond() {
+    const p = data.proposals.find((x) => x.id === respondId);
+    if (!p) return;
+    const lang = settings.lang;
+    const today = Logic.todayStr(new Date());
+    const expired = Logic.isExpired(p, today);
+    const head = $('#respond-head');
+    head.replaceChildren();
+    head.append(el('div', 'respond-name', clientName(p.clientId)));
+    const dl = expired
+      ? el('div', 'expired', tr('expired_days', { n: -Logic.daysUntil(p.deadline, today) }))
+      : el('div', 'respond-deadline', tr('deadline_remaining', { date: Logic.formatDateShort(p.deadline, lang), n: Logic.daysUntil(p.deadline, today) }));
+    head.append(dl);
+    const list = $('#respond-slots');
+    list.replaceChildren();
+    p.slots.forEach((s, i) => {
+      const b = el('button', 'radio-row', Logic.formatSlotLong(s, lang));
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(i === respondChoice));
+      b.addEventListener('click', () => { respondChoice = i; renderRespond(); });
+      list.append(b);
+    });
+    $('#respond-confirm').disabled = respondChoice < 0 || p.status !== 'pending';
+    $('#respond-repropose').hidden = !expired;
+  }
+
+  async function confirmRespond() {
+    const p = data.proposals.find((x) => x.id === respondId);
+    if (!p || respondChoice < 0) return;
+    const slot = p.slots[respondChoice];
+    if (!slot) return;
+    if (!(await dialog({ message: tr('confirm_fix', { slot: Logic.formatSlotLong(slot, settings.lang) }) })).ok) return;
+    const now = new Date();
+    const next = getData();
+    const q = next.proposals.find((x) => x.id === respondId);
+    if (!q) return;
+    next.blocks.push({ id: Logic.newId('k', now), date: slot.date, start: slot.start, end: slot.end, kind: 'meeting', title: '', clientId: q.clientId, proposalId: q.id });
+    q.status = 'confirmed';
+    q.confirmedSlot = respondChoice;
+    q.confirmedAt = now.toISOString();
+    setData(next);
+    showView('tab-clients', 'view-clients-list');
+  }
+
+  function showSavedMessage() {
+    const p = data.proposals.find((x) => x.id === respondId);
+    if (!p) return;
+    openSheet({
+      title: tr('show_message'),
+      build(body) {
+        const ta = el('textarea', 'sheet-textarea');
+        ta.readOnly = true;
+        ta.rows = 10;
+        ta.value = p.message;
+        const copy = el('button', 'btn', tr('copy'));
+        copy.type = 'button';
+        copy.addEventListener('click', async () => {
+          if (await copyText(ta.value, ta)) { copy.textContent = tr('copied'); setTimeout(() => { copy.textContent = tr('copy'); }, 2000); }
+          else setStatus('warn', () => tr('copy_failed'));
+        });
+        body.append(ta, copy);
+      },
+      onOk() {},
+    });
+  }
+
+  async function extendDeadline() {
+    const p = data.proposals.find((x) => x.id === respondId);
+    if (!p) return;
+    const today = Logic.todayStr(new Date());
+    const r = await dialog({ message: tr('extend_deadline'), input: { type: 'date', value: p.deadline, min: today } });
+    if (!r.ok || !r.value) return;
+    const next = getData();
+    const q = next.proposals.find((x) => x.id === respondId);
+    if (!q) return;
+    q.deadline = r.value;
+    setData(next);
+    renderRespond();
+  }
+
+  async function cancelProposal() {
+    if (!respondId) return;
+    if (!(await dialog({ message: tr('confirm_cancel_proposal'), okLabel: tr('confirm_cancel_proposal_ok'), danger: true })).ok) return;
+    const next = getData();
+    const q = next.proposals.find((x) => x.id === respondId);
+    if (!q) return;
+    q.status = 'cancelled';
+    q.cancelledAt = new Date().toISOString();
+    setData(next);
+    showView('tab-clients', 'view-clients-list');
+  }
+
+  // ---- リマインド ----
   function openReminder(blockId) {
     const b = data.blocks.find((x) => x.id === blockId);
-    const c = b && data.clients.find((x) => x.id === b.clientId);
-    setViewTitle('view-reminder', c ? Logic.displayName(c, settings) : '');
+    if (!b) return;
+    reminderBlockId = blockId;
+    setViewTitle('view-reminder', clientName(b.clientId));
+    $('#reminder-text').value = Logic.buildReminder(Logic.templatesFrom(settings), b, settings.lang);
     showTab('clients');
     showView('tab-clients', 'view-reminder');
   }
@@ -3712,6 +4229,7 @@ const App = (() => {
     bindTabs();
     bindDialogs();
     bindClients();
+    bindFlow();
     loadData();
     applySettings();
     // 起動時に書き込めるか確かめて、状態ドットに反映する(設定は書かない)。
@@ -3730,7 +4248,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { SCHEMA, getSettings, updateSettings, setStatus, scheduleRefresh, refresh, applyZoom, setToolbarAttention, showTab, showView, dialog, openSheet, getData, setData, openSlotsFor, openRespond, openReminder };
+  return { SCHEMA, getSettings, updateSettings, setStatus, scheduleRefresh, refresh, applyZoom, setToolbarAttention, showTab, showView, dialog, openSheet, getData, setData, openSlotsFor, openRespond, openReminder, copyText };
 })();
 </script>
 </body>
