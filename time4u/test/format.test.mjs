@@ -57,3 +57,10 @@ test('displayName appends honorific, empty allowed', () => {
   assert.equal(Logic.displayName({ name: '田中' }, { honorific: 'さん' }), '田中さん');
   assert.equal(Logic.displayName({ name: 'Tanaka' }, { honorific: '' }), 'Tanaka');
 });
+
+test('meetingLine: name, date, time on one line', () => {
+  const c = { name: '田中' };
+  const b = { date: '2026-10-22', start: '13:00', end: '14:30' };
+  assert.equal(Logic.meetingLine(c, b, { lang: 'ja', honorific: 'さん' }), '田中さん 10/22(木) 13:00〜14:30');
+  assert.equal(Logic.meetingLine({ name: 'Tanaka' }, b, { lang: 'en', honorific: '' }), 'Tanaka Thu 10/22 13:00–14:30');
+});

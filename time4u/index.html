@@ -2413,7 +2413,7 @@ h2.cal-title { cursor: default; }
     <p><strong>設定。</strong>設定タブで「表示」(敬称、週の始まり、表示する時間帯)、「時間」(スロットの長さとインターバル、回答期限の既定、おまかせの件数)、「文面」(提示のヘッダ・フッタとリマインドのひな形。ビジネス / フレンドリーの文例を読み込めます)を整えます。テーマ・拡大率・言語は右上のアイコンで切り替えます。</p>
     <p><strong>面会可能時間を置く。</strong>週タブに面会できる時間帯(緑)を置きます。右下の「＋」で複数の曜日にまとめて追加、「複写」で前の週から写せます。列をタップすると 1 日の画面になり、ランチなどの予定(灰)や面会(青)を直接足せます。黄色は仮押さえ中の枠です。タイトルをタップすると今週に戻ります。月タブは見るだけで、日をタップするとその週に移ります。</p>
     <h3>提示の流れ</h3>
-    <p><strong>相手を選ぶ。</strong>相手タブの上の欄に名前を入れると一覧が絞り込まれます(変換前のよみでも探せます)。見つからなければ「＋」でそのまま登録できます。確定済み・調整中・過去の面会の順に並び、行の「…」から名前やよみを直せます。</p>
+    <p><strong>相手を選ぶ。</strong>相手タブの上の欄に名前を入れると一覧が絞り込まれます(変換前のよみでも探せます)。見つからなければ「＋」でそのまま登録できます。確定済み・調整中・過去の面会の順に並びます。確定済みの行をタップすると、テキストのコピー・リマインド文面・別の予定の調整・取り消し・名前やよみの編集を選べます。他の行では「…」から名前やよみを直せます。</p>
     <ol>
       <li>相手を選ぶと空き枠が出ます。上の条件カードで期間・曜日・時間帯・長さを変えて「検索」。空き枠の件数はその場で表示されます。</li>
       <li>枠をタップして選ぶか、「おまかせ」で散らして選びます。</li>
@@ -2434,7 +2434,7 @@ h2.cal-title { cursor: default; }
     <p><strong>Settings.</strong> On the settings tab adjust Display (honorific, first day of the week, visible hours), Time (slot lengths and interval, default deadline, auto-pick count) and Message (header and footer of the proposal, the reminder template; load the business or friendly samples). Theme, zoom and language are the icons at the top right.</p>
     <p><strong>Put in your available times.</strong> On the week tab add the times you can meet (green). The "+" at the bottom right adds bands to several weekdays at once; "Copy" takes them from a past week. Tap a column for the day view, where you can add busy time (grey) such as lunch, or a meeting (blue). Yellow is a held slot. Tap the title to return to this week. The month tab is read only; tapping a day opens its week.</p>
     <h3>Proposing</h3>
-    <p><strong>Choose the client.</strong> Type a name in the box on the clients tab to filter the list (readings typed before conversion work too). If nobody matches, "+" registers the name. Rows are grouped into confirmed, pending and past meetings; "…" on a row edits the name and reading.</p>
+    <p><strong>Choose the client.</strong> Type a name in the box on the clients tab to filter the list (readings typed before conversion work too). If nobody matches, "+" registers the name. Rows are grouped into confirmed, pending and past meetings. Tapping a confirmed row offers copy as text, reminder text, arranging another meeting, cancelling, and editing the name and reading; other rows have "…" for the name and reading.</p>
     <ol>
       <li>Pick a client to see free slots. The card at the top changes period, weekdays, time of day and length; tap "Search". The number of free slots updates as you change the conditions.</li>
       <li>Tap slots to select them, or "Auto pick" spreads a few across dates.</li>
@@ -2612,7 +2612,11 @@ const Logic = (() => {
       deadline_on: '期限 {date}',
       expired_on: '期限切れ {date}',
       last_met: '最終 {date}',
-      action_remind: 'リマインド',
+      action_remind: 'リマインド文面',
+      copy_text: 'テキストをコピー',
+      action_adjust_next: '別の予定を調整',
+      action_cancel_meeting: '面会を取り消し',
+      copy_failed_short: 'コピーできませんでした',
       action_cancel: '取消',
       action_propose: '新しく提示',
       action_repropose: '再提示',
@@ -2773,7 +2777,11 @@ const Logic = (() => {
       deadline_on: 'Due {date}',
       expired_on: 'Expired {date}',
       last_met: 'Last {date}',
-      action_remind: 'Remind',
+      action_remind: 'Reminder text',
+      copy_text: 'Copy as text',
+      action_adjust_next: 'Arrange another meeting',
+      action_cancel_meeting: 'Cancel meeting',
+      copy_failed_short: 'Could not copy',
       action_cancel: 'Cancel',
       action_propose: 'Propose',
       action_repropose: 'Re-propose',
@@ -3030,6 +3038,12 @@ const Logic = (() => {
     if (m >= settings.pmStart * 60) return 'pm';
     return 'am';
   }
+  // 確定した面会を 1 行のテキストにする: 「田中さん 10/22(木) 13:00〜14:30」
+  function meetingLine(client, block, settings) {
+    const lang = settings.lang;
+    return displayName(client, settings) + ' ' + formatDateShort(block.date, lang) + ' ' + formatRange(block.start, block.end, lang);
+  }
+
   function displayName(client, settings) { return client.name + settings.honorific; }
 
   // 検索
@@ -3351,7 +3365,7 @@ const Logic = (() => {
     return { header: settings.tplHeader, footer: settings.tplFooter, reminder: settings.tplReminder };
   }
 
-  return { toMin, toHHMM, todayStr, addDays, weekStartOf, weekDates, weekdayOf, weekdayLabel, formatDateShort, formatDateLong, formatRange, formatSlotLong, formatWeekTitle, formatMonthTitle, isExpired, daysUntil, timeOfDay, normalizeKana, matchesClient, displayName, emptyData, normalizeData, newId, mergeBands, copyWeekBands, weeksWithBands, holds, clientSections, clientHasActive, deleteClient, itemsForDay, itemsForWeek, axisRange, pct, monthCells, freeIntervals, freeSlots, defaultConditions, slotKey, pickSpread, buildMessage, buildReminder, templatesFrom, VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport, parseImportAll };
+  return { toMin, toHHMM, todayStr, addDays, weekStartOf, weekDates, weekdayOf, weekdayLabel, formatDateShort, formatDateLong, formatRange, formatSlotLong, formatWeekTitle, formatMonthTitle, isExpired, daysUntil, timeOfDay, normalizeKana, matchesClient, displayName, meetingLine, emptyData, normalizeData, newId, mergeBands, copyWeekBands, weeksWithBands, holds, clientSections, clientHasActive, deleteClient, itemsForDay, itemsForWeek, axisRange, pct, monthCells, freeIntervals, freeSlots, defaultConditions, slotKey, pickSpread, buildMessage, buildReminder, templatesFrom, VERSION, DATA_VERSION, DEFAULT_TEMPLATES, parseSlotList, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport, parseImportAll };
 })();
 </script>
 <script id="app-ui">
@@ -4251,7 +4265,7 @@ const App = (() => {
     return id;
   }
 
-  function clientRow(client, sub, actions, onBody, extraClass) {
+  function clientRow(client, sub, actions, onBody, extraClass, showMore = true) {
     const li = el('li', 'client-row' + (extraClass ? ' ' + extraClass : ''));
     li.dataset.id = client.id;
     const body = el('button', 'row-body');
@@ -4270,6 +4284,7 @@ const App = (() => {
       b.addEventListener('click', fn);
       li.append(b);
     }
+    if (!showMore) { bindLongPress(li, client.id); return li; }
     const more = el('button', 'icon-btn row-more');
     more.type = 'button';
     more.setAttribute('aria-label', tr('client_edit'));
@@ -4301,6 +4316,38 @@ const App = (() => {
     li.addEventListener('pointercancel', cancel);
     li.addEventListener('pointermove', (e) => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 10) cancel(); });
     li.addEventListener('contextmenu', (e) => { e.preventDefault(); cancel(); li._longPressed = true; openClientSheet(clientId); });
+  }
+
+  // 確定済みの行をタップしたときの選択シート
+  function openMeetingMenu(client, block) {
+    if ($('#sheet').open) return;
+    // 次の処理はこのシートの close イベントの後に走らせる(先に走ると close ハンドラが次のシートの状態を消す)。
+    const after = (fn) => { $('#sheet').addEventListener('close', () => fn(), { once: true }); $('#sheet').close('cancel'); };
+    openSheet({
+      title: Logic.meetingLine(client, block, settings),
+      okHidden: true,
+      build(body) {
+        const choices = [
+          ['copy_text', async () => {
+            const ok = await copyText(Logic.meetingLine(client, block, settings));
+            $('#sheet').close('cancel');
+            if (ok) setStatus('ok', () => tr('copied'));
+            else setStatus('warn', () => tr('copy_failed_short'));
+          }],
+          ['action_remind', () => after(() => openReminder(block.id))],
+          ['action_adjust_next', () => after(() => openSlotsFor(client.id))],
+          ['action_cancel_meeting', () => after(() => cancelMeeting(client, block))],
+          ['client_edit', () => after(() => openClientSheet(client.id))],
+        ];
+        for (const [key, fn] of choices) {
+          const b = el('button', 'btn sheet-choice' + (key === 'action_cancel_meeting' ? ' danger' : ''), tr(key));
+          b.type = 'button';
+          b.addEventListener('click', fn);
+          body.append(b);
+        }
+      },
+      onOk() {},
+    });
   }
 
   async function cancelMeeting(client, block) {
@@ -4387,8 +4434,8 @@ const App = (() => {
     fillSection('confirmed', secs.confirmed.filter(keep), (r) => clientRow(
       r.client,
       Logic.formatDateShort(r.block.date, lang) + ' ' + Logic.formatRange(r.block.start, r.block.end, lang),
-      [['remind', tr('action_remind'), () => openReminder(r.block.id)], ['cancel-meeting', tr('action_cancel'), () => cancelMeeting(r.client, r.block)]],
-      () => openSlotsFor(r.client.id)));
+      [],
+      () => openMeetingMenu(r.client, r.block), '', false));
     fillSection('pending', secs.pending.filter(keep), (r) => {
       const date = Logic.formatDateShort(r.proposal.deadline, lang);
       const sub = tr('proposed_count', { n: r.proposal.slots.length }) + ' · ' + (r.expired ? tr('expired_on', { date }) : tr('deadline_on', { date }));
