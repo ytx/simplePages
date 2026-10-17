@@ -11,9 +11,14 @@ const base = () => ({ version: 1, clients: [{ id: 'c_1', name: 'A', reading: '',
 const cond = (o) => ({ from: '2026-10-19', to: '2026-10-31', weekdays: [0, 1, 2, 3, 4, 5, 6], timeOfDay: ['am', 'pm', 'eve'], slotMin: 90, ...o });
 const times = (slots) => slots.map((s) => `${s.date} ${s.start}-${s.end}`);
 
-test('band 13-17, 90 min, interval 10 → two slots', () => {
+test('band 13-17, 90 min → candidates step by slot length, no interval between them', () => {
   const d = base(); d.bands.push({ id: 'b', date: '2026-10-20', start: '13:00', end: '17:00' });
-  assert.deepEqual(times(Logic.freeSlots(d, cond(), S, NOW)), ['2026-10-20 13:00-14:30', '2026-10-20 14:40-16:10']);
+  assert.deepEqual(times(Logic.freeSlots(d, cond(), S, NOW)), ['2026-10-20 13:00-14:30', '2026-10-20 14:30-16:00']);
+});
+
+test('band 13-17, 120 min, interval 30 → 13:00-15:00 and 15:00-17:00', () => {
+  const d = base(); d.bands.push({ id: 'b', date: '2026-10-20', start: '13:00', end: '17:00' });
+  assert.deepEqual(times(Logic.freeSlots(d, cond({ slotMin: 120 }), { ...S, interval: 30 }, NOW)), ['2026-10-20 13:00-15:00', '2026-10-20 15:00-17:00']);
 });
 
 test('hold at the band start keeps the grid: interval after a hold', () => {
@@ -44,22 +49,22 @@ test('expired pending proposal still holds; confirmed releases the rest but not 
   assert.deepEqual(times(Logic.freeSlots(d, cond(), S, NOW)), ['2026-10-20 14:00-15:30']);
   d.proposals[0].status = 'confirmed'; d.proposals[0].confirmedSlot = 1;
   d.blocks.push({ id: 'k', date: '2026-10-20', start: '10:40', end: '12:10', kind: 'meeting', clientId: 'c_1', proposalId: 'p_1' });
-  assert.deepEqual(times(Logic.freeSlots(d, cond(), S, NOW)), ['2026-10-20 09:00-10:30', '2026-10-20 12:20-13:50', '2026-10-20 14:00-15:30']);
+  assert.deepEqual(times(Logic.freeSlots(d, cond(), S, NOW)), ['2026-10-20 09:00-10:30', '2026-10-20 12:20-13:50', '2026-10-20 13:50-15:20']);
 });
 
 test('excludeProposalId returns the own held slots (re-propose)', () => {
   const d = base(); d.bands.push({ id: 'b', date: '2026-10-20', start: '13:00', end: '17:00' });
   d.proposals.push({ id: 'p_1', clientId: 'c_1', status: 'pending', slots: [{ date: '2026-10-20', start: '13:00', end: '14:30' }], deadline: '2026-10-01', message: '', conditions: {}, createdAt: '' });
-  assert.deepEqual(times(Logic.freeSlots(d, cond(), S, NOW, 'p_1')), ['2026-10-20 13:00-14:30', '2026-10-20 14:40-16:10']);
+  assert.deepEqual(times(Logic.freeSlots(d, cond(), S, NOW, 'p_1')), ['2026-10-20 13:00-14:30', '2026-10-20 14:30-16:00']);
 });
 
 test('filters: range, weekday, time of day, past slots, interval 0', () => {
   const d = base();
   d.bands.push({ id: 'b1', date: '2026-10-17', start: '09:00', end: '13:00' }, { id: 'b2', date: '2026-10-20', start: '09:00', end: '21:00' }, { id: 'b3', date: '2026-10-24', start: '09:00', end: '12:00' });
   const all = Logic.freeSlots(d, cond({ from: '2026-10-17', to: '2026-10-24' }), S, NOW);
-  assert.deepEqual(times(all.filter((s) => s.date === '2026-10-17')), ['2026-10-17 10:40-12:10']); // 09:00 starts before NOW
+  assert.deepEqual(times(all.filter((s) => s.date === '2026-10-17')), ['2026-10-17 10:30-12:00']); // 09:00 starts before NOW
   assert.deepEqual(times(Logic.freeSlots(d, cond({ from: '2026-10-17', to: '2026-10-24', weekdays: [2] }), S, NOW)).every((t) => t.startsWith('2026-10-20')), true);
-  assert.deepEqual(times(Logic.freeSlots(d, cond({ weekdays: [2], timeOfDay: ['eve'] }), S, NOW)), ['2026-10-20 17:20-18:50', '2026-10-20 19:00-20:30']);
+  assert.deepEqual(times(Logic.freeSlots(d, cond({ weekdays: [2], timeOfDay: ['eve'] }), S, NOW)), ['2026-10-20 18:00-19:30', '2026-10-20 19:30-21:00']);
   assert.deepEqual(times(Logic.freeSlots(d, cond({ weekdays: [2], timeOfDay: ['am'], slotMin: 60 }), { ...S, interval: 0 }, NOW)), ['2026-10-20 09:00-10:00', '2026-10-20 10:00-11:00', '2026-10-20 11:00-12:00']);
 });
 

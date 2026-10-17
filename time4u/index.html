@@ -2025,7 +2025,7 @@ dialog#help { width: min(92vw, 36em); max-height: 85vh; overflow: auto; padding-
 #dialog-message { margin: 0 0 var(--gap); white-space: pre-wrap; }
 #dialog-input { width: 100%; margin-bottom: var(--gap); }
 #dialog-input[hidden] { display: none; }
-#sheet-title { margin: 0 0 var(--gap); font-size: var(--fs-base); font-weight: 400; }
+#sheet-title { margin: 0 0 var(--gap); font-size: var(--fs-base); font-weight: 400; outline: none; }
 #sheet-body { margin-bottom: var(--gap); }
 .dialog-actions { display: flex; justify-content: flex-end; gap: calc(var(--gap) / 2); }
 .settings-section { border-bottom: 1px solid var(--border); padding: calc(var(--gap) / 2) 0; }
@@ -2461,7 +2461,7 @@ h2.cal-title { cursor: default; }
 </dialog>
 <dialog id="sheet">
   <form method="dialog">
-    <h2 id="sheet-title"></h2>
+    <h2 id="sheet-title" tabindex="-1"></h2>
     <div id="sheet-body"></div>
     <div class="dialog-actions">
       <button id="sheet-delete" class="btn danger" type="button" data-i18n="delete" hidden></button>
@@ -2726,7 +2726,7 @@ const Logic = (() => {
       dayEnd: 'Day ends (hour)',
       slots: 'Slot lengths (min, comma-separated)',
       defaultSlot: 'Default slot length (min)',
-      interval: 'Gap between slots (min)',
+      interval: 'Gap around meetings (min)',
       deadlineDays: 'Reply deadline (days ahead)',
       pickCount: 'Number of auto picks',
       rangeStartDays: 'Range start (days ahead)',
@@ -3306,7 +3306,8 @@ const Logic = (() => {
       if (date < today || !conditions.weekdays.includes(weekdayOf(date))) continue;
       for (const iv of freeIntervals(data, date, settings.interval, excludeProposalId)) {
         const end = toMin(iv.end);
-        for (let t = toMin(iv.start); t + conditions.slotMin <= end; t += conditions.slotMin + settings.interval) {
+        // 候補は slotMin 刻み。インターバルは面会・仮押さえの前後にだけ置くので、候補同士の間には挟まない。
+        for (let t = toMin(iv.start); t + conditions.slotMin <= end; t += conditions.slotMin) {
           if (date === today && t <= nowMin) continue;
           if (!conditions.timeOfDay.includes(timeOfDay(toHHMM(t), settings))) continue;
           out.push({ date, start: toHHMM(t), end: toHHMM(t + conditions.slotMin) });
@@ -3671,6 +3672,8 @@ const App = (() => {
     sheetState = { onOk, onDelete };
     dlg.returnValue = '';
     dlg.showModal();
+    // showModal は最初の入力欄にフォーカスする。日付欄だと iOS でカレンダーが即座に開くので、見出しへ移す。
+    if (document.activeElement && document.activeElement.type === 'date') $('#sheet-title').focus();
   }
 
   function bindDialogs() {
