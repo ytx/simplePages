@@ -66,3 +66,10 @@ test('proposal flow markup', () => {
   assert.match(src, /navigator\.clipboard/);
   assert.match(src, /execCommand\('copy'\)/);
 });
+
+test('calendar markup', () => {
+  for (const id of ['week-prev', 'week-title', 'week-next', 'week-copy', 'week-grid', 'day-prev', 'day-title', 'day-next', 'day-close', 'day-lane', 'day-add', 'month-prev', 'month-title', 'month-next', 'month-grid']) {
+    assert.match(src, new RegExp(`id="${id}"`), id);
+  }
+  assert.match(src, /window\.addEventListener\('pointerup'/);
+});

@@ -2087,6 +2087,50 @@ button.btn.primary { background: var(--accent); color: #fff; border-color: var(-
 .sheet-label { color: var(--fg-muted); font-size: var(--fs-small); margin: calc(var(--gap) / 2) 0 calc(var(--gap) / 4); }
 .sheet-error { color: var(--error); min-height: 1.4em; }
 .sheet-body-row input[type=date] { min-height: 44px; box-sizing: border-box; }
+.cal-head { display: flex; align-items: center; gap: calc(var(--gap) / 2); margin-bottom: calc(var(--gap) / 2); }
+.cal-title { flex: 1; min-height: 44px; margin: 0; font: inherit; font-size: var(--fs-base); font-weight: 400; text-align: center; color: var(--fg); background: none; border: none; cursor: pointer; }
+h2.cal-title { cursor: default; }
+#week-grid { --hour-h: 2.6em; --hours: 13; display: grid; grid-template-columns: 2em repeat(7, 1fr); column-gap: 2px; padding-bottom: var(--gap); touch-action: pan-y; }
+.dh { text-align: center; font-size: var(--fs-small); color: var(--fg-muted); padding-bottom: 0.6em; cursor: pointer; min-height: 44px; display: flex; align-items: flex-end; justify-content: center; }
+.dh.corner { cursor: default; }
+.dh.today { color: var(--accent); }
+.axis, .col { position: relative; height: calc(var(--hour-h) * var(--hours)); }
+.col { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; overflow: hidden; }
+.col.today { border-color: var(--accent); }
+.hour-label { position: absolute; right: 2px; transform: translateY(-50%); font-size: var(--fs-small); color: var(--fg-muted); line-height: 1; }
+.item { position: absolute; left: 0; right: 0; border-radius: 3px; overflow: hidden; }
+.item.band { background: var(--c-avail); color: var(--c-avail-text); z-index: 0; }
+.item.busy { background: var(--c-busy); color: var(--c-busy-text); z-index: 1; }
+.item.meeting { background: var(--c-meeting); color: var(--c-meeting-text); z-index: 1; }
+.item.hold { background: var(--c-hold); color: var(--c-hold-text); z-index: 1; }
+.col .item { left: 12%; right: 12%; }
+.col .item.band { left: 0; right: 0; }
+.now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--error); z-index: 2; pointer-events: none; }
+#view-day { overflow: hidden; display: flex; flex-direction: column; }
+#day-scroll { flex: 1; min-height: 0; overflow: auto; touch-action: pan-y; padding: 0.8em 0 5em; }
+#day-lane { --hour-h: 4.2em; --hours: 13; position: relative; height: calc(var(--hour-h) * var(--hours)); cursor: pointer; }
+#day-lane .hline { position: absolute; left: 3.4em; right: 0; height: 1px; background: var(--border); }
+#day-lane .hour-label { left: 0; right: auto; }
+#day-lane .item { left: 3.4em; right: 0; min-height: 44px; border: none; padding: 0.2em 0.6em; text-align: left; font: inherit; cursor: pointer; }
+#day-lane .item.band { min-height: 0; opacity: 0.9; }
+#day-lane .item-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#day-lane .item.hold { border: 1px dashed var(--c-hold-text); }
+.fab { position: absolute; right: var(--gap); bottom: var(--gap); width: 56px; height: 56px; background: var(--accent); color: #fff; border-color: var(--accent); }
+.sheet-choice { display: block; width: 100%; margin-bottom: calc(var(--gap) / 2); }
+#sheet-body select, #sheet-body input[type=text] { width: 100%; min-height: 44px; box-sizing: border-box; margin-bottom: calc(var(--gap) / 3); }
+#sheet-body [hidden] { display: none; }
+#tab-month.active { overflow: auto; }
+#month-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding-bottom: var(--gap); }
+.mh { text-align: center; color: var(--fg-muted); font-size: var(--fs-small); }
+.cell { min-height: 44px; aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; padding: 4px 0 0; font: inherit; color: var(--fg); background: var(--bg-panel); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+.cell.out { opacity: 0.4; }
+.cell.has-band { background: var(--c-avail); color: var(--c-avail-text); }
+.cell.today { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; max-width: 90%; }
+.dot { width: 0.5em; height: 0.5em; border-radius: 50%; }
+.dot.meeting { background: var(--c-meeting-text); }
+.dot.hold { background: var(--c-hold-text); }
+.dot-more { font-size: var(--fs-small); line-height: 0.6; color: var(--fg-muted); }
 </style>
 </head>
 <body>
@@ -2184,12 +2228,20 @@ button.btn.primary { background: var(--accent); color: #fff; border-color: var(-
     </div>
   </section>
   <section class="tab-pane" id="tab-week">
-    <div class="view root active" id="view-week"></div>
+<div class="view root active" id="view-week">
+      <div class="cal-head"><button id="week-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><button id="week-title" class="cal-title" type="button" data-i18n-label="today"></button><button id="week-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button><button id="week-copy" class="icon-btn" type="button" data-i18n-label="week_copy"><svg aria-hidden="true"><use href="#icon-copy"></use></svg></button></div>
+      <div id="week-grid"></div>
+    </div>
     <div class="view" id="view-day">
-      <header class="view-head"><button class="icon-btn back" type="button" data-i18n-label="back"><svg aria-hidden="true"><use href="#icon-back"></use></svg></button><h2 class="view-title"></h2></header>
+      <div class="cal-head"><button id="day-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><h2 id="day-title" class="cal-title"></h2><button id="day-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button><button id="day-close" class="icon-btn" type="button" data-i18n-label="close"><svg aria-hidden="true"><use href="#icon-close"></use></svg></button></div>
+      <div id="day-scroll"><div id="day-lane"></div></div>
+      <button id="day-add" class="icon-btn fab" type="button" data-i18n-label="add_item"><svg aria-hidden="true"><use href="#icon-add"></use></svg></button>
     </div>
   </section>
-  <section class="tab-pane" id="tab-month"></section>
+  <section class="tab-pane" id="tab-month">
+    <div class="cal-head"><button id="month-prev" class="icon-btn" type="button" data-i18n-label="prev_label"><svg aria-hidden="true"><use href="#icon-chevron-left"></use></svg></button><button id="month-title" class="cal-title" type="button" data-i18n-label="today"></button><button id="month-next" class="icon-btn" type="button" data-i18n-label="next_label"><svg aria-hidden="true"><use href="#icon-chevron-right"></use></svg></button></div>
+    <div id="month-grid"></div>
+  </section>
   <section class="tab-pane" id="tab-settings">
     <details class="settings-section" data-section="general" open>
       <summary data-i18n="tab_general"></summary>
@@ -2552,6 +2604,28 @@ const Logic = (() => {
       err_range: '開始日は終了日以前にしてください',
       err_weekday: '曜日を 1 つ以上選んでください',
       err_tod: '時間帯を 1 つ以上選んでください',
+      week_copy: '前の週から複写',
+      bands_count: '帯 {n} 件',
+      no_past_weeks: '複写できる過去の週がありません',
+      copy_replace: '置き換える',
+      copy_add: '追加する',
+      item_band: '面会可能帯',
+      item_busy: '予定あり',
+      item_meeting: '面会',
+      start: '開始',
+      end: '終了',
+      title: 'タイトル',
+      client: 'クライアント',
+      new_client_name: '新しい名前(入力すると新規登録)',
+      invalid_range: '終了は開始より後にしてください',
+      client_required: 'クライアントを選ぶか名前を入力してください',
+      confirm_delete_item: 'この項目を削除しますか?',
+      fixed: '確定',
+      hold_suffix: '(仮)',
+      today: '今日',
+      add_item: '項目を追加',
+      prev_label: '前へ',
+      next_label: '次へ',
     },
     en: {
       page_title: 'time4u',
@@ -2684,6 +2758,28 @@ const Logic = (() => {
       err_range: 'The start date must not be after the end date',
       err_weekday: 'Select at least one weekday',
       err_tod: 'Select at least one time of day',
+      week_copy: 'Copy from a past week',
+      bands_count: '{n} bands',
+      no_past_weeks: 'No past weeks to copy from',
+      copy_replace: 'Replace',
+      copy_add: 'Add',
+      item_band: 'Available band',
+      item_busy: 'Busy',
+      item_meeting: 'Meeting',
+      start: 'Start',
+      end: 'End',
+      title: 'Title',
+      client: 'Client',
+      new_client_name: 'New name (creates a client)',
+      invalid_range: 'End must be after start',
+      client_required: 'Choose a client or enter a name',
+      confirm_delete_item: 'Delete this item?',
+      fixed: 'confirmed',
+      hold_suffix: ' (hold)',
+      today: 'Today',
+      add_item: 'Add item',
+      prev_label: 'Previous',
+      next_label: 'Next',
     },
   };
 
@@ -3286,7 +3382,7 @@ const App = (() => {
     // data-i18n-label ループの後に実行する: 全画面ボタンのラベルを状態に合った値で上書きするため。
     updateFullscreenButton();
     if (lastStatus) setStatus(lastStatus.state, lastStatus.message);
-    if (data) { renderClients(); refreshFlow(); }
+    if (data) { renderClients(); refreshFlow(); if (activeTab !== 'clients') renderCurrentTab(); }
   }
 
   function currentTheme() {
@@ -3401,6 +3497,7 @@ const App = (() => {
     for (const b of $$('#tabbar .tab')) b.setAttribute('aria-selected', String(b.dataset.tab === name));
     for (const p of $$('.tab-pane')) p.classList.toggle('active', p.id === `tab-${name}`);
     if (name === 'settings') refreshDataText();
+    renderCurrentTab();
   }
 
   // paneId はペイン要素の id(例: 'tab-clients')、viewId は子ビューの id。
@@ -3456,11 +3553,13 @@ const App = (() => {
   // シート: build(body) が空にした #sheet-body へ要素を足す。onOk は保存で閉じたとき、
   // onDelete は削除ボタン(true を返すと閉じる)。deleteDisabled で削除ボタンを無効にする。
   let sheetState = null;
-  function openSheet({ title, build, onOk, onDelete, deleteDisabled = false }) {
+  function openSheet({ title, build, onOk, onDelete, deleteDisabled = false, validate = null, okHidden = false }) {
     const dlg = $('#sheet');
     const body = $('#sheet-body');
     $('#sheet-title').textContent = title;
     body.replaceChildren();
+    sheetValidate = validate;
+    $('#sheet-ok').hidden = !!okHidden;
     build(body);
     const del = $('#sheet-delete');
     del.hidden = !onDelete;
@@ -3509,7 +3608,9 @@ const App = (() => {
   }
 
   function renderCurrentTab() {
-    renderClients();
+    if (activeTab === 'clients') renderClients();
+    else if (activeTab === 'week') { renderWeek(); renderDay(); }
+    else if (activeTab === 'month') renderMonth();
   }
 
   // ---- クライアントタブ ----
@@ -4244,6 +4345,434 @@ const App = (() => {
     renderAbout();
   }
 
+  // ---- 週・日・月カレンダー ----
+  const SWIPE_MIN_DX = 60;
+  const SWIPE_RATIO = 1.5;
+  const WEEK_HOUR_H = '2.6em';
+  const DAY_HOUR_H = '4.2em';
+  let weekStartDate = '';
+  let dayDate = '';
+  let monthState = null;
+  let swipedAt = 0;
+  let itemEditing = null;
+
+  function hoursOf(range) { return (range.endMin - range.startMin) / 60; }
+
+  function round10(min) { return Math.round(min / 10) * 10; }
+
+  function bindSwipe(target, onPrev, onNext) {
+    target.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      const x0 = e.clientX;
+      const y0 = e.clientY;
+      const cleanup = () => {
+        window.removeEventListener('pointerup', up);
+        window.removeEventListener('pointercancel', cleanup);
+        window.removeEventListener('pointermove', move);
+      };
+      // 縦スクロールなど明らかに横ではない動きは、離す前に追跡を打ち切る
+      const move = (ev) => {
+        const dy = Math.abs(ev.clientY - y0);
+        if (dy > 40 && dy > Math.abs(ev.clientX - x0)) cleanup();
+      };
+      const up = (ev) => {
+        cleanup();
+        const dx = ev.clientX - x0;
+        const dy = ev.clientY - y0;
+        if (Math.abs(dx) >= SWIPE_MIN_DX && Math.abs(dx) >= SWIPE_RATIO * Math.abs(dy)) {
+          swipedAt = Date.now();
+          if (dx > 0) onPrev(); else onNext();
+        }
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', cleanup);
+    });
+  }
+
+  const justSwiped = () => Date.now() - swipedAt < 400;
+
+  function nowMinutes(now) { return now.getHours() * 60 + now.getMinutes(); }
+
+  function placeItem(node, it, range) {
+    const top = Logic.pct(Logic.toMin(it.start), range.startMin, range.endMin);
+    const bottom = Logic.pct(Logic.toMin(it.end), range.startMin, range.endMin);
+    node.style.top = `${top}%`;
+    node.style.height = `${Math.max(0, bottom - top)}%`;
+  }
+
+  function renderHourLabels(axis, range) {
+    for (let m = range.startMin; m <= range.endMin; m += 60) {
+      const l = el('span', 'hour-label', String(m / 60));
+      l.style.top = `${Logic.pct(m, range.startMin, range.endMin)}%`;
+      axis.append(l);
+    }
+  }
+
+  function renderWeek() {
+    if (!data) return;
+    const today = Logic.todayStr(new Date());
+    weekStartDate = Logic.weekStartOf(weekStartDate || today, settings.weekStart);
+    const lang = settings.lang;
+    $('#week-title').textContent = Logic.formatWeekTitle(weekStartDate);
+    const byDate = Logic.itemsForWeek(data, weekStartDate);
+    const range = Logic.axisRange(byDate, settings.dayStart, settings.dayEnd);
+    const grid = $('#week-grid');
+    grid.style.setProperty('--hours', String(hoursOf(range)));
+    grid.style.setProperty('--hour-h', WEEK_HOUR_H);
+    grid.replaceChildren();
+    grid.append(el('div', 'dh corner'));
+    const dates = Logic.weekDates(weekStartDate);
+    for (const d of dates) {
+      const h = el('div', 'dh' + (d === today ? ' today' : ''), Logic.formatDateShort(d, lang));
+      h.dataset.date = d;
+      grid.append(h);
+    }
+    const axis = el('div', 'axis');
+    renderHourLabels(axis, range);
+    grid.append(axis);
+    const nowMin = nowMinutes(new Date());
+    for (const d of dates) {
+      const col = el('div', 'col' + (d === today ? ' today' : ''));
+      col.dataset.date = d;
+      for (const it of byDate[d]) {
+        const node = el('div', `item ${it.kind}`);
+        placeItem(node, it, range);
+        col.append(node);
+      }
+      if (d === today && nowMin >= range.startMin && nowMin <= range.endMin) {
+        const line = el('div', 'now-line');
+        line.style.top = `${Logic.pct(nowMin, range.startMin, range.endMin)}%`;
+        col.append(line);
+      }
+      grid.append(col);
+    }
+  }
+
+  function showWeek(dateStr) {
+    weekStartDate = Logic.weekStartOf(dateStr, settings.weekStart);
+    showTab('week');
+    showView('tab-week', 'view-week');
+    renderWeek();
+  }
+
+  function showDay(dateStr) {
+    dayDate = dateStr;
+    renderDay();
+    showView('tab-week', 'view-day');
+  }
+
+  function shiftWeek(n) {
+    weekStartDate = Logic.addDays(weekStartDate, 7 * n);
+    renderWeek();
+  }
+
+  function shiftDay(n) {
+    dayDate = Logic.addDays(dayDate, n);
+    renderDay();
+  }
+
+  // ---- 日ビュー ----
+  function itemLabel(it) {
+    if (it.kind === 'busy') return it.title || '';
+    const c = data.clients.find((x) => x.id === it.clientId);
+    const name = c ? Logic.displayName(c, settings) : '';
+    if (it.kind === 'meeting') return name + ' ' + tr('fixed');
+    if (it.kind === 'hold') return name + tr('hold_suffix') + ' 〜' + Logic.formatDateShort(it.deadline, settings.lang);
+    return '';
+  }
+
+  function dayRange(items) {
+    return Logic.axisRange({ [dayDate]: items }, settings.dayStart, settings.dayEnd);
+  }
+
+  function renderDay() {
+    if (!data || !dayDate) return;
+    $('#day-title').textContent = Logic.formatDateShort(dayDate, settings.lang);
+    const items = Logic.itemsForDay(data, dayDate);
+    const range = dayRange(items);
+    const lane = $('#day-lane');
+    lane.style.setProperty('--hours', String(hoursOf(range)));
+    lane.style.setProperty('--hour-h', DAY_HOUR_H);
+    lane.replaceChildren();
+    for (let m = range.startMin; m <= range.endMin; m += 60) {
+      const top = `${Logic.pct(m, range.startMin, range.endMin)}%`;
+      const line = el('div', 'hline');
+      line.style.top = top;
+      const lab = el('span', 'hour-label', Logic.toHHMM(m));
+      lab.style.top = top;
+      lane.append(line, lab);
+    }
+    for (const it of items) {
+      const node = el('button', `item ${it.kind}`);
+      node.type = 'button';
+      placeItem(node, it, range);
+      if (it.kind !== 'band') node.append(el('span', 'item-label', itemLabel(it)));
+      node.addEventListener('click', () => {
+        if (justSwiped()) return;
+        if (it.kind === 'hold') openRespond(it.proposalId);
+        else openItemSheet({ ...it, date: dayDate });
+      });
+      lane.append(node);
+    }
+    if (dayDate === Logic.todayStr(new Date())) {
+      const nowMin = nowMinutes(new Date());
+      if (nowMin >= range.startMin && nowMin <= range.endMin) {
+        const line = el('div', 'now-line');
+        line.style.top = `${Logic.pct(nowMin, range.startMin, range.endMin)}%`;
+        lane.append(line);
+      }
+    }
+  }
+
+  function defaultEnd(startMin) { return Math.min(24 * 60, startMin + settings.defaultSlot); }
+
+  function newItemAt(startMin) {
+    const s = Math.max(0, Math.min(24 * 60 - 10, round10(startMin)));
+    openItemSheet({ kind: 'band', date: dayDate, start: Logic.toHHMM(s), end: Logic.toHHMM(defaultEnd(s)), isNew: true });
+  }
+
+  function onLaneClick(e) {
+    if (justSwiped()) return;
+    if (e.target.closest('.item')) return;
+    const lane = $('#day-lane');
+    const rect = lane.getBoundingClientRect();
+    if (rect.height <= 0) return;
+    const range = dayRange(Logic.itemsForDay(data, dayDate));
+    const frac = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    newItemAt(range.startMin + frac * (range.endMin - range.startMin));
+  }
+
+  function onDayAdd() {
+    const range = dayRange(Logic.itemsForDay(data, dayDate));
+    newItemAt(Math.max(range.startMin, 9 * 60));
+  }
+
+  function timeOptions(select, current) {
+    const values = [];
+    for (let m = 0; m <= 24 * 60; m += 10) values.push(Logic.toHHMM(m));
+    if (!values.includes(current)) values.push(current);
+    values.sort();
+    for (const v of values) {
+      const o = el('option', '', v);
+      o.value = v;
+      select.append(o);
+    }
+    select.value = current;
+  }
+
+  // item: { kind, id?, date, start, end, title?, clientId?, isNew? }
+  function openItemSheet(item) {
+    const existing = !item.isNew;
+    const refs = { kind: item.kind };
+    openSheet({
+      title: existing ? tr(`item_${item.kind}`) : tr('add_item'),
+      build(body) {
+        const label = (key) => body.append(el('div', 'sheet-label', tr(key)));
+        const seg = el('div', 'toggle-row');
+        seg.setAttribute('role', 'radiogroup');
+        const segBtns = ['band', 'busy', 'meeting'].map((k) => {
+          const b = el('button', 'toggle', tr(`item_${k}`));
+          b.type = 'button';
+          b.dataset.value = k;
+          b.setAttribute('role', 'radio');
+          b.setAttribute('aria-checked', String(k === refs.kind));
+          if (existing && k !== item.kind) b.disabled = true;
+          b.addEventListener('click', () => {
+            refs.kind = k;
+            sync();
+          });
+          seg.append(b);
+          return b;
+        });
+        body.append(seg);
+        label('start');
+        refs.start = el('select');
+        timeOptions(refs.start, item.start);
+        body.append(refs.start);
+        label('end');
+        refs.end = el('select');
+        timeOptions(refs.end, item.end);
+        body.append(refs.end);
+        refs.busyBox = el('div');
+        refs.busyBox.append(el('div', 'sheet-label', tr('title')));
+        refs.title = el('input');
+        refs.title.type = 'text';
+        refs.title.value = item.title || '';
+        refs.busyBox.append(refs.title);
+        body.append(refs.busyBox);
+        refs.meetBox = el('div');
+        refs.meetBox.append(el('div', 'sheet-label', tr('client')));
+        refs.client = el('select');
+        for (const c of data.clients) {
+          const o = el('option', '', Logic.displayName(c, settings));
+          o.value = c.id;
+          refs.client.append(o);
+        }
+        if (item.clientId && data.clients.some((c) => c.id === item.clientId)) refs.client.value = item.clientId;
+        refs.meetBox.append(refs.client);
+        refs.newName = el('input');
+        refs.newName.type = 'text';
+        refs.newName.placeholder = tr('new_client_name');
+        refs.meetBox.append(refs.newName);
+        body.append(refs.meetBox);
+        refs.err = el('div', 'sheet-error');
+        body.append(refs.err);
+        function sync() {
+          for (const b of segBtns) b.setAttribute('aria-checked', String(b.dataset.value === refs.kind));
+          refs.busyBox.hidden = refs.kind !== 'busy';
+          refs.meetBox.hidden = refs.kind !== 'meeting';
+        }
+        sync();
+      },
+      validate() {
+        let msg = '';
+        if (Logic.toMin(refs.end.value) <= Logic.toMin(refs.start.value)) msg = tr('invalid_range');
+        else if (refs.kind === 'meeting' && !refs.newName.value.trim() && !refs.client.value) msg = tr('client_required');
+        refs.err.textContent = msg;
+        return msg === '';
+      },
+      onOk() {
+        const next = getData();
+        const start = refs.start.value;
+        const end = refs.end.value;
+        if (refs.kind === 'band') {
+          const b = existing ? next.bands.find((x) => x.id === item.id) : null;
+          if (b) { b.start = start; b.end = end; } else next.bands.push({ id: Logic.newId('b', new Date()), date: item.date, start, end });
+          next.bands = Logic.mergeBands(next.bands);
+        } else {
+          let blk = existing ? next.blocks.find((x) => x.id === item.id) : null;
+          if (!blk) {
+            blk = { id: Logic.newId('k', new Date()), kind: refs.kind, date: item.date, start, end, title: '' };
+            next.blocks.push(blk);
+          }
+          blk.start = start;
+          blk.end = end;
+          if (refs.kind === 'busy') blk.title = refs.title.value.trim();
+          else {
+            const name = refs.newName.value.trim();
+            if (name) {
+              const cid = Logic.newId('c', new Date());
+              next.clients.push({ id: cid, name, reading: '', createdAt: new Date().toISOString() });
+              blk.clientId = cid;
+            } else blk.clientId = refs.client.value;
+          }
+        }
+        setData(next);
+      },
+      onDelete: existing ? async () => {
+        const r = await dialog({ message: tr('confirm_delete_item'), danger: true, okLabel: tr('delete') });
+        if (!r.ok) return false;
+        const next = getData();
+        if (item.kind === 'band') next.bands = next.bands.filter((x) => x.id !== item.id);
+        else next.blocks = next.blocks.filter((x) => x.id !== item.id);
+        setData(next);
+        return true;
+      } : undefined,
+    });
+  }
+
+  // ---- 週複写 ----
+  function openWeekCopy() {
+    const weeks = Logic.weeksWithBands(data, weekStartDate, settings.weekStart, 8);
+    const refs = { from: weeks.length ? weeks[0].weekStart : '' };
+    openSheet({
+      title: tr('week_copy'),
+      okHidden: weeks.length === 0,
+      build(body) {
+        if (!weeks.length) { body.append(el('p', 'sheet-note', tr('no_past_weeks'))); return; }
+        const rows = weeks.map((w, i) => {
+          const b = el('button', 'radio-row', Logic.formatWeekTitle(w.weekStart) + ' · ' + tr('bands_count', { n: w.count }));
+          b.type = 'button';
+          b.setAttribute('role', 'radio');
+          b.setAttribute('aria-checked', String(i === 0));
+          b.addEventListener('click', () => {
+            refs.from = w.weekStart;
+            for (const o of rows) o.setAttribute('aria-checked', String(o === b));
+          });
+          body.append(b);
+          return b;
+        });
+        body.setAttribute('role', 'radiogroup');
+      },
+      onOk() {
+        if (!refs.from) return;
+        const target = weekStartDate;
+        const has = Logic.weekDates(target).some((d) => data.bands.some((b) => b.date === d));
+        if (!has) { setData(Logic.copyWeekBands(data, refs.from, target, 'add')); return; }
+        let mode = '';
+        openSheet({
+          title: tr('week_copy'),
+          okHidden: true,
+          build(body) {
+            for (const [m, key] of [['replace', 'copy_replace'], ['add', 'copy_add']]) {
+              const b = el('button', 'btn sheet-choice', tr(key));
+              b.type = 'button';
+              b.addEventListener('click', () => { mode = m; $('#sheet').close('ok'); });
+              body.append(b);
+            }
+          },
+          onOk() { if (mode) setData(Logic.copyWeekBands(data, refs.from, target, mode)); },
+        });
+      },
+    });
+  }
+
+  // ---- 月タブ ----
+  function renderMonth() {
+    if (!data) return;
+    const today = Logic.todayStr(new Date());
+    if (!monthState) monthState = { year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) };
+    $('#month-title').textContent = Logic.formatMonthTitle(monthState.year, monthState.month, settings.lang);
+    const grid = $('#month-grid');
+    grid.replaceChildren();
+    for (let i = 0; i < 7; i++) grid.append(el('div', 'mh', weekdayLabel((settings.weekStart + i) % 7, 'short')));
+    for (const c of Logic.monthCells(data, monthState.year, monthState.month, settings.weekStart, today)) {
+      const cell = el('button', 'cell' + (c.inMonth ? '' : ' out') + (c.isToday ? ' today' : '') + (c.hasBand ? ' has-band' : ''));
+      cell.type = 'button';
+      cell.dataset.date = c.date;
+      cell.append(el('span', 'cell-num', String(Number(c.date.slice(8)))));
+      const dots = el('span', 'dots');
+      for (let i = 0; i < Math.min(c.meetings, 3); i++) dots.append(el('span', 'dot meeting'));
+      for (let i = 0; i < Math.min(c.holds, 3); i++) dots.append(el('span', 'dot hold'));
+      if (c.meetings > 3 || c.holds > 3) dots.append(el('span', 'dot-more', '+'));
+      cell.append(dots);
+      cell.addEventListener('click', () => showWeek(c.date));
+      grid.append(cell);
+    }
+  }
+
+  function shiftMonth(n) {
+    let m = monthState.month + n;
+    let y = monthState.year;
+    if (m < 1) { m = 12; y -= 1; }
+    if (m > 12) { m = 1; y += 1; }
+    monthState = { year: y, month: m };
+    renderMonth();
+  }
+
+  function bindCalendar() {
+    $('#week-prev').addEventListener('click', () => shiftWeek(-1));
+    $('#week-next').addEventListener('click', () => shiftWeek(1));
+    $('#week-title').addEventListener('click', () => { weekStartDate = Logic.todayStr(new Date()); renderWeek(); });
+    $('#week-copy').addEventListener('click', openWeekCopy);
+    $('#week-grid').addEventListener('click', (e) => {
+      if (justSwiped()) return;
+      const t = e.target.closest('[data-date]');
+      if (t) showDay(t.dataset.date);
+    });
+    bindSwipe($('#week-grid'), () => shiftWeek(-1), () => shiftWeek(1));
+    $('#day-prev').addEventListener('click', () => shiftDay(-1));
+    $('#day-next').addEventListener('click', () => shiftDay(1));
+    $('#day-close').addEventListener('click', () => showView('tab-week', 'view-week'));
+    $('#day-add').addEventListener('click', onDayAdd);
+    $('#day-lane').addEventListener('click', onLaneClick);
+    bindSwipe($('#day-scroll'), () => shiftDay(-1), () => shiftDay(1));
+    $('#month-prev').addEventListener('click', () => shiftMonth(-1));
+    $('#month-next').addEventListener('click', () => shiftMonth(1));
+    $('#month-title').addEventListener('click', () => { monthState = null; renderMonth(); });
+  }
+
   function init() {
     loadSettings();
     bindSettings();
@@ -4252,6 +4781,7 @@ const App = (() => {
     bindDialogs();
     bindClients();
     bindFlow();
+    bindCalendar();
     loadData();
     applySettings();
     // 起動時に書き込めるか確かめて、状態ドットに反映する(設定は書かない)。
@@ -4262,6 +4792,7 @@ const App = (() => {
     scheduleRefresh(0);
     tickClock();
     setInterval(tickClock, 1000);
+    setInterval(() => { if (document.visibilityState === 'visible') renderCurrentTab(); }, 60000);
     document.addEventListener('visibilitychange', onVisibility);
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
@@ -4270,7 +4801,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { SCHEMA, getSettings, updateSettings, setStatus, scheduleRefresh, refresh, applyZoom, setToolbarAttention, showTab, showView, dialog, openSheet, getData, setData, openSlotsFor, openRespond, openReminder, copyText };
+  return { SCHEMA, getSettings, updateSettings, setStatus, scheduleRefresh, refresh, applyZoom, setToolbarAttention, showTab, showView, dialog, openSheet, getData, setData, openSlotsFor, openRespond, openReminder, copyText, showWeek, showDay };
 })();
 </script>
 </body>
