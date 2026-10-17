@@ -2714,7 +2714,7 @@ const Logic = (() => {
     const shift = Math.round((noon(toWeekStart) - noon(fromWeekStart)) / 86400000);
     const copied = data.bands
       .filter((b) => fromDates.has(b.date))
-      .map((b, n) => ({ ...b, id: b.id + '_c' + n, date: addDays(b.date, shift) }));
+      .map((b) => { const date = addDays(b.date, shift); return { ...b, id: b.id + '_' + date, date }; });
     const kept = mode === 'replace' ? data.bands.filter((b) => !toDates.has(b.date)) : data.bands;
     return { ...data, bands: mergeBands([...kept, ...copied]) };
   }
@@ -2732,7 +2732,7 @@ const Logic = (() => {
     const out = [];
     for (const p of data.proposals) {
       if (p.status !== 'pending' || p.id === excludeProposalId) continue;
-      for (const s of p.slots) out.push({ date: s.date, start: s.start, end: s.end, proposalId: p.id, clientId: p.clientId, deadline: p.deadline });
+      p.slots.forEach((s, slotIndex) => out.push({ date: s.date, start: s.start, end: s.end, slotIndex, proposalId: p.id, clientId: p.clientId, deadline: p.deadline }));
     }
     return out;
   }
@@ -2796,7 +2796,7 @@ const Logic = (() => {
     }
     holds(data, excludeProposalId).forEach((h) => {
       if (h.date !== date) return;
-      rest.push({ kind: 'hold', id: h.proposalId + ':' + rest.length, start: h.start, end: h.end, clientId: h.clientId, proposalId: h.proposalId, deadline: h.deadline });
+      rest.push({ kind: 'hold', id: h.proposalId + ':' + h.slotIndex, start: h.start, end: h.end, clientId: h.clientId, proposalId: h.proposalId, deadline: h.deadline });
     });
     rest.sort((a, b) => toMin(a.start) - toMin(b.start));
     return [...bands, ...rest];

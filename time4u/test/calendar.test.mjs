@@ -18,6 +18,7 @@ test('itemsForDay stacks bands first then items by start', () => {
   assert.deepEqual(items.map((i) => [i.kind, i.start]), [['band', '13:00'], ['busy', '12:00'], ['hold', '13:00'], ['meeting', '15:00']]);
   assert.equal(items[2].deadline, '2026-10-22');
   assert.equal(items[2].clientId, 'c_1');
+  assert.equal(items[2].id, 'p_1:0');
   assert.deepEqual(Logic.itemsForDay(data, '2026-10-20', 'p_1').map((i) => i.kind), ['band', 'busy', 'meeting']);
 });
 

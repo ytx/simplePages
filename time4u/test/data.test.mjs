@@ -104,3 +104,12 @@ test('clientHasActive and deleteClient', () => {
   assert.ok(!out.blocks.some((b) => b.clientId === 'c_3'));
   assert.ok(!out.proposals.some((p) => p.clientId === 'c_3'));
 });
+
+test('copyWeekBands from one week to two weeks yields unique band ids', () => {
+  const d = sample();
+  const a = Logic.copyWeekBands(d, '2026-10-19', '2026-10-26', 'add');
+  const b = Logic.copyWeekBands(a, '2026-10-19', '2026-11-02', 'add');
+  const ids = b.bands.map((x) => x.id);
+  assert.equal(new Set(ids).size, ids.length);
+  assert.equal(ids.length, 3);
+});
