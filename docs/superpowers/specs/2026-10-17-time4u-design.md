@@ -1,7 +1,7 @@
 # time4u ページ 設計書
 
 日付: 2026-10-17
-対象: `time4u/index.html`、`time4u/test/`、`time4u/README.md`
+対象: `time4u/index.html`、`time4u/fonts/`、`time4u/test/`、`time4u/README.md`、`CLAUDE.md`(規約の例外追記)
 前提: 共通規約 `2026-10-12-simplepages-conventions-design.md`、`2026-10-13-toolbar-and-settings-modal-design.md`。設定モーダル・ツールバー・i18n・テーマ・拡縮・データタブは規約どおりで、本書では差分だけ書く。
 参考: l_timer 設計書 `2026-10-15-l_timer-design.md`(設定とは別キー `simplePages.<page>.data` にユーザーデータを置く方式、ページ内ダイアログ)。
 
@@ -52,9 +52,27 @@
 - ページ固有のツールバーボタンはない。
 - 画面内の遷移(クライアント → 空き枠 → 文面、週 → 1 日)は `main` 内の子ビューを横スライドで切り替える。各子ビューの左上に「‹ 戻る」。ブラウザの戻るボタンとは連動しない(`history` は触らない)。
 
+### 構成
+
+```
+time4u/
+  index.html                       ページ本体
+  fonts/zen-kurenaido/zk-000.woff2 … zk-123.woff2   書体(124 ファイル、合計約 2.1 MB)
+  fonts/zen-kurenaido/OFL.txt      SIL Open Font License 1.1
+  test/                            Logic のテスト
+  README.md
+```
+
+### 書体
+
+- 全体に **Zen Kurenaido**(ペン字。SIL OFL 1.1)。`../green`(`packages/client/public/fonts/zen-kurenaido/`、`src/styles/fonts.css`)が自前配信している Google Fonts のサブセット分割 124 本をそのままコピーし、`fonts.css` の 124 個の `@font-face` を index.html の `<style>` に埋め込む。`url()` は `fonts/zen-kurenaido/zk-NNN.woff2` の相対パス、`font-display: swap`。unicode-range による分割なので、実際に読み込まれるのは画面に出た文字の分だけ。
+- フォールバックは共通のシステムフォントスタック。`--font: 'Zen Kurenaido', system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif`。
+- weight は 400 しかないので **太字は使わない**。強調は文字サイズと色で付ける。数字は `font-variant-numeric: tabular-nums`。
+- これは共通規約「Web フォントは使わない」の例外。音声・画像と同じく「同じページディレクトリ内のメディアを相対パスで読み込む」例外に書体ファイルを加える形で `CLAUDE.md` と共通規約の該当行を更新する(外部ドメイン・CDN は引き続き禁止)。About のクレジットに Zen Kurenaido(SIL OFL)を載せる。
+
 ### 見た目
 
-「柔らかい」印象を狙う。ライト・ダークで同じ系統の色を使う。
+「柔らかい」印象を狙う。ペン字の書体に合わせ、ライト・ダークで同じ系統の色を使う。
 
 - 状態色は彩度を落とした 4 色。可能帯 = 緑、仮押さえ = 黄、面会(確定) = 青、予定 = グレー。ライトでは淡い塗り + 濃い文字、ダークでは暗い塗り + 淡い文字。`--c-avail`、`--c-hold`、`--c-meeting`、`--c-busy` と、それぞれの `-text` を `:root` に置く。
 - 角丸は大きめ(`--radius: calc(12px * var(--zoom))`)、影は薄く 1 段。
