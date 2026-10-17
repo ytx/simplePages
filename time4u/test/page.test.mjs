@@ -108,6 +108,11 @@ test('follow-up UI: week bulk add, today buttons, deadline steppers, sticky foot
   }
 });
 
+test('settings fields cannot be widened by input intrinsic width (iOS)', () => {
+  assert.match(src, /\.field \{[^}]*grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\)/);
+  assert.match(src, /\.field > input, \.field > select \{ width: 100%; min-width: 0;/);
+});
+
 test('PWA manifest and icons', () => {
   const dir = new URL('../', import.meta.url);
   const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('manifest.webmanifest', dir)), 'utf8'));

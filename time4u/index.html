@@ -2001,10 +2001,10 @@ body {
 #status-dot[data-state="warn"] { background: var(--warn); }
 #tabbar { display: flex; border-top: 1px solid var(--border); background: var(--bg-panel); }
 .tab {
-  flex: 1; min-height: max(56px, 3.6em); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  flex: 1; min-height: max(70px, 4.5em); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   background: none; border: none; color: var(--fg-muted); cursor: pointer; font: inherit; font-size: var(--fs-small); padding: 4px 0;
 }
-.tab svg { width: 1.6em; height: 1.6em; fill: currentColor; }
+.tab svg { width: 2em; height: 2em; fill: currentColor; }
 .tab[aria-selected="true"] { color: var(--accent); }
 dialog#dialog, dialog#sheet, dialog#help {
   background: var(--bg-panel); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius);
@@ -2031,9 +2031,10 @@ dialog#help { width: min(92vw, 36em); max-height: 85vh; overflow: auto; padding-
 .settings-section { border-bottom: 1px solid var(--border); padding: calc(var(--gap) / 2) 0; }
 .settings-section > summary { cursor: pointer; padding: calc(var(--gap) / 2) 0; list-style-position: inside; }
 .settings-section > :not(summary) { margin-left: 0; }
-.field { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); align-items: center; margin-bottom: var(--gap); }
+.field { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--gap); align-items: center; margin-bottom: var(--gap); }
+.field > input, .field > select { width: 100%; min-width: 0; box-sizing: border-box; }
 .field label { color: var(--fg-muted); }
-.field.stack { grid-template-columns: 1fr; gap: calc(var(--gap) / 3); }
+.field.stack { grid-template-columns: minmax(0, 1fr); gap: calc(var(--gap) / 3); }
 select, input, textarea, button.btn {
   font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border);
   border-radius: 6px; padding: 0.4em 0.6em;
