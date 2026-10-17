@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>time4u</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2b7de9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12151b" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="time4u">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 /* Zen Kurenaido (SIL Open Font License 1.1, https://fonts.google.com/specimen/Zen+Kurenaido)
    Google Fonts のサブセット分割をそのまま自前配信する(オフライン・CSP のため外部 CDN は使わない)。
@@ -2414,6 +2421,7 @@ h2.cal-title { cursor: default; }
     </ol>
     <h3>データの扱い</h3>
     <p>設定タブの「データ」から JSON を書き出し・読み込みできます。読み込みは今の内容を置き換えます。別の端末へ移すときに使ってください。「全消去」で設定とデータをすべて消します。</p>
+    <p>ブラウザの共有メニューから「ホーム画面に追加」すると、アプリのように全画面で開けます。ホーム画面から開いた time4u とブラウザで開いた time4u はデータを共有しないので、ブラウザで入れたデータはいちど書き出してから読み込んでください。</p>
   </div>
   <div class="help-body" data-lang="en" hidden>
     <h2 class="help-h">What time4u is</h2>
@@ -2434,6 +2442,7 @@ h2.cal-title { cursor: default; }
     </ol>
     <h3>Your data</h3>
     <p>The data section of the settings tab exports and imports a JSON file. Importing replaces the current content. Use it to move to another device. "Clear all" deletes settings and data.</p>
+    <p>"Add to Home Screen" in the browser's share menu installs time4u as a full-screen app. The installed app and the browser tab do not share data, so export from the browser and import once in the app.</p>
   </div>
 </dialog>
 <dialog id="dialog">

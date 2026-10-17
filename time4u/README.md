@@ -75,6 +75,10 @@ localStorage に次の 2 つのキーで保存します。
 
 読み込みは `settings`、`data`、または両方を受け付け、含まれている側を**置き換える**(統合はしない)。実行前に確認を出す。含まれていない側は変更しない。「すべて消去」は 2 つのキーを両方消して既定値に戻す。
 
+## ホーム画面への追加(PWA)
+
+`manifest.webmanifest` と `icons/` を同梱しているので、Android Chrome の「インストール」や iOS Safari の「ホーム画面に追加」で全画面のアプリとして開ける(`display: standalone`)。Service Worker は置いていないので、起動には通信が要り、更新は普通のページと同じく次回起動時にサーバーから読み直す(開いたままなら閉じて開き直す)。iOS ではホーム画面から開いたアプリとブラウザで localStorage が別になるため、データはエクスポート/インポートで移す。アイコンは `icons/icon-192.png` / `icon-512.png`(maskable 兼用)と `icons/apple-touch-icon.png`(180px)。
+
 ## 書体とライセンス
 
 書体は Zen Kurenaido(SIL Open Font License 1.1)を `fonts/zen-kurenaido/` に同梱している。ライセンス全文は `fonts/zen-kurenaido/OFL.txt`。アイコンは Material Icons(Apache License 2.0)。ページ本体は MIT ライセンス。

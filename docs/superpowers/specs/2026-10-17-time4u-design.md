@@ -362,6 +362,12 @@ localStorage キー `simplePages.time4u`、`version: 1`。全キーが表示だ�
 - 週の複写、1 日ビューのシート編集、月タブの点。
 - ダーク・ライトで 4 色が見分けられる。拡縮 50〜200 でタブバーが崩れない。
 
+## ホーム画面への追加(PWA、インストールのみ)
+
+- `time4u/manifest.webmanifest`(`name`/`short_name` time4u、`start_url` `./`、`scope` `./`、`display` standalone、`theme_color` `#2b7de9`、`background_color` `#f6f7f9`)と `time4u/icons/icon-192.png`、`icon-512.png`(any と maskable 兼用)、`apple-touch-icon.png`(180px)を置く。
+- `<head>` に `<link rel="manifest">`、`<link rel="apple-touch-icon">`、`theme-color`(ライト/ダーク)、`apple-mobile-web-app-*` を足す。
+- Service Worker は置かない。起動には通信が要り、更新は次回起動時にサーバーから読み直す。iOS ではホーム画面のアプリとブラウザで localStorage が別になるので、使い方モーダルと README でエクスポート/インポートによる移行を案内する。
+
 ## 範囲外
 
 - Google カレンダーなど外部サービスとの同期、通知、メール/LINE の直接送信。

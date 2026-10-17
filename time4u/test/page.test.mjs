@@ -9,7 +9,10 @@ const src = readFileSync(html, 'utf8');
 const Logic = loadLogic(html);
 
 test('no external resources and no innerHTML', () => {
-  assert.doesNotMatch(src, /<link\s/);
+  for (const m of src.matchAll(/<link\s[^>]*>/g)) {
+    assert.match(m[0], /rel="(manifest|apple-touch-icon)"/, m[0]);
+    assert.match(m[0], /href="(manifest\.webmanifest|icons\/[\w.-]+\.png)"/, m[0]);
+  }
   assert.doesNotMatch(src, /<script\s[^>]*src=/);
   assert.doesNotMatch(src, /https?:\/\/(?!github\.com\/ytx\/simplePages|fonts\.google\.com\/specimen|openfontlicense\.org)/);
   assert.doesNotMatch(src, /innerHTML/);
@@ -103,4 +106,23 @@ test('follow-up UI: week bulk add, today buttons, deadline steppers, sticky foot
     assert.equal(typeof Logic.I18N.ja[k], 'string', k);
     assert.equal(typeof Logic.I18N.en[k], 'string', k);
   }
+});
+
+test('PWA manifest and icons', () => {
+  const dir = new URL('../', import.meta.url);
+  const manifest = JSON.parse(readFileSync(fileURLToPath(new URL('manifest.webmanifest', dir)), 'utf8'));
+  assert.equal(manifest.name, 'time4u');
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.start_url, './');
+  assert.equal(manifest.scope, './');
+  assert.ok(manifest.icons.length >= 2);
+  for (const icon of manifest.icons) {
+    assert.match(icon.src, /^icons\//);
+    assert.ok(existsSync(fileURLToPath(new URL(icon.src, dir))), icon.src);
+  }
+  assert.ok(existsSync(fileURLToPath(new URL('icons/apple-touch-icon.png', dir))));
+  assert.match(src, /<link rel="manifest" href="manifest\.webmanifest">/);
+  assert.match(src, /<link rel="apple-touch-icon" href="icons\/apple-touch-icon\.png">/);
+  assert.match(src, /<meta name="theme-color"/);
+  assert.match(src, /apple-mobile-web-app-capable/);
 });

@@ -17,7 +17,7 @@ index.html 1 ファイルで動く小さな Web ページの集まり。各ペ�
 
 詳細は `docs/superpowers/specs/2026-10-12-simplepages-conventions-design.md`。
 
-- 1 ページ = `<page>/index.html` 単体。外部 `<link>`/`<script src>`/CDN/Web フォント禁止。例外として同じページディレクトリ内のメディア(音声・画像・書体ファイル)は相対パスで読み込んでよい。`src` に入れるパスは index.html 内の定数リストに限り、設定値や URL の文字列を直接渡さない。
+- 1 ページ = `<page>/index.html` 単体。外部 `<link>`/`<script src>`/CDN/Web フォント禁止。例外として同じページディレクトリ内のメディア(音声・画像・書体ファイル)と PWA 用ファイル(`manifest.webmanifest`、アイコン PNG。`<link rel="manifest">` / `apple-touch-icon` の相対パス)は読み込んでよい。`src` に入れるパスは index.html 内の定数リストに限り、設定値や URL の文字列を直接渡さない。
 - `<script id="app-logic">` に DOM に触らない純粋関数を置き `Logic` を公開。`<script id="app-ui">` に DOM・fetch・タイマーを置き `App` を公開。グローバルはこの 2 つだけ。
 - 外部由来の文字列は `textContent` で挿入する。
 - CSS は `:root` の変数に集約。テーマは `html[data-theme="light"|"dark"]` で変数を上書き。
