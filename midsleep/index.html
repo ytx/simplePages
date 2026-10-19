@@ -616,6 +616,46 @@ const Logic = (() => {
     const w = wakeDate(r);
     return w >= addDays(today, -(days - 1)) && w <= today;
   }
+  function relMinutes(s, wd) { return Math.round((parseLocal(s) - parseLocal(wd.slice(0, 10))) / 60000); }
+  function targetRel(targetMin) { return targetMin > 720 ? targetMin - 1440 : targetMin; }
+  function chartModel(records, days, today, targetMin, lang) {
+    const first = addDays(today, -(days - 1));
+    const used = completed(records).filter((r) => inWindow(r, days, today)).sort((a, b) => (a.wakeAt < b.wakeAt ? -1 : a.wakeAt > b.wakeAt ? 1 : 0));
+    const rows = used.map((r) => {
+      const wd = wakeDate(r);
+      const bed = relMinutes(r.bedAt, wd), wake = relMinutes(r.wakeAt, wd);
+      return { r, wd, bed, wake, mid: (bed + wake) / 2, nap: isNap(r) };
+    });
+    let yMin = -180, yMax = 540;
+    const main = rows.filter((x) => !x.nap); // naps do not expand the axis
+    if (main.length) {
+      yMin = Math.min(yMin, Math.floor(Math.min(...main.map((x) => x.bed)) / 60) * 60);
+      yMax = Math.max(yMax, Math.ceil(Math.max(...main.map((x) => x.wake)) / 60) * 60);
+    }
+    const span = yMax - yMin;
+    const ratio = (rel) => (rel - yMin) / span;
+    const yTicks = [];
+    for (let v = yMin; v <= yMax; v += 120) yTicks.push({ y: ratio(v), label: formatHM(v) });
+    const cols = [];
+    for (let i = 0; i < days; i++) {
+      const date = addDays(first, i);
+      const d = parseLocal(date);
+      cols.push({ x: i, date, label: i % 3 === 0 ? `${d.getMonth() + 1}/${d.getDate()}` : '' });
+    }
+    const colOf = (date) => cols.findIndex((c) => c.date === date);
+    const bars = rows.map((x) => ({ x: colOf(x.wd), yBed: ratio(x.bed), yWake: ratio(x.wake), yMid: ratio(x.mid), nap: x.nap }));
+    const line = bars.filter((b) => !b.nap).map((b) => ({ x: b.x, y: b.yMid }));
+    const target = targetMin === null || targetMin === undefined ? null : { y: ratio(targetRel(targetMin)) };
+    return { yMin, yMax, yTicks, cols, bars, line, target };
+  }
+  function summaryLine(r, lang) {
+    const ja = lang === 'ja';
+    const span = `${formatHM(minutesOfDay(r.bedAt))} → ${formatHM(minutesOfDay(r.wakeAt))}`;
+    const dur = formatDuration(durationMin(r.bedAt, r.wakeAt), lang);
+    if (isNap(r)) return `${span} · ${ja ? '仮眠' : 'nap'} ${dur}`;
+    return `${span} · ${ja ? '中央' : 'mid'} ${formatHM(midMinutes(r.bedAt, r.wakeAt))} · ${dur}`;
+  }
+
   function stats(records, days, today) {
     const used = completed(records).filter((r) => inWindow(r, days, today) && !isNap(r));
     const count = used.length;
@@ -674,7 +714,7 @@ const Logic = (() => {
     if (sleepMin > 720) return 'long';
     return null;
   }
-  return { nextMid, prevMid, nextOccurrence, wakeFor, bedFor, adviceFlags, isNap, wakeDate, sleepingRecord, completed, inWindow, stats, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, emptyData, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
+  return { relMinutes, targetRel, chartModel, summaryLine, nextMid, prevMid, nextOccurrence, wakeFor, bedFor, adviceFlags, isNap, wakeDate, sleepingRecord, completed, inWindow, stats, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, emptyData, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
 })();
 </script>
 <script id="app-ui">
