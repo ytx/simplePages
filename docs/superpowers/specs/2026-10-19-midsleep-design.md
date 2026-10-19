@@ -79,7 +79,7 @@ PWA は time4u と同じ「インストールのみ、Service Worker なし」�
 
 ### 書体
 
-Zen Maru Gothic(SIL Open Font License 1.1)を `midsleep/fonts/zen-maru-gothic/` に同梱し、ページ全体の `--font` に使う。time4u と同じく Google Fonts が配る unicode-range 分割の woff2 をそのまま置き、`@font-face` を `<style>` 内に並べる(ウェイトは 400 と 700。700 は大きな時刻だけに使う)。ライセンス全文は同じディレクトリの `OFL.txt`。読み込み前は `font-display: swap` でシステム書体が出る。
+Zen Maru Gothic(SIL Open Font License 1.1)を `midsleep/fonts/zen-maru-gothic/` に同梱し、ページ全体の `--font` に使う。time4u と同じく Google Fonts が配る unicode-range 分割の woff2 をそのまま置き、`@font-face` を `<style>` 内に並べる。ウェイト 400 は全 122 分割、700 は大きな時刻にしか使わないので数字とコロンを含む分割だけ(`zmg-700-116`、`zmg-700-121`)を置く。合計 2.2 MB。ライセンス全文は同じディレクトリの `OFL.txt`。読み込み前は `font-display: swap` でシステム書体が出る。
 
 ### 色
 
@@ -113,7 +113,7 @@ Zen Maru Gothic(SIL Open Font License 1.1)を `midsleep/fonts/zen-maru-gothic/` 
 ```
 
 - **夜タイル**: `Logic.wakeFor(now, target)`。補足は「睡眠 {d} ・ 中央 {m}」。注意語は付けない(日中に開いて 20 時間超の提案になっても、そのまま出す)。
-- **朝タイル**: `Logic.bedFor(nextWake, target)`。補足は「睡眠 {d} ・ あと {r}」(`r` は `now` から `bed` までの残り時間、`formatDuration`)。`bed` が `now` より前なら、大きな時刻を不透明度 .55 にし、補足を「もう過ぎています ・ 今寝ると中央は {m}({diff})」にする(`m` は `wakeFor(now, target)` と同じ就寝で中央を取るので、`now` と `wake` の中央 = `target` の次の出現。`diff` は目標との差で、`diffParenT` と同じ書式)。
+- **朝タイル**: `Logic.bedFor(nextWake, target)`。補足は「睡眠 {d} ・ あと {r}」(`r` は `now` から `bed` までの残り時間、`formatDuration`)。`bed` が `now` より前なら、大きな時刻を不透明度 .55 にし、補足を「もう過ぎています ・ 今寝ると中央は {m}{diff}」にする(`m` は今寝て `nextWake` に起きた場合の中央 = `midMinutes(now, nextWake)`、`diff` は目標との差で `diffParenT` と同じ書式)。
 - ‹ › は `wakeTarget` を 15 分動かして保存し、即再計算する(既存の `stepWakeTarget`)。
 - **今から寝る**: 既存どおり。画面は就寝中へ。
 - 目標が出せない(有効な記録が 2 件未満)ときは、構成を崩さず、両タイルの大きな時刻を「--:--」(不透明度 .35)にし、補足を夜「記録があと {n} 回たまると目安が出ます」、朝「まずは今夜の記録から」にする。‹ › は動く(保存だけする)。
