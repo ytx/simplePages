@@ -3139,9 +3139,10 @@ const App = (() => {
       links.append(l1, l2);
       nodes.push(links);
       footNodes.push(el('div', 'tile-label', tr('tile_on_target')));
-      const tbig = targetMin === null
+      const tw = targetMin === null ? null : Logic.wakeFor(Logic.parseLocal(rec.bedAt), targetMin);
+      const tbig = (tw === null || tw.sleepMin > 720)
         ? el('div', 'tile-big none', tr('no_time'))
-        : el('div', 'tile-big' + (stale ? ' dim' : ''), hmOf(Logic.wakeFor(Logic.parseLocal(rec.bedAt), targetMin).wakeAt));
+        : el('div', 'tile-big' + (stale ? ' dim' : ''), hmOf(tw.wakeAt));
       footNodes.push(tbig);
     }
     body.replaceChildren(...nodes);
