@@ -1000,13 +1000,13 @@ const App = (() => {
     e.textContent = (typeof message === 'function' ? message() : message) || '';
   }
 
-  function tickClock() {
+  function tickClock(noRender = false) {
     const d = new Date();
     const minute = Math.floor(d.getTime() / 60000);
     if (minute !== lastMinute) {
       const first = lastMinute === null;
       lastMinute = minute;
-      if (!first && data && !$('#sheet').open) {
+      if (!first && !noRender && data && !$('#sheet').open) {
         if (activeTab === 'today') renderToday();
         else if (activeTab === 'history') renderHistory();
       }
@@ -1421,7 +1421,7 @@ const App = (() => {
   }
 
   function onVisibility() {
-    if (document.visibilityState === 'visible') { tickClock(); renderAll(); }
+    if (document.visibilityState === 'visible') { tickClock(true); renderAll(); }
   }
 
   function resetIdle() {
@@ -1517,8 +1517,7 @@ const App = (() => {
     let raw = null;
     try { raw = JSON.parse(localStorage.getItem(DATA_KEY)); } catch { raw = null; }
     data = Logic.normalizeData(raw);
-    const skipped = Logic.invalidCount(raw);
-    if (skipped > 0) setStatus('warn', () => tr('import_skipped', { n: skipped }));
+    return Logic.invalidCount(raw);
   }
 
   function saveData() {
@@ -1662,11 +1661,12 @@ const App = (() => {
     bindTabs();
     bindHistory();
     bindDialogs();
-    loadData();
+    const skippedOnLoad = loadData();
     applySettings();
     // 起動時に書き込めるか確かめて、状態ドットに反映する(設定は書かない)。
     storageOk = storage.probe();
     showStorageStatus();
+    if (skippedOnLoad > 0) setStatus('warn', () => tr('import_skipped', { n: skippedOnLoad }));
     const initialTab = new URLSearchParams(location.search).get('tab');
     switchTab(TABS.includes(initialTab) ? initialTab : 'today');
     renderAll();
