@@ -1928,20 +1928,20 @@ html[data-theme="dark"] {
     --tile-warn-fg: #ffe0b0;
   }
 }
-#tab-today.active { display: flex; flex-direction: column; margin: 0 calc(-1 * var(--gap)); padding-bottom: 0; overflow: hidden; }
-.tile { display: flex; flex-direction: column; padding: var(--gap) calc(var(--gap) * 1.5); min-height: 0; position: relative; }
+#tab-today.active { display: flex; flex-direction: column; margin: 0 calc(-1 * var(--gap)); padding-bottom: 0; overflow-x: hidden; overflow-y: auto; }
+.tile { display: flex; flex-direction: column; padding: min(var(--gap), 2dvh) calc(var(--gap) * 1.5); min-height: min-content; position: relative; }
 .tile-night { background: var(--tile-night-bg); color: var(--tile-night-fg); flex: 5 1 0; }
 .tile-morning { background: var(--tile-morning-bg); color: var(--tile-morning-fg); flex: 5 1 0; }
 #tab-today[data-state="sleeping"] .tile-night { background: var(--tile-night-deep); flex: 7 1 0; }
 #tab-today[data-state="sleeping"] .tile-morning { flex: 3 1 0; }
-.tile-date { font-size: var(--fs-small); opacity: 0.7; }
+.tile-date { font-size: min(var(--fs-small), 2.4dvh); opacity: 0.7; }
 .tile-main { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
-.tile-label { font-size: calc(var(--fs-base) * 0.9); opacity: 0.9; }
-.tile-big { font-weight: 700; font-size: clamp(2.4em, 16vw, calc(var(--fs-base) * 3.8)); line-height: 1.05; letter-spacing: -0.02em; }
+.tile-label { font-size: min(calc(var(--fs-base) * 0.9), 2.6dvh); opacity: 0.9; }
+.tile-big { font-weight: 700; font-size: clamp(1.6em, min(16vw, 7dvh), calc(var(--fs-base) * 3.8)); line-height: 1.05; letter-spacing: -0.02em; }
 .tile-big.dim { opacity: 0.55; } .tile-big.none { opacity: 0.35; }
 .tile-big .tile-unit { font-size: 0.45em; font-weight: 400; }
 #tab-today[data-state="sleeping"] .tile-morning .tile-big { font-size: clamp(1.8em, 11vw, calc(var(--fs-base) * 2.7)); }
-.tile-sub { font-size: var(--fs-small); opacity: 0.8; margin-top: calc(var(--gap) / 2); line-height: 1.5; }
+.tile-sub { font-size: min(var(--fs-small), 2.4dvh); opacity: 0.8; margin-top: calc(var(--gap) / 2); line-height: 1.5; }
 .tile-foot { display: flex; justify-content: flex-end; align-items: center; gap: calc(var(--gap) / 2); }
 .pill { font: inherit; font-size: var(--fs-small); min-height: 44px; padding: 0 1.2em; border-radius: 999px; border: 1.5px solid currentColor; background: none; color: inherit; cursor: pointer; }
 .pill.fill { background: var(--tile-night-fg); color: var(--tile-night-bg); border-color: var(--tile-night-fg); }
@@ -2927,6 +2927,21 @@ const App = (() => {
     return tr('err_overlap');
   }
 
+  const mkStep = (icon, key, delta) => {
+    const btn = el('button', 'icon-btn');
+    btn.type = 'button';
+    btn.setAttribute('aria-label', tr(key));
+    const NS = $('#history-chart').namespaceURI;
+    const ic = document.createElementNS(NS, 'svg');
+    ic.setAttribute('aria-hidden', 'true');
+    const use = document.createElementNS(NS, 'use');
+    use.setAttribute('href', icon);
+    ic.append(use);
+    btn.append(ic);
+    btn.addEventListener('click', () => stepWakeTarget(delta));
+    return btn;
+  };
+
   function stepWakeTarget(delta) {
     const [h, m] = settings.wakeTarget.split(':').map(Number);
     const v = (((h * 60 + m + delta) % 1440) + 1440) % 1440;
@@ -3071,20 +3086,6 @@ const App = (() => {
           footNodes.push(big(hmOf(b.bedAt)), el('div', 'tile-sub', tr('tile_sleep_left', { d: Logic.formatDuration(b.sleepMin, settings.lang), r: Logic.formatDuration(left, settings.lang) })));
         }
       }
-      const mkStep = (icon, key, delta) => {
-        const btn = el('button', 'icon-btn');
-        btn.type = 'button';
-        btn.setAttribute('aria-label', tr(key));
-        const NS = $('#history-chart').namespaceURI;
-        const ic = document.createElementNS(NS, 'svg');
-        ic.setAttribute('aria-hidden', 'true');
-        const use = document.createElementNS(NS, 'use');
-        use.setAttribute('href', icon);
-        ic.append(use);
-        btn.append(ic);
-        btn.addEventListener('click', () => stepWakeTarget(delta));
-        return btn;
-      };
       const stepper = el('div', 'stepper');
       stepper.append(
         mkStep('#icon-chevron-left', 'wake_target_earlier', -15),
