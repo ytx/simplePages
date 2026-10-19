@@ -646,7 +646,35 @@ const Logic = (() => {
   }
   function newId(now) { return 'r_' + now.getTime(); }
 
-  return { isNap, wakeDate, sleepingRecord, completed, inWindow, stats, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, emptyData, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
+  function atMinute(base, min) { return new Date(base.getFullYear(), base.getMonth(), base.getDate(), Math.floor(min / 60), min % 60); }
+  function truncMin(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()); }
+  function dayShift(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, d.getHours(), d.getMinutes()); }
+  function nextMid(now, targetMin) {
+    const c = atMinute(now, targetMin);
+    return c.getTime() > truncMin(now).getTime() ? c : dayShift(c, 1);
+  }
+  function prevMid(at, targetMin) {
+    const c = atMinute(at, targetMin);
+    return c.getTime() < truncMin(at).getTime() ? c : dayShift(c, -1);
+  }
+  function nextOccurrence(now, hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    return nextMid(now, h * 60 + m);
+  }
+  function wakeFor(now, targetMin) {
+    const sleepMin = Math.round(2 * (nextMid(now, targetMin).getTime() - now.getTime()) / 60000);
+    return { wakeAt: new Date(now.getTime() + sleepMin * 60000), sleepMin };
+  }
+  function bedFor(wakeAt, targetMin) {
+    const sleepMin = Math.round(2 * (wakeAt.getTime() - prevMid(wakeAt, targetMin).getTime()) / 60000);
+    return { bedAt: new Date(wakeAt.getTime() - sleepMin * 60000), sleepMin };
+  }
+  function adviceFlags(sleepMin, settings) {
+    if (sleepMin < settings.minSleepMin) return 'short';
+    if (sleepMin > 720) return 'long';
+    return null;
+  }
+  return { nextMid, prevMid, nextOccurrence, wakeFor, bedFor, adviceFlags, isNap, wakeDate, sleepingRecord, completed, inWindow, stats, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, emptyData, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
 })();
 </script>
 <script id="app-ui">
