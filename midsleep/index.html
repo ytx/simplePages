@@ -130,6 +130,27 @@ button.btn { cursor: pointer; min-height: 44px; }
 button.btn.danger { color: var(--error); }
 button.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 button.btn[hidden] { display: none; }
+.today-date { color: var(--fg-muted); }
+.today-target { margin-bottom: var(--gap); }
+.today-hint { color: var(--fg-muted); margin: var(--gap) 0; }
+.advice-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--gap); margin-bottom: var(--gap); }
+.advice-card.warn-card { border-color: var(--error); }
+.advice-title { color: var(--fg-muted); font-size: var(--fs-small); }
+.advice-big { font-size: calc(var(--fs-base) * 2); font-weight: 400; color: var(--accent); line-height: 1.3; }
+.advice-sub { color: var(--fg); }
+.advice-sub.warn { color: var(--error); }
+.advice-sub.muted { color: var(--fg-muted); }
+.advice-row { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--gap) / 2); }
+.advice-row .icon-btn { min-width: 44px; min-height: 44px; }
+.card-actions { display: flex; flex-wrap: wrap; gap: calc(var(--gap) / 2); margin-top: calc(var(--gap) / 2); }
+.big-btn { display: block; width: 100%; min-height: 4em; margin: var(--gap) 0; font: inherit; font-size: calc(var(--fs-base) * 1.4); color: #fff; background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius); cursor: pointer; }
+.big-btn.alt { background: var(--ok); border-color: var(--ok); }
+.big-btn[hidden] { display: none; }
+.today-last { color: var(--fg-muted); margin-top: var(--gap); }
+.link-btn { font: inherit; color: var(--accent); background: none; border: 0; padding: 0.5em 0.25em; min-height: 44px; cursor: pointer; text-decoration: underline; }
+.link-row { display: flex; flex-wrap: wrap; gap: var(--gap); margin-top: calc(var(--gap) / 2); }
+#sheet-body input[type=datetime-local] { width: 100%; min-height: 44px; margin-bottom: calc(var(--gap) / 3); }
+#sheet-ok.disabled, #sheet-ok:disabled { opacity: 0.4; cursor: default; }
 .row { display: flex; gap: var(--gap); flex-wrap: wrap; align-items: center; }
 .hint { color: var(--fg-muted); font-size: var(--fs-small); margin: calc(var(--gap) / 2) 0; }
 #data-message { min-height: 1.4em; margin-top: calc(var(--gap) / 2); }
@@ -165,8 +186,10 @@ button.btn[hidden] { display: none; }
 <main id="content">
   <h1 id="page-title" data-i18n="page_title"></h1>
   <section class="tab-pane active" id="tab-today">
-    <button id="btn-sleep" class="btn primary" type="button" hidden></button>
-    <button id="btn-wake" class="btn primary" type="button" hidden></button>
+    <div id="today-body"></div>
+    <button id="btn-sleep" class="big-btn" type="button" hidden></button>
+    <button id="btn-wake" class="big-btn alt" type="button" hidden></button>
+    <div id="today-foot"></div>
   </section>
   <section class="tab-pane" id="tab-history">
     <svg id="history-chart" aria-hidden="true"></svg>
@@ -395,6 +418,42 @@ const Logic = (() => {
       ok: 'OK',
       cancel: 'キャンセル',
       delete: '削除',
+      need_more: '2 晩分の記録がたまると、起床・就寝の目安が出ます(あと {n} 晩)',
+      target_line: '目標の中央時刻 {t}',
+      target_sub: '直近 {d} 日 · ばらつき ±{sd} 分',
+      card_if_sleep_now: '今寝ると',
+      wake_at: '起床 {t}',
+      sleep_for: '睡眠 {d}',
+      flag_short: '短めです',
+      flag_long: '長すぎます(目標からかなり外れています)',
+      card_wake_target: '起きたい時刻',
+      wake_target_earlier: '15 分早める',
+      wake_target_later: '15 分遅らせる',
+      bed_at: '就寝 {t}',
+      already_passed: 'もう過ぎています(就寝 {t} 予定)',
+      last_today: '今朝 {w} に起床 · 中央 {m}{diff}',
+      last_day: '{date} {w} に起床 · 中央 {m}{diff}',
+      diff_paren: '({d})',
+      diff_early: '目標より {n} 分早い',
+      diff_late: '目標より {n} 分遅い',
+      diff_on: '目標どおり',
+      sleep_now: '今から寝る',
+      sleeping_since: '就寝中 · {t} から({d})',
+      wake_now: '今起きた',
+      wake_too_early: '就寝時刻より前のため記録できません',
+      if_wake_now: '今起きると中央 {m}{diff}',
+      fix_bed_time: '就寝時刻を直す',
+      cancel_sleep: '取り消す',
+      confirm_cancel_sleep: '就寝中の記録を取り消します。よろしいですか?',
+      stale_text: '{t} に寝てから {h} 時間以上たっています。起きた時刻を入れて記録するか、取り消してください',
+      enter_wake_time: '起きた時刻を入れる',
+      label_bed: '就寝時刻',
+      label_wake: '起床時刻',
+      err_order: '起床は就寝より後にしてください',
+      err_too_long: '24 時間を超えています',
+      err_overlap: '他の記録と重なっています',
+      err_future: '未来の時刻は指定できません',
+      err_empty: '日時を入力してください',
       save: '保存',
     },
     en: {
@@ -444,6 +503,42 @@ const Logic = (() => {
       ok: 'OK',
       cancel: 'Cancel',
       delete: 'Delete',
+      need_more: 'Once you have 2 nights logged, wake and bed suggestions appear ({n} more)',
+      target_line: 'Target mid-point {t}',
+      target_sub: 'Last {d} days · spread ±{sd} min',
+      card_if_sleep_now: 'If you sleep now',
+      wake_at: 'Wake {t}',
+      sleep_for: 'Sleep {d}',
+      flag_short: 'Rather short',
+      flag_long: 'Too long (far from your target)',
+      card_wake_target: 'Wake-up time',
+      wake_target_earlier: '15 minutes earlier',
+      wake_target_later: '15 minutes later',
+      bed_at: 'Bed {t}',
+      already_passed: 'Already passed (bed was {t})',
+      last_today: 'Woke at {w} this morning · mid {m}{diff}',
+      last_day: 'Woke {date} {w} · mid {m}{diff}',
+      diff_paren: ' ({d})',
+      diff_early: '{n} min earlier than target',
+      diff_late: '{n} min later than target',
+      diff_on: 'on target',
+      sleep_now: 'Go to sleep now',
+      sleeping_since: 'Sleeping · since {t} ({d})',
+      wake_now: 'I just woke up',
+      wake_too_early: 'Cannot record: that is before bedtime',
+      if_wake_now: 'If you wake now, mid {m}{diff}',
+      fix_bed_time: 'Fix bedtime',
+      cancel_sleep: 'Cancel',
+      confirm_cancel_sleep: 'Discard this sleep record?',
+      stale_text: 'It has been over {h} hours since you went to bed at {t}. Enter when you woke up, or cancel.',
+      enter_wake_time: 'Enter wake time',
+      label_bed: 'Bedtime',
+      label_wake: 'Wake time',
+      err_order: 'Wake time must be after bedtime',
+      err_too_long: 'Longer than 24 hours',
+      err_overlap: 'Overlaps another record',
+      err_future: 'Cannot be in the future',
+      err_empty: 'Enter a date and time',
       save: 'Save',
     },
   };
@@ -875,7 +970,247 @@ const App = (() => {
   }
 
   // ---- 描画(後続タスクで中身を足す) ----
-  function renderToday() {}
+  // ---- 今日タブ ----
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const hmOf = (d) => Logic.formatHM(d.getHours() * 60 + d.getMinutes());
+
+  function diffPhrase(midMin, targetMin) {
+    const d = Logic.circularDiff(midMin, targetMin);
+    if (d < 0) return tr('diff_early', { n: -d });
+    if (d > 0) return tr('diff_late', { n: d });
+    return tr('diff_on');
+  }
+  const diffParen = (midMin, targetMin) => (targetMin === null ? '' : tr('diff_paren', { d: diffPhrase(midMin, targetMin) }));
+
+  function errText(error) {
+    if (error === 'order') return tr('err_order');
+    if (error === 'too_long') return tr('err_too_long');
+    return tr('err_overlap');
+  }
+
+  function adviceCard(title, cls) {
+    const c = el('div', 'advice-card' + (cls ? ' ' + cls : ''));
+    c.append(el('div', 'advice-title', title));
+    return c;
+  }
+
+  function flagLine(sleepMin) {
+    const sub = el('div', 'advice-sub', tr('sleep_for', { d: Logic.formatDuration(sleepMin, settings.lang) }));
+    const f = Logic.adviceFlags(sleepMin, settings);
+    if (f) {
+      sub.textContent += ' · ';
+      sub.append(el('span', 'warn advice-sub', tr(f === 'short' ? 'flag_short' : 'flag_long')));
+    }
+    return sub;
+  }
+
+  function stepWakeTarget(delta) {
+    const [h, m] = settings.wakeTarget.split(':').map(Number);
+    const v = (((h * 60 + m + delta) % 1440) + 1440) % 1440;
+    updateSettings({ wakeTarget: `${pad2(Math.floor(v / 60))}:${pad2(v % 60)}` });
+    renderToday();
+  }
+
+  function lastRecordLine(now, targetMin) {
+    const done = Logic.completed(data.records);
+    if (done.length === 0) return null;
+    const r = done.reduce((a, b) => (b.wakeAt > a.wakeAt ? b : a));
+    const params = {
+      w: Logic.formatHM(Logic.minutesOfDay(r.wakeAt)),
+      m: Logic.formatHM(Logic.midMinutes(r.bedAt, r.wakeAt)),
+      diff: diffParen(Logic.midMinutes(r.bedAt, r.wakeAt), targetMin),
+      date: Logic.formatDateShort(r.wakeAt, settings.lang),
+    };
+    const today = r.wakeAt.slice(0, 10) === Logic.todayStr(now);
+    return el('div', 'today-last', tr(today ? 'last_today' : 'last_day', params));
+  }
+
+  // 日時 1 つを入れるシート。check(value) は Logic.validateRecord の結果か { ok:false, error } を返す。
+  function dateTimeSheet({ title, label, initial, max, check, onSave }) {
+    let input = null;
+    let err = null;
+    const validate = () => {
+      const v = input.value;
+      let msg = '';
+      if (!v) msg = tr('err_empty');
+      else if (max && v > max) msg = tr('err_future');
+      else {
+        const res = check(v);
+        if (!res.ok) msg = errText(res.error);
+      }
+      err.textContent = msg;
+      $('#sheet-ok').disabled = msg !== '';
+      return msg === '';
+    };
+    openSheet({
+      title,
+      build(body) {
+        body.append(el('div', 'sheet-label', label));
+        input = el('input');
+        input.type = 'datetime-local';
+        input.step = '60';
+        input.value = initial;
+        if (max) input.max = max;
+        err = el('div', 'sheet-error');
+        input.addEventListener('input', validate);
+        body.append(input, err);
+        validate();
+      },
+      validate,
+      onOk() { onSave(input.value); },
+    });
+  }
+
+  function cancelSleep(rec) {
+    dialog({ message: tr('confirm_cancel_sleep'), danger: true }).then((res) => {
+      if (!res.ok) return;
+      data = Logic.normalizeData({ ...data, records: data.records.filter((r) => r.id !== rec.id) });
+      saveData();
+      renderToday();
+    });
+  }
+
+  function fixBedTime(rec, now) {
+    dateTimeSheet({
+      title: tr('fix_bed_time'),
+      label: tr('label_bed'),
+      initial: rec.bedAt,
+      max: Logic.formatLocal(now),
+      check: (v) => Logic.validateRecord({ ...rec, bedAt: v }, data.records),
+      onSave(v) {
+        data = Logic.normalizeData({ ...data, records: data.records.map((r) => (r.id === rec.id ? { ...r, bedAt: v } : r)) });
+        saveData();
+        renderToday();
+      },
+    });
+  }
+
+  function enterWakeTime(rec) {
+    const initial = Logic.formatLocal(new Date(Logic.parseLocal(rec.bedAt).getTime() + 8 * 3600000));
+    dateTimeSheet({
+      title: tr('enter_wake_time'),
+      label: tr('label_wake'),
+      initial,
+      max: Logic.formatLocal(new Date()),
+      check: (v) => Logic.validateRecord({ ...rec, wakeAt: v }, data.records),
+      onSave(v) {
+        data = Logic.normalizeData({ ...data, records: data.records.map((r) => (r.id === rec.id ? { ...r, wakeAt: v } : r)) });
+        saveData();
+        renderToday();
+      },
+    });
+  }
+
+  function wakeNow(rec, now) {
+    const done = { ...rec, wakeAt: Logic.formatLocal(now) };
+    const res = Logic.validateRecord(done, data.records);
+    if (!res.ok) {
+      setStatus('warn', () => (res.error === 'order' ? tr('wake_too_early') : errText(res.error)));
+      return;
+    }
+    data = Logic.normalizeData({ ...data, records: data.records.map((r) => (r.id === rec.id ? done : r)) });
+    saveData();
+    renderToday();
+  }
+
+  function sleepNow(now) {
+    const rec = { id: Logic.newId(now), bedAt: Logic.formatLocal(now), wakeAt: null, createdAt: now.toISOString() };
+    data = Logic.normalizeData({ ...data, records: [...data.records, rec] });
+    saveData();
+    renderToday();
+  }
+
+  function renderToday() {
+    if (!data) return;
+    const now = new Date();
+    const nowStr = Logic.formatLocal(now);
+    const body = $('#today-body');
+    const foot = $('#today-foot');
+    const btnSleep = $('#btn-sleep');
+    const btnWake = $('#btn-wake');
+    const head = el('div', 'today-date', `${Logic.formatDateShort(nowStr, settings.lang)} ${Logic.formatHM(Logic.minutesOfDay(nowStr))}`);
+    const rec = Logic.sleepingRecord(data.records);
+    const st = Logic.stats(data.records, settings.avgDays, Logic.todayStr(now));
+    const targetMin = st.targetMin;
+    const nodes = [head];
+    const footNodes = [];
+
+    if (!rec) {
+      btnSleep.hidden = false;
+      btnWake.hidden = true;
+      if (targetMin === null) {
+        nodes.push(el('div', 'today-hint', tr('need_more', { n: Math.max(0, 2 - st.count) })));
+      } else {
+        nodes.push(el('div', 'today-target', tr('target_line', { t: Logic.formatHM(targetMin) }) + '  ' + tr('target_sub', { d: settings.avgDays, sd: st.sdMin })));
+        const w = Logic.wakeFor(now, targetMin);
+        const c1 = adviceCard(tr('card_if_sleep_now'));
+        c1.append(el('div', 'advice-big', tr('wake_at', { t: hmOf(w.wakeAt) })), flagLine(w.sleepMin));
+        const nextWake = Logic.nextOccurrence(now, settings.wakeTarget);
+        const b = Logic.bedFor(nextWake, targetMin);
+        const c2 = adviceCard(tr('card_wake_target'));
+        const row = el('div', 'advice-row');
+        const mkStep = (icon, key, delta) => {
+          const btn = el('button', 'icon-btn');
+          btn.type = 'button';
+          btn.setAttribute('aria-label', tr(key));
+          const svg = $('#btn-zoom-in svg').cloneNode(true);
+          svg.querySelector('use').setAttribute('href', icon);
+          btn.append(svg);
+          btn.addEventListener('click', () => stepWakeTarget(delta));
+          return btn;
+        };
+        const [wh, wm] = settings.wakeTarget.split(':').map(Number);
+        row.append(
+          mkStep('#icon-chevron-left', 'wake_target_earlier', -15),
+          el('span', 'advice-big', Logic.formatHM(wh * 60 + wm)),
+          mkStep('#icon-chevron-right', 'wake_target_later', 15),
+        );
+        const bedT = hmOf(b.bedAt);
+        if (b.bedAt.getTime() < now.getTime()) row.append(el('span', 'advice-sub muted', tr('already_passed', { t: bedT })));
+        else row.append(el('span', 'advice-sub', '→ ' + tr('bed_at', { t: bedT })));
+        c2.append(row, flagLine(b.sleepMin));
+        nodes.push(c1, c2);
+      }
+      btnSleep.textContent = tr('sleep_now');
+      const last = lastRecordLine(now, targetMin);
+      if (last) footNodes.push(last);
+    } else {
+      btnSleep.hidden = true;
+      btnWake.hidden = false;
+      btnWake.textContent = tr('wake_now');
+      const dur = Math.max(0, Logic.durationMin(rec.bedAt, nowStr));
+      nodes.push(el('div', 'today-target', tr('sleeping_since', { t: Logic.formatHM(Logic.minutesOfDay(rec.bedAt)), d: Logic.formatDuration(dur, settings.lang) })));
+      if (Logic.isStale(rec, now, settings.staleHours)) {
+        const c = adviceCard('', 'warn-card');
+        c.replaceChildren(el('div', 'advice-sub', tr('stale_text', { t: Logic.formatHM(Logic.minutesOfDay(rec.bedAt)), h: settings.staleHours })));
+        const acts = el('div', 'card-actions');
+        const b1 = el('button', 'btn', tr('enter_wake_time'));
+        b1.type = 'button';
+        b1.addEventListener('click', () => enterWakeTime(rec));
+        const b2 = el('button', 'btn', tr('cancel_sleep'));
+        b2.type = 'button';
+        b2.addEventListener('click', () => cancelSleep(rec));
+        acts.append(b1, b2);
+        c.append(acts);
+        nodes.push(c);
+      }
+      if (nowStr > rec.bedAt) {
+        const mid = Logic.midMinutes(rec.bedAt, nowStr);
+        footNodes.push(el('div', 'advice-sub', tr('if_wake_now', { m: Logic.formatHM(mid), diff: diffParen(mid, targetMin) })));
+      }
+      const links = el('div', 'link-row');
+      const l1 = el('button', 'link-btn', tr('fix_bed_time'));
+      l1.type = 'button';
+      l1.addEventListener('click', () => fixBedTime(rec, new Date()));
+      const l2 = el('button', 'link-btn', tr('cancel_sleep'));
+      l2.type = 'button';
+      l2.addEventListener('click', () => cancelSleep(rec));
+      links.append(l1, l2);
+      footNodes.push(links);
+    }
+    body.replaceChildren(...nodes);
+    foot.replaceChildren(...footNodes);
+  }
   function renderHistory() {}
 
   function renderAll() {
@@ -959,6 +1294,7 @@ const App = (() => {
     $('#sheet-title').textContent = title;
     $('#sheet-ok').textContent = tr(okLabel);
     body.replaceChildren();
+    $('#sheet-ok').disabled = false;
     sheetValidate = validate;
     $('#sheet-ok').hidden = !!okHidden;
     build(body);
@@ -969,10 +1305,12 @@ const App = (() => {
     dlg.returnValue = '';
     dlg.showModal();
     // showModal は最初の入力欄にフォーカスする。日付欄だと iOS でカレンダーが即座に開くので、見出しへ移す。
-    if (document.activeElement && document.activeElement.type === 'date') $('#sheet-title').focus();
+    if (document.activeElement && ['date', 'datetime-local', 'time'].includes(document.activeElement.type)) $('#sheet-title').focus();
   }
 
   function bindDialogs() {
+    $('#btn-sleep').addEventListener('click', () => sleepNow(new Date()));
+    $('#btn-wake').addEventListener('click', () => { const r = Logic.sleepingRecord(data.records); if (r) wakeNow(r, new Date()); });
     $('#dialog-cancel').addEventListener('click', () => $('#dialog').close('cancel'));
     $('#sheet-cancel').addEventListener('click', () => $('#sheet').close('cancel'));
     $('#sheet-ok').addEventListener('click', (ev) => {

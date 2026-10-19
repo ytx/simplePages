@@ -31,7 +31,7 @@ test('script ids, ids and sections the shell needs exist', () => {
   assert.match(src, /^const Logic = /m);
   assert.match(src, /^const App = /m);
   assert.equal((src.match(/^(?:const|let|var|function|class) \w+/gm) || []).filter((l) => !/ (Logic|App)$/.test(l)).length, 0, 'only Logic and App at top level');
-  const ids = ['toolbar', 'page-title', 'status-bar', 'tabbar', 'tab-today', 'tab-history', 'tab-settings', 'sheet', 'sheet-title', 'sheet-body', 'sheet-ok', 'sheet-cancel', 'sheet-delete', 'dialog', 'data-text', 'data-copy-text', 'data-import-text', 'data-export', 'data-import', 'data-file', 'data-clear', 'data-message', 'btn-sleep', 'btn-wake', 'history-chart', 'history-list'];
+  const ids = ['toolbar', 'page-title', 'status-bar', 'tabbar', 'tab-today', 'tab-history', 'tab-settings', 'sheet', 'sheet-title', 'sheet-body', 'sheet-ok', 'sheet-cancel', 'sheet-delete', 'dialog', 'data-text', 'data-copy-text', 'data-import-text', 'data-export', 'data-import', 'data-file', 'data-clear', 'data-message', 'today-body', 'btn-sleep', 'btn-wake', 'history-chart', 'history-list'];
   for (const id of ids) assert.match(src, new RegExp(`id="${id}"`), id);
   for (const s of ['display', 'calc', 'data', 'about']) assert.match(src, new RegExp(`data-section="${s}"`), s);
   const order = ['display', 'calc', 'data', 'about'].map((s) => src.indexOf(`data-section="${s}"`));
@@ -98,7 +98,7 @@ test('data tab has a copy-text button before import-from-text', () => {
 });
 
 test('sheet keeps the date-input focus guard', () => {
-  assert.match(src, /activeElement\.type === 'date'\) \$\('#sheet-title'\)\.focus\(\)/);
+  assert.match(src, /\['date', 'datetime-local', 'time'\]\.includes\(document\.activeElement\.type\)\) \$\('#sheet-title'\)\.focus\(\)/);
 });
 
 test('PWA manifest and icons', () => {
@@ -121,4 +121,8 @@ test('PWA manifest and icons', () => {
   assert.match(src, /<link rel="apple-touch-icon" href="icons\/apple-touch-icon\.png">/);
   assert.match(src, /<meta name="theme-color" content="#5b6ee1">/);
   assert.match(src, /apple-mobile-web-app-capable/);
+});
+
+test('today tab big buttons', () => {
+  for (const id of ['btn-sleep', 'btn-wake']) assert.match(src, new RegExp(`id="${id}" class="[^"]*big-btn`), id);
 });
