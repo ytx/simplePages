@@ -40,3 +40,14 @@ test('formatting', () => {
   assert.equal(Logic.addDays('2026-10-01', -1), '2026-09-30');
   assert.equal(Logic.todayStr(new Date(2026, 9, 5, 3, 0)), '2026-10-05');
 });
+
+test('durationParts', () => {
+  assert.deepEqual(Logic.durationParts(254, 'ja'), [{ n: '4', u: '時間' }, { n: '14', u: '分' }]);
+  assert.deepEqual(Logic.durationParts(254, 'en'), [{ n: '4', u: 'h' }, { n: '14', u: 'm' }]);
+  assert.deepEqual(Logic.durationParts(120, 'ja'), [{ n: '2', u: '時間' }]);
+  assert.deepEqual(Logic.durationParts(0, 'en'), [{ n: '0', u: 'm' }]);
+});
+test('midOf', () => {
+  assert.equal(Logic.midOf(new Date(2026, 9, 20, 0, 40), new Date(2026, 9, 20, 6, 0)), 200);   // 3:20
+  assert.equal(Logic.midOf(new Date(2026, 9, 19, 23, 0), new Date(2026, 9, 20, 1, 0)), 0);     // 0:00
+});
