@@ -1928,7 +1928,27 @@ html[data-theme="dark"] {
     --tile-warn-fg: #ffe0b0;
   }
 }
-.tile-big { font-weight: 700; }
+#tab-today.active { display: flex; flex-direction: column; margin: 0 calc(-1 * var(--gap)); padding-bottom: 0; overflow: hidden; }
+.tile { display: flex; flex-direction: column; padding: var(--gap) calc(var(--gap) * 1.5); min-height: 0; position: relative; }
+.tile-night { background: var(--tile-night-bg); color: var(--tile-night-fg); flex: 5 1 0; }
+.tile-morning { background: var(--tile-morning-bg); color: var(--tile-morning-fg); flex: 5 1 0; }
+#tab-today[data-state="sleeping"] .tile-night { background: var(--tile-night-deep); flex: 7 1 0; }
+#tab-today[data-state="sleeping"] .tile-morning { flex: 3 1 0; }
+.tile-date { font-size: var(--fs-small); opacity: 0.7; }
+.tile-main { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+.tile-label { font-size: calc(var(--fs-base) * 0.9); opacity: 0.9; }
+.tile-big { font-weight: 700; font-size: clamp(2.4em, 16vw, calc(var(--fs-base) * 3.8)); line-height: 1.05; letter-spacing: -0.02em; }
+.tile-big.dim { opacity: 0.55; } .tile-big.none { opacity: 0.35; }
+.tile-big .tile-unit { font-size: 0.45em; font-weight: 400; }
+#tab-today[data-state="sleeping"] .tile-morning .tile-big { font-size: clamp(1.8em, 11vw, calc(var(--fs-base) * 2.7)); }
+.tile-sub { font-size: var(--fs-small); opacity: 0.8; margin-top: calc(var(--gap) / 2); line-height: 1.5; }
+.tile-foot { display: flex; justify-content: flex-end; align-items: center; gap: calc(var(--gap) / 2); }
+.pill { font: inherit; font-size: var(--fs-small); min-height: 44px; padding: 0 1.2em; border-radius: 999px; border: 1.5px solid currentColor; background: none; color: inherit; cursor: pointer; }
+.pill.fill { background: var(--tile-night-fg); color: var(--tile-night-bg); border-color: var(--tile-night-fg); }
+.pill[hidden] { display: none; }
+.stepper { display: flex; align-items: center; gap: 4px; }
+.stepper .icon-btn { background: none; border-color: currentColor; color: inherit; }
+.stepper .stepper-val { font-size: var(--fs-base); padding: 0 0.3em; }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
@@ -2014,23 +2034,8 @@ button.btn { cursor: pointer; min-height: 44px; }
 button.btn.danger { color: var(--error); }
 button.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 button.btn[hidden] { display: none; }
-.today-date { color: var(--fg-muted); }
-.today-target { margin-bottom: var(--gap); }
-.today-hint { color: var(--fg-muted); margin: var(--gap) 0; }
-.advice-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--gap); margin-bottom: var(--gap); }
-.advice-card.warn-card { border-color: var(--error); }
-.advice-title { color: var(--fg-muted); font-size: var(--fs-small); }
-.advice-big { font-size: calc(var(--fs-base) * 2); font-weight: 400; color: var(--accent); line-height: 1.3; }
-.advice-sub { color: var(--fg); }
-.advice-sub.warn { color: var(--error); }
-.advice-sub.muted { color: var(--fg-muted); }
-.advice-row { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--gap) / 2); }
-.advice-row .icon-btn { min-width: 44px; min-height: 44px; }
 .card-actions { display: flex; flex-wrap: wrap; gap: calc(var(--gap) / 2); margin-top: calc(var(--gap) / 2); }
-.big-btn { display: block; width: 100%; min-height: 4em; margin: var(--gap) 0; font: inherit; font-size: calc(var(--fs-base) * 1.4); color: var(--on-accent); background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius); cursor: pointer; }
-.big-btn.alt { background: var(--ok); border-color: var(--ok); }
-.big-btn[hidden] { display: none; }
-.today-last { color: var(--fg-muted); margin-top: var(--gap); }
+.tile-warn { background: var(--tile-warn-bg); color: var(--tile-warn-fg); border-radius: var(--radius); padding: var(--gap); margin-top: var(--gap); }
 .link-btn { font: inherit; color: var(--accent); background: none; border: 0; padding: 0.5em 0.25em; min-height: 44px; cursor: pointer; text-decoration: underline; }
 .link-row { display: flex; flex-wrap: wrap; gap: var(--gap); margin-top: calc(var(--gap) / 2); }
 #sheet-body input[type=datetime-local] { width: 100%; min-height: 44px; margin-bottom: calc(var(--gap) / 3); }
@@ -2080,10 +2085,15 @@ button.seg[aria-pressed="true"] { background: var(--accent); border-color: var(-
 <main id="content">
   <h1 id="page-title" data-i18n="page_title"></h1>
   <section class="tab-pane active" id="tab-today">
-    <div id="today-body"></div>
-    <button id="btn-sleep" class="big-btn" type="button" hidden></button>
-    <button id="btn-wake" class="big-btn alt" type="button" hidden></button>
-    <div id="today-foot"></div>
+    <div id="tile-night" class="tile tile-night">
+      <div id="today-date" class="tile-date"></div>
+      <div id="today-body" class="tile-main"></div>
+      <div class="tile-foot"><button id="btn-sleep" class="pill fill" type="button" hidden></button></div>
+    </div>
+    <div id="tile-morning" class="tile tile-morning">
+      <div id="today-foot" class="tile-main"></div>
+      <div class="tile-foot" id="morning-foot"><button id="btn-wake" class="pill" type="button" hidden></button></div>
+    </div>
   </section>
   <section class="tab-pane" id="tab-history">
     <div id="chart-days" class="seg-group" role="group">
@@ -2319,28 +2329,20 @@ const Logic = (() => {
       ok: 'OK',
       cancel: 'キャンセル',
       delete: '削除',
-      need_more: '2 晩分の記録がたまると、起床・就寝の目安が出ます(あと {n} 晩)',
-      target_line: '目標の中央時刻 {t}',
-      target_sub: '直近 {d} 日 · ばらつき ±{sd} 分',
-      card_if_sleep_now: '今寝ると',
-      wake_at: '起床 {t}',
-      sleep_for: '睡眠 {d}',
-      flag_short: '短めです',
-      flag_long: '長すぎます(目標からかなり外れています)',
-      card_wake_target: '起きたい時刻',
       wake_target_earlier: '15 分早める',
       wake_target_later: '15 分遅らせる',
-      bed_at: '就寝 {t}',
-      already_passed: 'もう過ぎています(就寝 {t} 予定)',
-      last_today: '今朝 {w} に起床 · 中央 {m}{diff}',
-      last_day: '{date} {w} に起床 · 中央 {m}{diff}',
       diff_paren: '({d})',
-      diff_early: '目標より {n} 分早い',
-      diff_late: '目標より {n} 分遅い',
-      diff_on: '目標どおり',
       diff_early_t: '目標 {t} より {n} 分早い',
       diff_late_t: '目標 {t} より {n} 分遅い',
       diff_on_t: '目標 {t} どおり',
+      tile_if_sleep_now: '今寝ると、起きるのは',
+      tile_sleep_mid: '睡眠 {d} ・ 中央 {m}',
+      tile_wake_target: '{t} に起きるなら、寝るのは',
+      tile_sleep_left: '睡眠 {d} ・ あと {r}',
+      tile_passed: 'もう過ぎています ・ 今寝ると中央は {m}{diff}',
+      tile_need_more: '記録があと {n} 回たまると目安が出ます',
+      tile_first_night: 'まずは今夜の記録から',
+      no_time: '--:--',
       sleep_now: '今から寝る',
       sleeping_since: '就寝中 · {t} から({d})',
       wake_now: '今起きた',
@@ -2418,28 +2420,20 @@ const Logic = (() => {
       ok: 'OK',
       cancel: 'Cancel',
       delete: 'Delete',
-      need_more: 'Once you have 2 nights logged, wake and bed suggestions appear ({n} more)',
-      target_line: 'Target mid-point {t}',
-      target_sub: 'Last {d} days · spread ±{sd} min',
-      card_if_sleep_now: 'If you sleep now',
-      wake_at: 'Wake {t}',
-      sleep_for: 'Sleep {d}',
-      flag_short: 'Rather short',
-      flag_long: 'Too long (far from your target)',
-      card_wake_target: 'Wake-up time',
       wake_target_earlier: '15 minutes earlier',
       wake_target_later: '15 minutes later',
-      bed_at: 'Bed {t}',
-      already_passed: 'Already passed (bed was {t})',
-      last_today: 'Woke at {w} this morning · mid {m}{diff}',
-      last_day: 'Woke {date} {w} · mid {m}{diff}',
       diff_paren: ' ({d})',
-      diff_early: '{n} min earlier than target',
-      diff_late: '{n} min later than target',
-      diff_on: 'on target',
       diff_early_t: '{n} min earlier than target {t}',
       diff_late_t: '{n} min later than target {t}',
       diff_on_t: 'on target {t}',
+      tile_if_sleep_now: 'Sleep now and wake at',
+      tile_sleep_mid: 'Sleep {d} · mid {m}',
+      tile_wake_target: 'To wake at {t}, go to bed at',
+      tile_sleep_left: 'Sleep {d} · in {r}',
+      tile_passed: 'Already passed · sleeping now puts mid at {m}{diff}',
+      tile_need_more: '{n} more night(s) of records and the advice appears',
+      tile_first_night: 'Start with tonight',
+      no_time: '--:--',
       sleep_now: 'Go to sleep now',
       sleeping_since: 'Sleeping · since {t} ({d})',
       wake_now: 'I just woke up',
@@ -2919,12 +2913,6 @@ const App = (() => {
   const pad2 = (n) => String(n).padStart(2, '0');
   const hmOf = (d) => Logic.formatHM(d.getHours() * 60 + d.getMinutes());
 
-  function diffPhrase(midMin, targetMin) {
-    const d = Logic.circularDiff(midMin, targetMin);
-    if (d < 0) return tr('diff_early', { n: -d });
-    if (d > 0) return tr('diff_late', { n: d });
-    return tr('diff_on');
-  }
   function diffParenT(midMin, targetMin) {
     if (targetMin === null) return '';
     const d = Logic.circularDiff(midMin, targetMin);
@@ -2932,7 +2920,6 @@ const App = (() => {
     const p = d < 0 ? tr('diff_early_t', { n: -d, t }) : d > 0 ? tr('diff_late_t', { n: d, t }) : tr('diff_on_t', { t });
     return tr('diff_paren', { d: p });
   }
-  const diffParen = (midMin, targetMin) => (targetMin === null ? '' : tr('diff_paren', { d: diffPhrase(midMin, targetMin) }));
 
   function errText(error) {
     if (error === 'order') return tr('err_order');
@@ -2940,40 +2927,10 @@ const App = (() => {
     return tr('err_overlap');
   }
 
-  function adviceCard(title, cls) {
-    const c = el('div', 'advice-card' + (cls ? ' ' + cls : ''));
-    c.append(el('div', 'advice-title', title));
-    return c;
-  }
-
-  function flagLine(sleepMin) {
-    const sub = el('div', 'advice-sub', tr('sleep_for', { d: Logic.formatDuration(sleepMin, settings.lang) }));
-    const f = Logic.adviceFlags(sleepMin, settings);
-    if (f) {
-      sub.textContent += ' · ';
-      sub.append(el('span', 'warn advice-sub', tr(f === 'short' ? 'flag_short' : 'flag_long')));
-    }
-    return sub;
-  }
-
   function stepWakeTarget(delta) {
     const [h, m] = settings.wakeTarget.split(':').map(Number);
     const v = (((h * 60 + m + delta) % 1440) + 1440) % 1440;
     updateSettings({ wakeTarget: `${pad2(Math.floor(v / 60))}:${pad2(v % 60)}` });
-  }
-
-  function lastRecordLine(now, targetMin) {
-    const done = Logic.completed(data.records);
-    if (done.length === 0) return null;
-    const r = done.reduce((a, b) => (b.wakeAt > a.wakeAt ? b : a));
-    const params = {
-      w: Logic.formatHM(Logic.minutesOfDay(r.wakeAt)),
-      m: Logic.formatHM(Logic.midMinutes(r.bedAt, r.wakeAt)),
-      diff: diffParen(Logic.midMinutes(r.bedAt, r.wakeAt), targetMin),
-      date: Logic.formatDateShort(r.wakeAt, settings.lang),
-    };
-    const today = r.wakeAt.slice(0, 10) === Logic.todayStr(now);
-    return el('div', 'today-last', tr(today ? 'last_today' : 'last_day', params));
   }
 
   // 日時 1 つを入れるシート。check(value) は Logic.validateRecord の結果か { ok:false, error } を返す。
@@ -3077,68 +3034,74 @@ const App = (() => {
     const nowStr = Logic.formatLocal(now);
     const body = $('#today-body');
     const foot = $('#today-foot');
+    const morningFoot = $('#morning-foot');
     const btnSleep = $('#btn-sleep');
     const btnWake = $('#btn-wake');
-    const head = el('div', 'today-date', `${Logic.formatDateShort(nowStr, settings.lang)} ${Logic.formatHM(Logic.minutesOfDay(nowStr))}`);
     const rec = Logic.sleepingRecord(data.records);
     const nowM = Logic.truncMin(now);
     const st = Logic.stats(data.records, settings.avgDays, Logic.todayStr(now));
     const targetMin = st.targetMin;
-    const nodes = [head];
+    $('#tab-today').dataset.state = rec ? 'sleeping' : 'awake';
+    $('#today-date').textContent = `${Logic.formatDateShort(nowStr, settings.lang)} ${Logic.formatHM(Logic.minutesOfDay(nowStr))}`;
+    const nodes = [];
     const footNodes = [];
 
     if (!rec) {
       btnSleep.hidden = false;
       btnWake.hidden = true;
+      btnSleep.textContent = tr('sleep_now');
+      const big = (text, cls) => el('div', 'tile-big' + (cls ? ' ' + cls : ''), text);
+      nodes.push(el('div', 'tile-label', tr('tile_if_sleep_now')));
+      const [wh, wm] = settings.wakeTarget.split(':').map(Number);
+      const wakeHM = Logic.formatHM(wh * 60 + wm);
+      footNodes.push(el('div', 'tile-label', tr('tile_wake_target', { t: wakeHM })));
       if (targetMin === null) {
-        nodes.push(el('div', 'today-hint', tr('need_more', { n: Math.max(0, 2 - st.count) })));
+        nodes.push(big(tr('no_time'), 'none'), el('div', 'tile-sub', tr('tile_need_more', { n: Math.max(0, 2 - st.count) })));
+        footNodes.push(big(tr('no_time'), 'none'), el('div', 'tile-sub', tr('tile_first_night')));
       } else {
-        nodes.push(el('div', 'today-target', tr('target_line', { t: Logic.formatHM(targetMin) }) + '  ' + tr('target_sub', { d: settings.avgDays, sd: st.sdMin })));
         const w = Logic.wakeFor(nowM, targetMin);
-        const c1 = adviceCard(tr('card_if_sleep_now'));
-        c1.append(el('div', 'advice-big', tr('wake_at', { t: hmOf(w.wakeAt) })), flagLine(w.sleepMin));
+        nodes.push(big(hmOf(w.wakeAt)), el('div', 'tile-sub', tr('tile_sleep_mid', { d: Logic.formatDuration(w.sleepMin, settings.lang), m: Logic.formatHM(targetMin) })));
         const nextWake = Logic.nextOccurrence(nowM, settings.wakeTarget);
         const b = Logic.bedFor(nextWake, targetMin);
-        const c2 = adviceCard(tr('card_wake_target'));
-        const row = el('div', 'advice-row');
-        const mkStep = (icon, key, delta) => {
-          const btn = el('button', 'icon-btn');
-          btn.type = 'button';
-          btn.setAttribute('aria-label', tr(key));
-          const NS = $('#history-chart').namespaceURI;
-          const ic = document.createElementNS(NS, 'svg');
-          ic.setAttribute('aria-hidden', 'true');
-          const use = document.createElementNS(NS, 'use');
-          use.setAttribute('href', icon);
-          ic.append(use);
-          btn.append(ic);
-          btn.addEventListener('click', () => stepWakeTarget(delta));
-          return btn;
-        };
-        const [wh, wm] = settings.wakeTarget.split(':').map(Number);
-        row.append(
-          mkStep('#icon-chevron-left', 'wake_target_earlier', -15),
-          el('span', 'advice-big', Logic.formatHM(wh * 60 + wm)),
-          mkStep('#icon-chevron-right', 'wake_target_later', 15),
-        );
-        const bedT = hmOf(b.bedAt);
-        if (b.bedAt.getTime() < now.getTime()) row.append(el('span', 'advice-sub muted', tr('already_passed', { t: bedT })));
-        else row.append(el('span', 'advice-sub', '→ ' + tr('bed_at', { t: bedT })));
-        c2.append(row, flagLine(b.sleepMin));
-        nodes.push(c1, c2);
+        if (b.bedAt.getTime() < now.getTime()) {
+          const mid = Logic.midOf(nowM, nextWake);
+          footNodes.push(big(hmOf(b.bedAt), 'dim'), el('div', 'tile-sub', tr('tile_passed', { m: Logic.formatHM(mid), diff: diffParenT(mid, targetMin) })));
+        } else {
+          const left = Math.round((b.bedAt.getTime() - now.getTime()) / 60000);
+          footNodes.push(big(hmOf(b.bedAt)), el('div', 'tile-sub', tr('tile_sleep_left', { d: Logic.formatDuration(b.sleepMin, settings.lang), r: Logic.formatDuration(left, settings.lang) })));
+        }
       }
-      btnSleep.textContent = tr('sleep_now');
-      const last = lastRecordLine(now, targetMin);
-      if (last) footNodes.push(last);
+      const mkStep = (icon, key, delta) => {
+        const btn = el('button', 'icon-btn');
+        btn.type = 'button';
+        btn.setAttribute('aria-label', tr(key));
+        const NS = $('#history-chart').namespaceURI;
+        const ic = document.createElementNS(NS, 'svg');
+        ic.setAttribute('aria-hidden', 'true');
+        const use = document.createElementNS(NS, 'use');
+        use.setAttribute('href', icon);
+        ic.append(use);
+        btn.append(ic);
+        btn.addEventListener('click', () => stepWakeTarget(delta));
+        return btn;
+      };
+      const stepper = el('div', 'stepper');
+      stepper.append(
+        mkStep('#icon-chevron-left', 'wake_target_earlier', -15),
+        el('span', 'stepper-val', wakeHM),
+        mkStep('#icon-chevron-right', 'wake_target_later', 15),
+      );
+      morningFoot.replaceChildren(stepper, btnWake);
     } else {
       btnSleep.hidden = true;
       btnWake.hidden = false;
       btnWake.textContent = tr('wake_now');
+      morningFoot.replaceChildren(btnWake);
       const dur = Math.max(0, Logic.durationMin(rec.bedAt, nowStr));
-      nodes.push(el('div', 'today-target', tr('sleeping_since', { t: Logic.formatHM(Logic.minutesOfDay(rec.bedAt)), d: Logic.formatDuration(dur, settings.lang) })));
+      nodes.push(el('div', 'tile-sub', tr('sleeping_since', { t: Logic.formatHM(Logic.minutesOfDay(rec.bedAt)), d: Logic.formatDuration(dur, settings.lang) })));
       if (Logic.isStale(rec, now, settings.staleHours)) {
-        const c = adviceCard('', 'warn-card');
-        c.replaceChildren(el('div', 'advice-sub', tr('stale_text', { t: Logic.formatHM(Logic.minutesOfDay(rec.bedAt)), h: settings.staleHours })));
+        const c = el('div', 'tile-warn');
+        c.append(el('div', 'tile-sub', tr('stale_text', { t: Logic.formatHM(Logic.minutesOfDay(rec.bedAt)), h: settings.staleHours })));
         const acts = el('div', 'card-actions');
         const b1 = el('button', 'btn', tr('enter_wake_time'));
         b1.type = 'button';
@@ -3152,7 +3115,7 @@ const App = (() => {
       }
       if (nowStr > rec.bedAt) {
         const mid = Logic.midMinutes(rec.bedAt, nowStr);
-        footNodes.push(el('div', 'advice-sub', tr('if_wake_now', { m: Logic.formatHM(mid), diff: diffParenT(mid, targetMin) })));
+        footNodes.push(el('div', 'tile-sub', tr('if_wake_now', { m: Logic.formatHM(mid), diff: diffParenT(mid, targetMin) })));
       }
       const links = el('div', 'link-row');
       const l1 = el('button', 'link-btn', tr('fix_bed_time'));

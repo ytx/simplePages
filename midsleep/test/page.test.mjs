@@ -140,6 +140,13 @@ test('PWA manifest and icons', () => {
   assert.match(src, /apple-mobile-web-app-capable/);
 });
 
-test('today tab big buttons', () => {
-  for (const id of ['btn-sleep', 'btn-wake']) assert.match(src, new RegExp(`id="${id}" class="[^"]*big-btn`), id);
+test('today tab is two tiles', () => {
+  const pane = src.match(/<section class="tab-pane active" id="tab-today">([\s\S]*?)<\/section>/)[1];
+  assert.match(pane, /id="tile-night" class="tile tile-night"/);
+  assert.match(pane, /id="tile-morning" class="tile tile-morning"/);
+  assert.ok(pane.indexOf('id="tile-night"') < pane.indexOf('id="btn-sleep"') && pane.indexOf('id="btn-sleep"') < pane.indexOf('id="tile-morning"'));
+  assert.ok(pane.indexOf('id="tile-morning"') < pane.indexOf('id="btn-wake"'));
+  assert.doesNotMatch(src, /big-btn|advice-card|today-last|flagLine|lastRecordLine|adviceCard/);
+  for (const k of ['tile_if_sleep_now', 'tile_sleep_mid', 'tile_wake_target', 'tile_sleep_left', 'tile_passed', 'tile_need_more', 'tile_first_night', 'no_time']) assert.ok(k in Logic.I18N.ja, k);
+  for (const k of ['need_more', 'target_line', 'target_sub', 'flag_short', 'flag_long', 'last_today', 'already_passed']) assert.ok(!(k in Logic.I18N.ja), 'removed ' + k);
 });
