@@ -17,12 +17,28 @@ test('no external resources and no innerHTML', () => {
   assert.doesNotMatch(src, /<script\s[^>]*src=/);
   assert.doesNotMatch(src, /https?:\/\/(?!github\.com\/ytx\/simplePages)/);
   assert.doesNotMatch(src, /innerHTML/);
-  assert.doesNotMatch(src, /@font-face/);
 });
 
 test('no emoji and no bold', () => {
   assert.doesNotMatch(src, /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
-  assert.doesNotMatch(src, /font-weight:\s*(bold|[5-9]00)/);
+  // bold allowed only in @font-face and .tile-big
+  const noFaces = src.replace(/@font-face \{[\s\S]*?\}/g, '');
+  const bolds = [...noFaces.matchAll(/font-weight:\s*(bold|[5-9]00)/g)];
+  assert.equal(bolds.length, 1, 'exactly one bold rule outside @font-face');
+  assert.match(noFaces.slice(Math.max(0, bolds[0].index - 80), bolds[0].index), /\.tile-big\s*\{[^}]*$/);
+});
+
+test('font faces reference files that exist', () => {
+  const faces = src.match(/@font-face/g) || [];
+  assert.equal(faces.length, 124);
+  const urls = [...new Set([...src.matchAll(/url\((fonts\/zen-maru-gothic\/zmg-[47]00-\d{3}\.woff2)\)/g)].map((m) => m[1]))];
+  assert.equal(urls.length, 124);
+  for (const u of urls) assert.ok(existsSync(fileURLToPath(new URL('../' + u, import.meta.url))), u);
+  assert.ok(existsSync(fileURLToPath(new URL('../fonts/zen-maru-gothic/OFL.txt', import.meta.url))));
+  assert.match(src, /--font: 'Zen Maru Gothic'/);
+  for (const t of ['--tile-night-bg', '--tile-night-fg', '--tile-night-deep', '--tile-morning-bg', '--tile-morning-fg', '--tile-warn-bg', '--tile-warn-fg']) {
+    assert.equal((src.match(new RegExp(`${t}:`, 'g')) || []).length, 3, `${t} defined for light, dark attr, dark media`);
+  }
 });
 
 test('script ids, ids and sections the shell needs exist', () => {
@@ -120,7 +136,7 @@ test('PWA manifest and icons', () => {
   assert.ok(existsSync(fileURLToPath(new URL('icons/apple-touch-icon.png', dir))));
   assert.match(src, /<link rel="manifest" href="manifest\.webmanifest">/);
   assert.match(src, /<link rel="apple-touch-icon" href="icons\/apple-touch-icon\.png">/);
-  assert.match(src, /<meta name="theme-color" content="#5b6ee1">/);
+  assert.match(src, /<meta name="theme-color" content="#1d2b6b">/);
   assert.match(src, /apple-mobile-web-app-capable/);
 });
 

@@ -88,6 +88,8 @@ localStorage に次の 2 つのキーで保存します。
 
 ページ本体は MIT ライセンス。アイコンは Material Icons(Apache License 2.0)のパスをインライン SVG で埋め込んでいる。
 
+書体は Zen Maru Gothic(SIL Open Font License 1.1)を `fonts/zen-maru-gothic/` に同梱(ウェイト 400 の全分割と、大きな時刻にだけ使うウェイト 700 の数字分割 2 つ、合計 2.2 MB)。ライセンス全文は同ディレクトリの `OFL.txt`。
+
 ## 使用 API
 
 なし。外部への通信は行わない。
