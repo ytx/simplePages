@@ -64,6 +64,7 @@ midsleep/
   index.html
   manifest.webmanifest           PWA(standalone、start_url/scope ./)
   icons/icon-192.png icon-512.png apple-touch-icon.png
+  fonts/zen-maru-gothic/         Zen Maru Gothic woff2 分割 + OFL.txt
   test/*.test.mjs
   test/load-logic.mjs
   README.md
@@ -129,7 +130,7 @@ Zen Maru Gothic(SIL Open Font License 1.1)を `midsleep/fonts/zen-maru-gothic/` 
 │ 4時間14分                            │  数字 62px、単位 28px
 │ いま起きると 中央 1:05(目標より 1 時間 50 分 早い) │
 │                                      │
-│ 就寝時刻を直す ・ 取り消す            │  小さなリンク、不透明度 .6
+│ 就寝時刻を直す ・ 取り消す            │  小さなリンク、不透明度 .7
 ├ 朝タイル(残り 30%)─────────────────── ┤
 │ 目標どおりなら                        │
 │ 6:52                                 │  44px
