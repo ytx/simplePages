@@ -148,5 +148,8 @@ test('today tab is two tiles', () => {
   assert.ok(pane.indexOf('id="tile-morning"') < pane.indexOf('id="btn-wake"'));
   assert.doesNotMatch(src, /big-btn|advice-card|today-last|flagLine|lastRecordLine|adviceCard/);
   for (const k of ['tile_if_sleep_now', 'tile_sleep_mid', 'tile_wake_target', 'tile_sleep_left', 'tile_passed', 'tile_need_more', 'tile_first_night', 'no_time']) assert.ok(k in Logic.I18N.ja, k);
+  for (const k of ['tile_sleeping_since', 'tile_if_wake_now', 'tile_on_target']) assert.ok(k in Logic.I18N.ja, k);
+  assert.ok(!('sleeping_since' in Logic.I18N.ja));
+  assert.ok(!('if_wake_now' in Logic.I18N.ja));
   for (const k of ['need_more', 'target_line', 'target_sub', 'flag_short', 'flag_long', 'last_today', 'already_passed']) assert.ok(!(k in Logic.I18N.ja), 'removed ' + k);
 });

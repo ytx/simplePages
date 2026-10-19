@@ -1940,7 +1940,7 @@ html[data-theme="dark"] {
 .tile-big { font-weight: 700; font-size: clamp(1.6em, min(16vw, 7dvh), calc(var(--fs-base) * 3.8)); line-height: 1.05; letter-spacing: -0.02em; }
 .tile-big.dim { opacity: 0.55; } .tile-big.none { opacity: 0.35; }
 .tile-big .tile-unit { font-size: 0.45em; font-weight: 400; }
-#tab-today[data-state="sleeping"] .tile-morning .tile-big { font-size: clamp(1.8em, 11vw, calc(var(--fs-base) * 2.7)); }
+#tab-today[data-state="sleeping"] .tile-morning .tile-big { font-size: clamp(1.8em, min(11vw, 5dvh), calc(var(--fs-base) * 2.7)); }
 .tile-sub { font-size: min(var(--fs-small), 2.4dvh); opacity: 0.8; margin-top: calc(var(--gap) / 2); line-height: 1.5; }
 .tile-foot { display: flex; justify-content: flex-end; align-items: center; gap: calc(var(--gap) / 2); }
 .pill { font: inherit; font-size: var(--fs-small); min-height: 44px; padding: 0 1.2em; border-radius: 999px; border: 1.5px solid currentColor; background: none; color: inherit; cursor: pointer; }
@@ -2034,10 +2034,11 @@ button.btn { cursor: pointer; min-height: 44px; }
 button.btn.danger { color: var(--error); }
 button.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 button.btn[hidden] { display: none; }
-.card-actions { display: flex; flex-wrap: wrap; gap: calc(var(--gap) / 2); margin-top: calc(var(--gap) / 2); }
-.tile-warn { background: var(--tile-warn-bg); color: var(--tile-warn-fg); border-radius: var(--radius); padding: var(--gap); margin-top: var(--gap); }
-.link-btn { font: inherit; color: var(--accent); background: none; border: 0; padding: 0.5em 0.25em; min-height: 44px; cursor: pointer; text-decoration: underline; }
-.link-row { display: flex; flex-wrap: wrap; gap: var(--gap); margin-top: calc(var(--gap) / 2); }
+.tile-warn { background: var(--tile-warn-bg); color: var(--tile-warn-fg); border-radius: var(--radius); padding: calc(var(--gap) * 0.75) var(--gap); margin-top: var(--gap); font-size: var(--fs-small); line-height: 1.5; }
+.tile-warn .card-actions { display: flex; flex-wrap: wrap; gap: calc(var(--gap) / 2); margin-top: calc(var(--gap) / 2); }
+.tile-warn .btn { background: none; color: inherit; border-color: currentColor; border-radius: 999px; }
+.tile-links { display: flex; flex-wrap: wrap; gap: var(--gap); margin-top: var(--gap); opacity: 0.7; }
+.link-btn { font: inherit; font-size: var(--fs-small); color: inherit; background: none; border: 0; padding: 0.5em 0; min-height: 44px; cursor: pointer; text-decoration: underline; }
 #sheet-body input[type=datetime-local] { width: 100%; min-height: 44px; margin-bottom: calc(var(--gap) / 3); }
 #sheet-ok:disabled { opacity: 0.4; cursor: default; }
 .seg-group { display: flex; gap: calc(var(--gap) / 2); margin-bottom: calc(var(--gap) / 2); }
@@ -2344,10 +2345,11 @@ const Logic = (() => {
       tile_first_night: 'まずは今夜の記録から',
       no_time: '--:--',
       sleep_now: '今から寝る',
-      sleeping_since: '就寝中 · {t} から({d})',
+      tile_sleeping_since: '{t} から寝ています',
+      tile_on_target: '目標どおりなら',
       wake_now: '今起きた',
       wake_too_early: '就寝時刻より前のため記録できません',
-      if_wake_now: '今起きると中央 {m}{diff}',
+      tile_if_wake_now: 'いま起きると 中央 {m}{diff}',
       fix_bed_time: '就寝時刻を直す',
       cancel_sleep: '取り消す',
       confirm_cancel_sleep: '就寝中の記録を取り消します。よろしいですか?',
@@ -2435,10 +2437,11 @@ const Logic = (() => {
       tile_first_night: 'Start with tonight',
       no_time: '--:--',
       sleep_now: 'Go to sleep now',
-      sleeping_since: 'Sleeping · since {t} ({d})',
+      tile_sleeping_since: 'Asleep since {t}',
+      tile_on_target: 'On target, wake at',
       wake_now: 'I just woke up',
       wake_too_early: 'Cannot record: that is before bedtime',
-      if_wake_now: 'If you wake now, mid {m}{diff}',
+      tile_if_wake_now: 'Wake now and mid is {m}{diff}',
       fix_bed_time: 'Fix bedtime',
       cancel_sleep: 'Cancel',
       confirm_cancel_sleep: 'Discard this sleep record?',
@@ -3099,10 +3102,22 @@ const App = (() => {
       btnWake.textContent = tr('wake_now');
       morningFoot.replaceChildren(btnWake);
       const dur = Math.max(0, Logic.durationMin(rec.bedAt, nowStr));
-      nodes.push(el('div', 'tile-sub', tr('sleeping_since', { t: Logic.formatHM(Logic.minutesOfDay(rec.bedAt)), d: Logic.formatDuration(dur, settings.lang) })));
-      if (Logic.isStale(rec, now, settings.staleHours)) {
+      const stale = Logic.isStale(rec, now, settings.staleHours);
+      const bedHM = Logic.formatHM(Logic.minutesOfDay(rec.bedAt));
+      nodes.push(el('div', 'tile-label', tr('tile_sleeping_since', { t: bedHM })));
+      const bigEl = el('div', 'tile-big');
+      Logic.durationParts(dur, settings.lang).forEach((p, i) => {
+        if (i > 0 && settings.lang === 'en') bigEl.append(document.createTextNode(' '));
+        bigEl.append(el('span', 'tile-num', String(p.n)), el('span', 'tile-unit', p.u));
+      });
+      nodes.push(bigEl);
+      if (nowStr > rec.bedAt) {
+        const mid = Logic.midMinutes(rec.bedAt, nowStr);
+        nodes.push(el('div', 'tile-sub', tr('tile_if_wake_now', { m: Logic.formatHM(mid), diff: diffParenT(mid, targetMin) })));
+      }
+      if (stale) {
         const c = el('div', 'tile-warn');
-        c.append(el('div', 'tile-sub', tr('stale_text', { t: Logic.formatHM(Logic.minutesOfDay(rec.bedAt)), h: settings.staleHours })));
+        c.append(el('div', null, tr('stale_text', { t: bedHM, h: settings.staleHours })));
         const acts = el('div', 'card-actions');
         const b1 = el('button', 'btn', tr('enter_wake_time'));
         b1.type = 'button';
@@ -3114,11 +3129,7 @@ const App = (() => {
         c.append(acts);
         nodes.push(c);
       }
-      if (nowStr > rec.bedAt) {
-        const mid = Logic.midMinutes(rec.bedAt, nowStr);
-        footNodes.push(el('div', 'tile-sub', tr('if_wake_now', { m: Logic.formatHM(mid), diff: diffParenT(mid, targetMin) })));
-      }
-      const links = el('div', 'link-row');
+      const links = el('div', 'tile-links');
       const l1 = el('button', 'link-btn', tr('fix_bed_time'));
       l1.type = 'button';
       l1.addEventListener('click', () => fixBedTime(rec, new Date()));
@@ -3126,7 +3137,12 @@ const App = (() => {
       l2.type = 'button';
       l2.addEventListener('click', () => cancelSleep(rec));
       links.append(l1, l2);
-      footNodes.push(links);
+      nodes.push(links);
+      footNodes.push(el('div', 'tile-label', tr('tile_on_target')));
+      const tbig = targetMin === null
+        ? el('div', 'tile-big none', tr('no_time'))
+        : el('div', 'tile-big' + (stale ? ' dim' : ''), hmOf(Logic.wakeFor(Logic.parseLocal(rec.bedAt), targetMin).wakeAt));
+      footNodes.push(tbig);
     }
     body.replaceChildren(...nodes);
     foot.replaceChildren(...footNodes);
