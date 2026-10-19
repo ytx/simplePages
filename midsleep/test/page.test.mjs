@@ -125,7 +125,7 @@ test('PWA manifest and icons', () => {
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.start_url, './');
   assert.equal(manifest.scope, './');
-  assert.equal(manifest.theme_color, '#5b6ee1');
+  assert.equal(manifest.theme_color, '#1d2b6b');
   assert.ok(manifest.icons.length >= 2);
   for (const icon of manifest.icons) {
     assert.match(icon.src, /^icons\//);

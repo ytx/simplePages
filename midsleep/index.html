@@ -1940,7 +1940,7 @@ html[data-theme="dark"] {
 .tile-big { font-weight: 700; font-size: clamp(1.6em, min(16vw, 7dvh), calc(var(--fs-base) * 3.8)); line-height: 1.05; letter-spacing: -0.02em; }
 .tile-big.dim { opacity: 0.55; } .tile-big.none { opacity: 0.35; }
 .tile-big .tile-unit { font-size: 0.45em; font-weight: 400; }
-#tab-today[data-state="sleeping"] .tile-morning .tile-big { font-size: clamp(1.8em, min(11vw, 5dvh), calc(var(--fs-base) * 2.7)); }
+#tab-today[data-state="sleeping"] .tile-morning .tile-big { font-size: clamp(1.2em, min(11vw, 5dvh), calc(var(--fs-base) * 2.7)); }
 .tile-sub { font-size: min(var(--fs-small), 2.4dvh); opacity: 0.8; margin-top: calc(var(--gap) / 2); line-height: 1.5; }
 .tile-foot { display: flex; justify-content: flex-end; align-items: center; gap: calc(var(--gap) / 2); }
 .pill { font: inherit; font-size: var(--fs-small); min-height: 44px; padding: 0 1.2em; border-radius: 999px; border: 1.5px solid currentColor; background: none; color: inherit; cursor: pointer; }
@@ -2128,10 +2128,6 @@ button.seg[aria-pressed="true"] { background: var(--accent); border-color: var(-
         <input id="set-avgDays" type="number" min="3" max="30" data-setting="avgDays">
       </div>
       <div class="field">
-        <label for="set-minSleepMin" data-i18n="min_sleep"></label>
-        <input id="set-minSleepMin" type="number" min="180" max="720" data-setting="minSleepMin">
-      </div>
-      <div class="field">
         <label for="set-staleHours" data-i18n="stale_hours"></label>
         <input id="set-staleHours" type="number" min="10" max="36" data-setting="staleHours">
       </div>
@@ -2297,7 +2293,6 @@ const Logic = (() => {
       days_30: '30 日',
       wake_target: '起きたい時刻',
       avg_days: '目標に使う日数',
-      min_sleep: '短めの目安(分)',
       stale_hours: '押し忘れとみなす時間',
       status_saved: '保存済み',
       status_storage_unavailable: '保存できません(この画面の間だけ有効)',
@@ -2389,7 +2384,6 @@ const Logic = (() => {
       days_30: '30 days',
       wake_target: 'Wake-up time',
       avg_days: 'Days for the target',
-      min_sleep: 'Short-sleep threshold (min)',
       stale_hours: 'Hours before a forgotten tap',
       status_saved: 'Saved',
       status_storage_unavailable: 'Cannot save (valid only while this screen is open)',
@@ -2433,7 +2427,7 @@ const Logic = (() => {
       tile_wake_target: 'To wake at {t}, go to bed at',
       tile_sleep_left: 'Sleep {d} · in {r}',
       tile_passed: 'Already passed · sleeping now puts mid at {m}{diff}',
-      tile_need_more: '{n} more night(s) of records and the advice appears',
+      tile_need_more: 'Record {n} more night(s) to see advice',
       tile_first_night: 'Start with tonight',
       no_time: '--:--',
       sleep_now: 'Go to sleep now',
@@ -2934,6 +2928,7 @@ const App = (() => {
     const btn = el('button', 'icon-btn');
     btn.type = 'button';
     btn.setAttribute('aria-label', tr(key));
+    btn.dataset.step = String(delta);
     const NS = $('#history-chart').namespaceURI;
     const ic = document.createElementNS(NS, 'svg');
     ic.setAttribute('aria-hidden', 'true');
@@ -3089,6 +3084,10 @@ const App = (() => {
           footNodes.push(big(hmOf(b.bedAt)), el('div', 'tile-sub', tr('tile_sleep_left', { d: Logic.formatDuration(b.sleepMin, settings.lang), r: Logic.formatDuration(left, settings.lang) })));
         }
       }
+      const ae = document.activeElement;
+      const refocus = ae && ae.dataset && ae.dataset.step && morningFoot.contains(ae) ? ae.dataset.step : null;
+      const ae = document.activeElement;
+      const refocus = ae && ae.dataset && ae.dataset.step && morningFoot.contains(ae) ? ae.dataset.step : null;
       const stepper = el('div', 'stepper');
       stepper.append(
         mkStep('#icon-chevron-left', 'wake_target_earlier', -15),
@@ -3096,6 +3095,8 @@ const App = (() => {
         mkStep('#icon-chevron-right', 'wake_target_later', 15),
       );
       morningFoot.replaceChildren(stepper, btnWake);
+      if (refocus) { const nb = stepper.querySelector(`[data-step="${refocus}"]`); if (nb) nb.focus(); }
+      if (refocus) { const nb = stepper.querySelector(`[data-step="${refocus}"]`); if (nb) nb.focus(); }
     } else {
       btnSleep.hidden = true;
       btnWake.hidden = false;
