@@ -517,7 +517,61 @@ const Logic = (() => {
     return out;
   }
 
-  return { VERSION, DATA_VERSION, SCHEMA, fixupSettings, emptyData, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
+  const pad2 = (n) => String(n).padStart(2, '0');
+  function parseLocal(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/.exec(String(s));
+    if (!m) return new Date(NaN);
+    return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), 0, 0);
+  }
+  function formatLocal(d) {
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  }
+  function minutesOfDay(s) { const d = parseLocal(s); return d.getHours() * 60 + d.getMinutes(); }
+  function durationMin(bedAt, wakeAt) { return Math.round((parseLocal(wakeAt) - parseLocal(bedAt)) / 60000); }
+  function midMinutes(bedAt, wakeAt) {
+    const bed = parseLocal(bedAt);
+    const mid = new Date(bed.getTime() + (parseLocal(wakeAt) - bed) / 2);
+    return mid.getHours() * 60 + mid.getMinutes();
+  }
+  function circularMean(mins) {
+    if (!Array.isArray(mins) || mins.length === 0) return null;
+    let sx = 0, sy = 0;
+    for (const m of mins) { const a = m * 2 * Math.PI / 1440; sx += Math.cos(a); sy += Math.sin(a); }
+    const r = Math.round(Math.atan2(sy, sx) * 1440 / (2 * Math.PI));
+    return ((r % 1440) + 1440) % 1440;
+  }
+  function circularDiff(a, b) {
+    const d = ((((a - b + 720) % 1440) + 1440) % 1440) - 720;
+    return d === -720 ? 720 : d;
+  }
+  function formatHM(min) {
+    const m = ((Math.round(min) % 1440) + 1440) % 1440;
+    return `${Math.floor(m / 60)}:${pad2(m % 60)}`;
+  }
+  function formatDuration(min, lang) {
+    const h = Math.floor(min / 60), m = Math.round(min - h * 60);
+    const ja = lang === 'ja';
+    const parts = [];
+    if (h > 0) parts.push(ja ? `${h} 時間` : `${h} h`);
+    if (m > 0 || h === 0) parts.push(ja ? `${m} 分` : `${m} min`);
+    return parts.join(' ');
+  }
+  function formatDateShort(s, lang) {
+    const d = parseLocal(s);
+    const mo = d.getMonth(), da = d.getDate(), wd = d.getDay();
+    if (lang === 'ja') return `${mo + 1}/${da}(${'日月火水木金土'[wd]})`;
+    const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const W = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return `${M[mo]} ${da} (${W[wd]})`;
+  }
+  function todayStr(now) { return formatLocal(now).slice(0, 10); }
+  function addDays(s, n) {
+    const d = parseLocal(s.slice(0, 10));
+    d.setDate(d.getDate() + n);
+    return todayStr(d);
+  }
+
+  return { VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, emptyData, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
 })();
 </script>
 <script id="app-ui">
