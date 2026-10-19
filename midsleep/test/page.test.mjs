@@ -31,8 +31,9 @@ test('script ids, ids and sections the shell needs exist', () => {
   assert.match(src, /^const Logic = /m);
   assert.match(src, /^const App = /m);
   assert.equal((src.match(/^(?:const|let|var|function|class) \w+/gm) || []).filter((l) => !/ (Logic|App)$/.test(l)).length, 0, 'only Logic and App at top level');
-  const ids = ['toolbar', 'page-title', 'status-bar', 'tabbar', 'tab-today', 'tab-history', 'tab-settings', 'sheet', 'sheet-title', 'sheet-body', 'sheet-ok', 'sheet-cancel', 'sheet-delete', 'dialog', 'data-text', 'data-copy-text', 'data-import-text', 'data-export', 'data-import', 'data-file', 'data-clear', 'data-message', 'today-body', 'btn-sleep', 'btn-wake', 'history-chart', 'history-list'];
+  const ids = ['toolbar', 'page-title', 'status-bar', 'tabbar', 'tab-today', 'tab-history', 'tab-settings', 'sheet', 'sheet-title', 'sheet-body', 'sheet-ok', 'sheet-cancel', 'sheet-delete', 'dialog', 'data-text', 'data-copy-text', 'data-import-text', 'data-export', 'data-import', 'data-file', 'data-clear', 'data-message', 'today-body', 'btn-sleep', 'btn-wake', 'history-chart', 'history-list', 'chart-days', 'history-stats', 'history-add'];
   for (const id of ids) assert.match(src, new RegExp(`id="${id}"`), id);
+  assert.match(src, /<svg id="history-chart"/);
   for (const s of ['display', 'calc', 'data', 'about']) assert.match(src, new RegExp(`data-section="${s}"`), s);
   const order = ['display', 'calc', 'data', 'about'].map((s) => src.indexOf(`data-section="${s}"`));
   assert.deepEqual([...order].sort((a, b) => a - b), order, 'sections in order');

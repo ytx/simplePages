@@ -151,6 +151,16 @@ button.btn[hidden] { display: none; }
 .link-row { display: flex; flex-wrap: wrap; gap: var(--gap); margin-top: calc(var(--gap) / 2); }
 #sheet-body input[type=datetime-local] { width: 100%; min-height: 44px; margin-bottom: calc(var(--gap) / 3); }
 #sheet-ok.disabled, #sheet-ok:disabled { opacity: 0.4; cursor: default; }
+.seg-group { display: flex; gap: calc(var(--gap) / 2); margin-bottom: calc(var(--gap) / 2); }
+button.seg { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; min-height: 44px; padding: 0 var(--gap); cursor: pointer; }
+button.seg[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+#history-chart { display: block; max-width: 720px; margin: calc(var(--gap) / 2) 0; }
+#history-chart text { font-size: 9px; fill: var(--fg-muted); font-family: inherit; }
+#history-list { list-style: none; margin: var(--gap) 0 0; padding: 0; }
+#history-list li { border-top: 1px solid var(--border); }
+#history-list li button.history-item { display: block; width: 100%; min-height: 44px; text-align: left; font: inherit; color: var(--fg); background: none; border: 0; padding: calc(var(--gap) / 2) 0; cursor: pointer; }
+.history-date { color: var(--fg-muted); font-size: var(--fs-small); }
+.history-empty { color: var(--fg-muted); padding: calc(var(--gap) / 2) 0; }
 .row { display: flex; gap: var(--gap); flex-wrap: wrap; align-items: center; }
 .hint { color: var(--fg-muted); font-size: var(--fs-small); margin: calc(var(--gap) / 2) 0; }
 #data-message { min-height: 1.4em; margin-top: calc(var(--gap) / 2); }
@@ -192,7 +202,13 @@ button.btn[hidden] { display: none; }
     <div id="today-foot"></div>
   </section>
   <section class="tab-pane" id="tab-history">
-    <svg id="history-chart" aria-hidden="true"></svg>
+    <div id="chart-days" class="seg-group" role="group">
+      <button type="button" class="seg" data-days="14" data-i18n="days_14"></button>
+      <button type="button" class="seg" data-days="30" data-i18n="days_30"></button>
+    </div>
+    <div id="history-stats" class="hint"></div>
+    <svg id="history-chart" viewBox="0 0 360 240" width="100%" role="img"></svg>
+    <button type="button" id="history-add" class="btn"></button>
     <ul id="history-list"></ul>
   </section>
   <section class="tab-pane" id="tab-settings">
@@ -454,6 +470,15 @@ const Logic = (() => {
       err_overlap: '他の記録と重なっています',
       err_future: '未来の時刻は指定できません',
       err_empty: '日時を入力してください',
+      add_record: '+ 記録を追加',
+      edit_record: '記録を編集',
+      edit_bed: '就寝',
+      edit_wake: '起床',
+      confirm_delete_record: 'この記録を削除します。よろしいですか?',
+      chart_label: '睡眠の帯と中央時刻のグラフ',
+      no_records: 'まだ記録がありません',
+      not_enough: '記録が足りません',
+      history_stats: '目標 {t}(直近 {d} 日) · ばらつき ±{sd} 分 · 平均睡眠 {s}',
       save: '保存',
     },
     en: {
@@ -539,6 +564,15 @@ const Logic = (() => {
       err_overlap: 'Overlaps another record',
       err_future: 'Cannot be in the future',
       err_empty: 'Enter a date and time',
+      add_record: '+ Add record',
+      edit_record: 'Edit record',
+      edit_bed: 'Bedtime',
+      edit_wake: 'Wake time',
+      confirm_delete_record: 'Delete this record?',
+      chart_label: 'Chart of sleep bands and mid-sleep times',
+      no_records: 'No records yet',
+      not_enough: 'Not enough records',
+      history_stats: 'Target {t} (last {d} days) · spread ±{sd} min · avg sleep {s}',
       save: 'Save',
     },
   };
@@ -1211,7 +1245,152 @@ const App = (() => {
     body.replaceChildren(...nodes);
     foot.replaceChildren(...footNodes);
   }
-  function renderHistory() {}
+
+  function svg(tag, attrs, text) {
+    const n = document.createElementNS($('#history-chart').namespaceURI, tag);
+    for (const k of Object.keys(attrs || {})) n.setAttribute(k, String(attrs[k]));
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  // 就寝・起床の 2 項目を編集するシート。rec は新規なら未保存の記録。
+  function recordSheet(rec, isNew) {
+    let bedIn = null;
+    let wakeIn = null;
+    let err = null;
+    const validate = () => {
+      const b = bedIn.value;
+      const w = wakeIn.value;
+      let msg = '';
+      if (!b || !w) msg = tr('err_empty');
+      else if (w > Logic.formatLocal(new Date())) msg = tr('err_future');
+      else {
+        const res = Logic.validateRecord({ ...rec, bedAt: b, wakeAt: w }, data.records);
+        if (!res.ok) msg = errText(res.error);
+      }
+      err.textContent = msg;
+      $('#sheet-ok').disabled = msg !== '';
+      return msg === '';
+    };
+    openSheet({
+      title: tr(isNew ? 'add_record' : 'edit_record').replace(/^\+ /, ''),
+      build(body) {
+        const mk = (labelKey, value) => {
+          body.append(el('div', 'sheet-label', tr(labelKey)));
+          const i = el('input');
+          i.type = 'datetime-local';
+          i.step = '60';
+          i.value = value || '';
+          i.addEventListener('input', validate);
+          body.append(i);
+          return i;
+        };
+        bedIn = mk('edit_bed', rec.bedAt);
+        wakeIn = mk('edit_wake', rec.wakeAt);
+        err = el('div', 'sheet-error');
+        body.append(err);
+        validate();
+      },
+      validate,
+      onOk() {
+        const next = { ...rec, bedAt: bedIn.value, wakeAt: wakeIn.value };
+        const exists = data.records.some((r) => r.id === rec.id);
+        const records = exists ? data.records.map((r) => (r.id === rec.id ? next : r)) : [...data.records, next];
+        data = Logic.normalizeData({ ...data, records });
+        saveData();
+        renderAll();
+      },
+      onDelete: isNew ? undefined : async () => {
+        const res = await dialog({ message: tr('confirm_delete_record'), danger: true });
+        if (!res.ok) return false;
+        data = Logic.normalizeData({ ...data, records: data.records.filter((r) => r.id !== rec.id) });
+        saveData();
+        renderAll();
+        return true;
+      },
+    });
+  }
+
+  function addRecord() {
+    const now = new Date();
+    const d = (n) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + n);
+    const at = (base, h) => Logic.formatLocal(new Date(base.getFullYear(), base.getMonth(), base.getDate(), h, 0));
+    recordSheet({ id: Logic.newId(now), bedAt: at(d(-1), 23), wakeAt: at(d(0), 6), createdAt: now.toISOString() }, true);
+  }
+
+  function drawChart(model) {
+    const W = 360, H = 240, L = 36, B = 20, T = 6, R = 4;
+    const plotH = H - B - T;
+    const colW = (W - L - R) / model.cols.length;
+    const Y = (v) => T + v * plotH;
+    const clamp = (v) => Math.min(1, Math.max(0, v));
+    const nodes = [];
+    for (const t of model.yTicks) {
+      nodes.push(svg('line', { x1: L, x2: W - R, y1: Y(t.y), y2: Y(t.y), stroke: 'var(--border)', 'stroke-width': 1 }));
+      nodes.push(svg('text', { x: L - 4, y: Y(t.y) + 3, 'text-anchor': 'end' }, t.label));
+    }
+    if (model.target) {
+      const bandH = (60 / ((model.yMax - model.yMin))) * plotH;
+      nodes.push(svg('rect', { x: L, y: Y(model.target.y) - bandH / 2, width: W - L - R, height: bandH, fill: 'var(--accent)', opacity: 0.12 }));
+      nodes.push(svg('line', { x1: L, x2: W - R, y1: Y(model.target.y), y2: Y(model.target.y), stroke: 'var(--accent)', 'stroke-width': 1, 'stroke-dasharray': '4 3' }));
+    }
+    for (const c of model.cols) {
+      if (c.label) nodes.push(svg('text', { x: L + (c.x + 0.5) * colW, y: H - 6, 'text-anchor': 'middle' }, c.label));
+    }
+    for (const b of model.bars) {
+      if (b.x < 0) continue;
+      const y0 = clamp(b.yBed), y1 = clamp(b.yWake);
+      if (y1 - y0 <= 0) continue;
+      const w = b.nap ? colW / 3 : Math.max(2, colW - 6);
+      const cx = L + (b.x + 0.5) * colW;
+      nodes.push(svg('rect', { x: cx - w / 2, y: Y(y0), width: w, height: (y1 - y0) * plotH, rx: 3, fill: 'var(--accent)', opacity: 0.35 }));
+      if (!b.nap) nodes.push(svg('circle', { cx, cy: Y(clamp(b.yMid)), r: 3.5, fill: 'var(--error)' }));
+    }
+    if (model.line.length > 1) {
+      const pts = model.line.map((p) => `${L + (p.x + 0.5) * colW},${Y(clamp(p.y))}`).join(' ');
+      nodes.push(svg('polyline', { points: pts, fill: 'none', stroke: 'var(--error)', 'stroke-width': 1.5 }));
+    }
+    $('#history-chart').replaceChildren(...nodes);
+  }
+
+  function renderHistory() {
+    if (!data) return;
+    const today = Logic.todayStr(new Date());
+    const days = settings.chartDays;
+    const lang = settings.lang;
+    for (const b of $$('#chart-days .seg')) b.setAttribute('aria-pressed', String(Number(b.dataset.days) === days));
+    const avg = Logic.stats(data.records, settings.avgDays, today);
+    const cur = Logic.stats(data.records, days, today);
+    $('#history-stats').textContent = avg.targetMin === null
+      ? tr('not_enough')
+      : tr('history_stats', { t: Logic.formatHM(avg.targetMin), d: settings.avgDays, sd: cur.sdMin === null ? '-' : cur.sdMin, s: cur.avgSleepMin === null ? '-' : Logic.formatDuration(cur.avgSleepMin, lang) });
+    const chart = $('#history-chart');
+    chart.setAttribute('aria-label', tr('chart_label'));
+    drawChart(Logic.chartModel(data.records, days, today, avg.targetMin, lang));
+    const rows = Logic.completed(data.records).filter((r) => Logic.inWindow(r, days, today))
+      .sort((a, b) => (a.wakeAt < b.wakeAt ? 1 : a.wakeAt > b.wakeAt ? -1 : 0));
+    $('#history-add').textContent = tr('add_record');
+    if (rows.length === 0) {
+      $('#history-list').replaceChildren(el('li', 'history-empty', tr('no_records')));
+      return;
+    }
+    $('#history-list').replaceChildren(...rows.map((r) => {
+      const li = el('li');
+      const b = el('button', 'history-item');
+      b.type = 'button';
+      b.append(el('div', 'history-date', Logic.formatDateShort(Logic.wakeDate(r), lang)), el('div', 'history-sum', Logic.summaryLine(r, lang)));
+      b.addEventListener('click', () => recordSheet(r, false));
+      li.append(b);
+      return li;
+    }));
+  }
+
+  function bindHistory() {
+    for (const b of $$('#chart-days .seg')) {
+      b.addEventListener('click', () => { updateSettings({ chartDays: Number(b.dataset.days) }); renderHistory(); });
+    }
+    $('#history-add').addEventListener('click', addRecord);
+  }
 
   function renderAll() {
     renderToday();
@@ -1474,6 +1653,7 @@ const App = (() => {
     bindSettings();
     bindToolbar();
     bindTabs();
+    bindHistory();
     bindDialogs();
     loadData();
     applySettings();
@@ -1485,8 +1665,12 @@ const App = (() => {
     scheduleRefresh(0);
     tickClock();
     setInterval(tickClock, 1000);
-    // 今日タブは 1 分ごとに再描画する。
-    setInterval(() => { if (document.visibilityState === 'visible') renderAll(); }, 60000);
+    // 表示中のタブだけ 1 分ごとに再描画する(シートを開いている間は触らない)。
+    setInterval(() => {
+      if (document.visibilityState !== 'visible' || $('#sheet').open) return;
+      if (activeTab === 'today') renderToday();
+      else if (activeTab === 'history') renderHistory();
+    }, 60000);
     document.addEventListener('visibilitychange', onVisibility);
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
