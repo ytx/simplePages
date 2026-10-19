@@ -153,3 +153,12 @@ test('today tab is two tiles', () => {
   assert.ok(!('if_wake_now' in Logic.I18N.ja));
   for (const k of ['need_more', 'target_line', 'target_sub', 'flag_short', 'flag_long', 'last_today', 'already_passed']) assert.ok(!(k in Logic.I18N.ja), 'removed ' + k);
 });
+
+test('app-ui script parses', () => {
+  assert.doesNotThrow(() => new Function(ui[1]));
+});
+
+test('app-logic script parses', () => {
+  const logic = src.match(/<script id="app-logic">([\s\S]*?)<\/script>/);
+  assert.doesNotThrow(() => new Function(logic[1]));
+});

@@ -3086,8 +3086,6 @@ const App = (() => {
       }
       const ae = document.activeElement;
       const refocus = ae && ae.dataset && ae.dataset.step && morningFoot.contains(ae) ? ae.dataset.step : null;
-      const ae = document.activeElement;
-      const refocus = ae && ae.dataset && ae.dataset.step && morningFoot.contains(ae) ? ae.dataset.step : null;
       const stepper = el('div', 'stepper');
       stepper.append(
         mkStep('#icon-chevron-left', 'wake_target_earlier', -15),
@@ -3095,7 +3093,6 @@ const App = (() => {
         mkStep('#icon-chevron-right', 'wake_target_later', 15),
       );
       morningFoot.replaceChildren(stepper, btnWake);
-      if (refocus) { const nb = stepper.querySelector(`[data-step="${refocus}"]`); if (nb) nb.focus(); }
       if (refocus) { const nb = stepper.querySelector(`[data-step="${refocus}"]`); if (nb) nb.focus(); }
     } else {
       btnSleep.hidden = true;
