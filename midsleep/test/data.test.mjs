@@ -35,3 +35,10 @@ test('rejects newer versions, bad JSON, unknown shapes', () => {
   assert.equal(Logic.parseImportAll('{', 1, 1).reason, 'invalid_json');
   assert.equal(parse({ version: 1 }).ok, false);
 });
+
+test('parseImportAll reports skipped record count', () => {
+  const r = parse({ version: 1, data: { version: 1, records: [rec, { id: 'x', bedAt: 'bad', wakeAt: null }, { id: 'y' }] } });
+  assert.equal(r.skipped, 2);
+  assert.equal(parse({ version: 1, data: { version: 1, records: [rec] } }).skipped, 0);
+  assert.equal(parse({ version: 1, settings: {} }).skipped, undefined);
+});

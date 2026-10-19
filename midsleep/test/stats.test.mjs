@@ -17,3 +17,12 @@ test('stats over window', () => {
   assert.equal(Logic.inWindow(recs[1], 7, '2026-10-20'), true);
   assert.equal(Logic.inWindow(recs[6], 7, '2026-10-20'), false);
 });
+
+test('stats with mids straddling midnight', () => {
+  const mk = [R('p', '2026-10-17T20:50', '2026-10-18T02:50'), R('q', '2026-10-18T21:10', '2026-10-19T03:10')];
+  assert.equal(Logic.midMinutes(mk[0].bedAt, mk[0].wakeAt), 23 * 60 + 50);
+  assert.equal(Logic.midMinutes(mk[1].bedAt, mk[1].wakeAt), 10);
+  const st = Logic.stats(mk, 7, '2026-10-20');
+  assert.equal(st.targetMin, 0);
+  assert.equal(st.sdMin, 10);
+});

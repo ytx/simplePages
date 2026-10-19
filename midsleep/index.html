@@ -18,6 +18,7 @@
   --fg-muted: #5c6070;
   --border: #dcdde6;
   --accent: #5b6ee1;
+  --on-accent: #fff;
   --ok: #2fa84f;
   --warn: #e6a700;
   --error: #d64545;
@@ -36,10 +37,11 @@ html[data-theme="dark"] {
   --fg-muted: #9b9fb2;
   --border: #2e3040;
   --accent: #8c9bf5;
+  --on-accent: #13141b;
 }
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) {
-    --bg: #13141b; --bg-panel: #1c1e28; --fg: #e8e9f0; --fg-muted: #9b9fb2; --border: #2e3040; --accent: #8c9bf5;
+    --bg: #13141b; --bg-panel: #1c1e28; --fg: #e8e9f0; --fg-muted: #9b9fb2; --border: #2e3040; --accent: #8c9bf5; --on-accent: #13141b;
   }
 }
 * { box-sizing: border-box; }
@@ -105,11 +107,9 @@ dialog#dialog::backdrop, dialog#sheet::backdrop { background: rgba(0,0,0,0.5); }
 #sheet-title { margin: 0 0 var(--gap); font-size: var(--fs-base); font-weight: 400; outline: none; }
 #sheet-body { margin-bottom: var(--gap); }
 #sheet-body [hidden] { display: none; }
-#sheet-body select, #sheet-body input[type=text] { width: 100%; min-height: 44px; box-sizing: border-box; margin-bottom: calc(var(--gap) / 3); }
 #sheet-delete:disabled { opacity: 0.4; cursor: default; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: calc(var(--gap) / 2); }
 .sheet-label { color: var(--fg-muted); font-size: var(--fs-small); margin: calc(var(--gap) / 2) 0 calc(var(--gap) / 4); }
-.sheet-note { color: var(--fg-muted); font-size: var(--fs-small); margin: calc(var(--gap) / 2) 0; }
 .sheet-error { color: var(--error); min-height: 1.4em; }
 .settings-section { border-bottom: 1px solid var(--border); padding: calc(var(--gap) / 2) 0; }
 .settings-section > summary { cursor: pointer; padding: calc(var(--gap) / 2) 0; list-style-position: inside; min-height: 44px; }
@@ -117,7 +117,6 @@ dialog#dialog::backdrop, dialog#sheet::backdrop { background: rgba(0,0,0,0.5); }
 .field { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--gap); align-items: center; margin-bottom: var(--gap); }
 .field > input, .field > select { width: 100%; min-width: 0; box-sizing: border-box; }
 .field label { color: var(--fg-muted); }
-.field.stack { grid-template-columns: minmax(0, 1fr); gap: calc(var(--gap) / 3); }
 select, input, textarea, button.btn {
   font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border);
   border-radius: 6px; padding: 0.4em 0.6em;
@@ -125,10 +124,10 @@ select, input, textarea, button.btn {
 textarea { width: 100%; resize: vertical; }
 input, select, textarea { font-size: max(16px, var(--fs-base)); }
 input, select { min-height: 44px; }
-textarea#data-text { min-height: 10em; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: var(--fs-small); }
+textarea#data-text { min-height: 10em; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: max(16px, var(--fs-small)); }
 button.btn { cursor: pointer; min-height: 44px; }
 button.btn.danger { color: var(--error); }
-button.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 button.btn[hidden] { display: none; }
 .today-date { color: var(--fg-muted); }
 .today-target { margin-bottom: var(--gap); }
@@ -143,17 +142,17 @@ button.btn[hidden] { display: none; }
 .advice-row { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--gap) / 2); }
 .advice-row .icon-btn { min-width: 44px; min-height: 44px; }
 .card-actions { display: flex; flex-wrap: wrap; gap: calc(var(--gap) / 2); margin-top: calc(var(--gap) / 2); }
-.big-btn { display: block; width: 100%; min-height: 4em; margin: var(--gap) 0; font: inherit; font-size: calc(var(--fs-base) * 1.4); color: #fff; background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius); cursor: pointer; }
+.big-btn { display: block; width: 100%; min-height: 4em; margin: var(--gap) 0; font: inherit; font-size: calc(var(--fs-base) * 1.4); color: var(--on-accent); background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius); cursor: pointer; }
 .big-btn.alt { background: var(--ok); border-color: var(--ok); }
 .big-btn[hidden] { display: none; }
 .today-last { color: var(--fg-muted); margin-top: var(--gap); }
 .link-btn { font: inherit; color: var(--accent); background: none; border: 0; padding: 0.5em 0.25em; min-height: 44px; cursor: pointer; text-decoration: underline; }
 .link-row { display: flex; flex-wrap: wrap; gap: var(--gap); margin-top: calc(var(--gap) / 2); }
 #sheet-body input[type=datetime-local] { width: 100%; min-height: 44px; margin-bottom: calc(var(--gap) / 3); }
-#sheet-ok.disabled, #sheet-ok:disabled { opacity: 0.4; cursor: default; }
+#sheet-ok:disabled { opacity: 0.4; cursor: default; }
 .seg-group { display: flex; gap: calc(var(--gap) / 2); margin-bottom: calc(var(--gap) / 2); }
 button.seg { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; min-height: 44px; padding: 0 var(--gap); cursor: pointer; }
-button.seg[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.seg[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 #history-chart { display: block; max-width: 720px; margin: calc(var(--gap) / 2) 0; }
 #history-chart text { font-size: 9px; fill: var(--fg-muted); font-family: inherit; }
 #history-list { list-style: none; margin: var(--gap) 0 0; padding: 0; }
@@ -420,6 +419,7 @@ const Logic = (() => {
       data_hint: '現在の設定とデータ(JSON)。編集して「テキストから読み込む」で反映できます。読み込むと該当部分は置き換わります。',
       confirm_import_replace: '現在の内容を読み込む内容で置き換えます(統合はしません)。よろしいですか?',
       import_ok: '読み込みました',
+      import_skipped: '{n} 件を読み飛ばしました',
       import_failed_json: '読み込み失敗: JSON として解釈できません',
       import_failed_format: '読み込み失敗: midsleep のファイルの形式ではありません',
       about_description: '睡眠中央時刻をそろえるための記録ツール。寝る前と起きた後に 1 回ずつボタンを押すだけで、目標の中央時刻、今寝たときの起床の目安、起きたい時刻から逆算した就寝の目安が分かります。',
@@ -430,7 +430,6 @@ const Logic = (() => {
       about_credits: 'クレジット',
       credit_icons: 'アイコン: Material Icons (Google) — Apache License 2.0',
       confirm_clear: '保存した設定とデータをすべて消去します。よろしいですか?',
-      close: '閉じる',
       ok: 'OK',
       cancel: 'キャンセル',
       delete: '削除',
@@ -453,6 +452,9 @@ const Logic = (() => {
       diff_early: '目標より {n} 分早い',
       diff_late: '目標より {n} 分遅い',
       diff_on: '目標どおり',
+      diff_early_t: '目標 {t} より {n} 分早い',
+      diff_late_t: '目標 {t} より {n} 分遅い',
+      diff_on_t: '目標 {t} どおり',
       sleep_now: '今から寝る',
       sleeping_since: '就寝中 · {t} から({d})',
       wake_now: '今起きた',
@@ -477,6 +479,7 @@ const Logic = (() => {
       confirm_delete_record: 'この記録を削除します。よろしいですか?',
       chart_label: '睡眠の帯と中央時刻のグラフ',
       no_records: 'まだ記録がありません',
+      no_records_in_range: 'この期間の記録はありません',
       not_enough: '記録が足りません',
       history_stats: '目標 {t}(直近 {d} 日) · ばらつき ±{sd} 分 · 平均睡眠 {s}',
       save: '保存',
@@ -514,6 +517,7 @@ const Logic = (() => {
       data_hint: 'Current settings and data (JSON). Edit it and press "Import from text" to apply. Imported parts replace the current ones.',
       confirm_import_replace: 'This replaces the current content with the imported content (no merging). Continue?',
       import_ok: 'Imported',
+      import_skipped: 'Skipped {n} invalid records',
       import_failed_json: 'Import failed: not valid JSON',
       import_failed_format: 'Import failed: not a midsleep file',
       about_description: 'A log for keeping your sleep mid-point steady. Tap once before bed and once after waking to see the target mid-point, when you would wake if you slept now, and when to go to bed to wake at your target time.',
@@ -524,7 +528,6 @@ const Logic = (() => {
       about_credits: 'Credits',
       credit_icons: 'Icons: Material Icons (Google) — Apache License 2.0',
       confirm_clear: 'This deletes all saved settings and data. Continue?',
-      close: 'Close',
       ok: 'OK',
       cancel: 'Cancel',
       delete: 'Delete',
@@ -547,6 +550,9 @@ const Logic = (() => {
       diff_early: '{n} min earlier than target',
       diff_late: '{n} min later than target',
       diff_on: 'on target',
+      diff_early_t: '{n} min earlier than target {t}',
+      diff_late_t: '{n} min later than target {t}',
+      diff_on_t: 'on target {t}',
       sleep_now: 'Go to sleep now',
       sleeping_since: 'Sleeping · since {t} ({d})',
       wake_now: 'I just woke up',
@@ -571,6 +577,7 @@ const Logic = (() => {
       confirm_delete_record: 'Delete this record?',
       chart_label: 'Chart of sleep bands and mid-sleep times',
       no_records: 'No records yet',
+      no_records_in_range: 'No records in this range',
       not_enough: 'Not enough records',
       history_stats: 'Target {t} (last {d} days) · spread ±{sd} min · avg sleep {s}',
       save: 'Save',
@@ -615,9 +622,6 @@ const Logic = (() => {
 
   const isObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 
-  function emptyData() { return { version: 1, records: [] }; }
-
-  // 暫定: records が配列ならそのまま通す。レコードごとの検証は後続タスクで足す。
   const LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
   function validLocal(s) {
     if (typeof s !== 'string' || !LOCAL_RE.test(s)) return false;
@@ -637,10 +641,12 @@ const Logic = (() => {
   function normalizeData(raw) {
     const src = raw && Array.isArray(raw.records) ? raw.records : [];
     const out = [];
+    const seen = new Set();
     let sleeping = null;
     for (const r of src) {
       const c = cleanRecord(r);
-      if (!c) continue;
+      if (!c || seen.has(c.id)) continue;
+      seen.add(c.id);
       if (c.wakeAt === null) {
         if (!sleeping || c.bedAt > sleeping.bedAt) sleeping = c;
       } else out.push(c);
@@ -674,6 +680,7 @@ const Logic = (() => {
     if (hasData) {
       if (Number.isInteger(raw.data.version) && raw.data.version > dataVersion) return fail('unrecognized_format');
       out.data = normalizeData(raw.data);
+      out.skipped = invalidCount(raw.data);
     }
     return out;
   }
@@ -843,7 +850,7 @@ const Logic = (() => {
     if (sleepMin > 720) return 'long';
     return null;
   }
-  return { relMinutes, targetRel, chartModel, summaryLine, nextMid, prevMid, nextOccurrence, wakeFor, bedFor, adviceFlags, isNap, wakeDate, sleepingRecord, completed, inWindow, stats, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, emptyData, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
+  return { relMinutes, targetRel, chartModel, summaryLine, truncMin, nextOccurrence, wakeFor, bedFor, adviceFlags, isNap, wakeDate, sleepingRecord, completed, inWindow, stats, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
 })();
 </script>
 <script id="app-ui">
@@ -863,8 +870,7 @@ const App = (() => {
   const TABS = ['today', 'history', 'settings'];
 
   let settings = {};
-  let nextRefreshAt = 0;
-  let refreshTimer = null;
+  let lastMinute = null;
   let idleTimer = null;
   let toolbarAttention = false;
   let storageOk = true;
@@ -928,13 +934,10 @@ const App = (() => {
   function getSettings() { return { ...settings }; }
 
   function updateSettings(patch) {
-    const prev = settings;
     settings = Logic.fixupSettings(Logic.resolveSettings(SCHEMA, { ...settings, ...patch }, {}));
     persist();
     applySettings();
-    const changed = (k) => JSON.stringify(prev[k]) !== JSON.stringify(settings[k]);
-    if (Object.keys(patch).some((k) => !DISPLAY_ONLY_KEYS.has(k) && changed(k))) scheduleRefresh(0);
-    else renderAll();
+    renderAll();
   }
 
   function applyI18n() {
@@ -999,6 +1002,15 @@ const App = (() => {
 
   function tickClock() {
     const d = new Date();
+    const minute = Math.floor(d.getTime() / 60000);
+    if (minute !== lastMinute) {
+      const first = lastMinute === null;
+      lastMinute = minute;
+      if (!first && data && !$('#sheet').open) {
+        if (activeTab === 'today') renderToday();
+        else if (activeTab === 'history') renderHistory();
+      }
+    }
     $('#clock').textContent = new Intl.DateTimeFormat(settings.lang === 'ja' ? 'ja-JP' : 'en-US',
       { month: 'numeric', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(d);
   }
@@ -1013,6 +1025,13 @@ const App = (() => {
     if (d < 0) return tr('diff_early', { n: -d });
     if (d > 0) return tr('diff_late', { n: d });
     return tr('diff_on');
+  }
+  function diffParenT(midMin, targetMin) {
+    if (targetMin === null) return '';
+    const d = Logic.circularDiff(midMin, targetMin);
+    const t = Logic.formatHM(targetMin);
+    const p = d < 0 ? tr('diff_early_t', { n: -d, t }) : d > 0 ? tr('diff_late_t', { n: d, t }) : tr('diff_on_t', { t });
+    return tr('diff_paren', { d: p });
   }
   const diffParen = (midMin, targetMin) => (targetMin === null ? '' : tr('diff_paren', { d: diffPhrase(midMin, targetMin) }));
 
@@ -1042,7 +1061,6 @@ const App = (() => {
     const [h, m] = settings.wakeTarget.split(':').map(Number);
     const v = (((h * 60 + m + delta) % 1440) + 1440) % 1440;
     updateSettings({ wakeTarget: `${pad2(Math.floor(v / 60))}:${pad2(v % 60)}` });
-    renderToday();
   }
 
   function lastRecordLine(now, targetMin) {
@@ -1164,6 +1182,7 @@ const App = (() => {
     const btnWake = $('#btn-wake');
     const head = el('div', 'today-date', `${Logic.formatDateShort(nowStr, settings.lang)} ${Logic.formatHM(Logic.minutesOfDay(nowStr))}`);
     const rec = Logic.sleepingRecord(data.records);
+    const nowM = Logic.truncMin(now);
     const st = Logic.stats(data.records, settings.avgDays, Logic.todayStr(now));
     const targetMin = st.targetMin;
     const nodes = [head];
@@ -1176,10 +1195,10 @@ const App = (() => {
         nodes.push(el('div', 'today-hint', tr('need_more', { n: Math.max(0, 2 - st.count) })));
       } else {
         nodes.push(el('div', 'today-target', tr('target_line', { t: Logic.formatHM(targetMin) }) + '  ' + tr('target_sub', { d: settings.avgDays, sd: st.sdMin })));
-        const w = Logic.wakeFor(now, targetMin);
+        const w = Logic.wakeFor(nowM, targetMin);
         const c1 = adviceCard(tr('card_if_sleep_now'));
         c1.append(el('div', 'advice-big', tr('wake_at', { t: hmOf(w.wakeAt) })), flagLine(w.sleepMin));
-        const nextWake = Logic.nextOccurrence(now, settings.wakeTarget);
+        const nextWake = Logic.nextOccurrence(nowM, settings.wakeTarget);
         const b = Logic.bedFor(nextWake, targetMin);
         const c2 = adviceCard(tr('card_wake_target'));
         const row = el('div', 'advice-row');
@@ -1187,9 +1206,13 @@ const App = (() => {
           const btn = el('button', 'icon-btn');
           btn.type = 'button';
           btn.setAttribute('aria-label', tr(key));
-          const svg = $('#btn-zoom-in svg').cloneNode(true);
-          svg.querySelector('use').setAttribute('href', icon);
-          btn.append(svg);
+          const NS = $('#history-chart').namespaceURI;
+          const ic = document.createElementNS(NS, 'svg');
+          ic.setAttribute('aria-hidden', 'true');
+          const use = document.createElementNS(NS, 'use');
+          use.setAttribute('href', icon);
+          ic.append(use);
+          btn.append(ic);
           btn.addEventListener('click', () => stepWakeTarget(delta));
           return btn;
         };
@@ -1230,7 +1253,7 @@ const App = (() => {
       }
       if (nowStr > rec.bedAt) {
         const mid = Logic.midMinutes(rec.bedAt, nowStr);
-        footNodes.push(el('div', 'advice-sub', tr('if_wake_now', { m: Logic.formatHM(mid), diff: diffParen(mid, targetMin) })));
+        footNodes.push(el('div', 'advice-sub', tr('if_wake_now', { m: Logic.formatHM(mid), diff: diffParenT(mid, targetMin) })));
       }
       const links = el('div', 'link-row');
       const l1 = el('button', 'link-btn', tr('fix_bed_time'));
@@ -1329,7 +1352,7 @@ const App = (() => {
       nodes.push(svg('line', { x1: L, x2: W - R, y1: Y(t.y), y2: Y(t.y), stroke: 'var(--border)', 'stroke-width': 1 }));
       nodes.push(svg('text', { x: L - 4, y: Y(t.y) + 3, 'text-anchor': 'end' }, t.label));
     }
-    if (model.target) {
+    if (model.target && model.target.y >= 0 && model.target.y <= 1) {
       const bandH = (60 / ((model.yMax - model.yMin))) * plotH;
       nodes.push(svg('rect', { x: L, y: Y(model.target.y) - bandH / 2, width: W - L - R, height: bandH, fill: 'var(--accent)', opacity: 0.12 }));
       nodes.push(svg('line', { x1: L, x2: W - R, y1: Y(model.target.y), y2: Y(model.target.y), stroke: 'var(--accent)', 'stroke-width': 1, 'stroke-dasharray': '4 3' }));
@@ -1371,7 +1394,7 @@ const App = (() => {
       .sort((a, b) => (a.wakeAt < b.wakeAt ? 1 : a.wakeAt > b.wakeAt ? -1 : 0));
     $('#history-add').textContent = tr('add_record');
     if (rows.length === 0) {
-      $('#history-list').replaceChildren(el('li', 'history-empty', tr('no_records')));
+      $('#history-list').replaceChildren(el('li', 'history-empty', tr(Logic.completed(data.records).length > 0 ? 'no_records_in_range' : 'no_records')));
       return;
     }
     $('#history-list').replaceChildren(...rows.map((r) => {
@@ -1387,7 +1410,7 @@ const App = (() => {
 
   function bindHistory() {
     for (const b of $$('#chart-days .seg')) {
-      b.addEventListener('click', () => { updateSettings({ chartDays: Number(b.dataset.days) }); renderHistory(); });
+      b.addEventListener('click', () => { updateSettings({ chartDays: Number(b.dataset.days) }); });
     }
     $('#history-add').addEventListener('click', addRecord);
   }
@@ -1397,24 +1420,8 @@ const App = (() => {
     renderHistory();
   }
 
-  // midsleep は外部データを取得しない。再描画だけ行う。
-  async function refresh() {
-    renderAll();
-  }
-
-  function scheduleRefresh(delayMs) {
-    clearTimeout(refreshTimer);
-    const delay = delayMs ?? 10 * 60000;
-    nextRefreshAt = Date.now() + delay;
-    // 古い更新の finally が新しい予約を消さないように、自分のタイマーが現役のときだけ再予約する
-    const mine = setTimeout(async () => {
-      try { await refresh(); } finally { if (refreshTimer === mine) scheduleRefresh(); }
-    }, delay);
-    refreshTimer = mine;
-  }
-
   function onVisibility() {
-    if (document.visibilityState === 'visible') { tickClock(); scheduleRefresh(0); }
+    if (document.visibilityState === 'visible') { tickClock(); renderAll(); }
   }
 
   function resetIdle() {
@@ -1466,8 +1473,8 @@ const App = (() => {
   }
 
   // シート: build(body) が空にした #sheet-body へ要素を足す。onOk は保存で閉じたとき、
-  // onDelete は削除ボタン(true を返すと閉じる)。deleteDisabled で削除ボタンを無効にする。
-  function openSheet({ title, build, onOk, onDelete, deleteDisabled = false, validate = null, okHidden = false, okLabel = 'save' }) {
+  // onDelete は削除ボタン(true を返すと閉じる)。
+  function openSheet({ title, build, onOk, onDelete, validate = null, okLabel = 'save' }) {
     const dlg = $('#sheet');
     const body = $('#sheet-body');
     $('#sheet-title').textContent = title;
@@ -1475,11 +1482,9 @@ const App = (() => {
     body.replaceChildren();
     $('#sheet-ok').disabled = false;
     sheetValidate = validate;
-    $('#sheet-ok').hidden = !!okHidden;
     build(body);
     const del = $('#sheet-delete');
     del.hidden = !onDelete;
-    del.disabled = !!deleteDisabled;
     sheetState = { onOk, onDelete };
     dlg.returnValue = '';
     dlg.showModal();
@@ -1512,6 +1517,8 @@ const App = (() => {
     let raw = null;
     try { raw = JSON.parse(localStorage.getItem(DATA_KEY)); } catch { raw = null; }
     data = Logic.normalizeData(raw);
+    const skipped = Logic.invalidCount(raw);
+    if (skipped > 0) setStatus('warn', () => tr('import_skipped', { n: skipped }));
   }
 
   function saveData() {
@@ -1591,7 +1598,7 @@ const App = (() => {
     if (result.settings) replaceSettings(result.settings);
     if (result.data) setData(result.data);
     refreshDataText();
-    setDataMessage('ok', tr('import_ok'));
+    setDataMessage('ok', tr('import_ok') + (result.skipped > 0 ? ' / ' + tr('import_skipped', { n: result.skipped }) : ''));
   }
 
   // 置き換え: 現在の設定に重ねず、既定値に取り込み分だけを適用する。
@@ -1662,15 +1669,9 @@ const App = (() => {
     showStorageStatus();
     const initialTab = new URLSearchParams(location.search).get('tab');
     switchTab(TABS.includes(initialTab) ? initialTab : 'today');
-    scheduleRefresh(0);
+    renderAll();
     tickClock();
     setInterval(tickClock, 1000);
-    // 表示中のタブだけ 1 分ごとに再描画する(シートを開いている間は触らない)。
-    setInterval(() => {
-      if (document.visibilityState !== 'visible' || $('#sheet').open) return;
-      if (activeTab === 'today') renderToday();
-      else if (activeTab === 'history') renderHistory();
-    }, 60000);
     document.addEventListener('visibilitychange', onVisibility);
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
     for (const ev of ['pointermove', 'pointerdown', 'touchstart', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
@@ -1679,7 +1680,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { SCHEMA, $, el, tr, getSettings, updateSettings, setStatus, scheduleRefresh, refresh, applyZoom, setToolbarAttention, switchTab, dialog, openSheet, getData, setData, loadData, saveData, exportAll, importText, setDataMessage, copyText };
+  return { SCHEMA, $, el, tr, getSettings, updateSettings, setStatus, applyZoom, setToolbarAttention, switchTab, dialog, openSheet, getData, setData, loadData, saveData, exportAll, importText, setDataMessage, copyText };
 })();
 </script>
 </body>

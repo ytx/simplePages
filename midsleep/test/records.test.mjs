@@ -39,3 +39,10 @@ test('stale and newId', () => {
   assert.equal(Logic.isStale(recs[0], new Date(2026, 9, 20, 17, 12), 18), false);
   assert.equal(Logic.newId(new Date(1000)), 'r_1000');
 });
+
+test('normalizeData keeps the first record per id and counts the rest as invalid', () => {
+  const raw = { version: 1, records: [R('a', '2026-10-10T23:00', '2026-10-11T06:00'), R('a', '2026-10-12T23:00', '2026-10-13T06:00'), R('b', '2026-10-14T23:00', '2026-10-15T06:00')] };
+  const n = Logic.normalizeData(raw);
+  assert.deepEqual(n.records.map((r) => [r.id, r.bedAt]), [['a', '2026-10-10T23:00'], ['b', '2026-10-14T23:00']]);
+  assert.equal(Logic.invalidCount(raw), 1);
+});
