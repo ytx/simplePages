@@ -489,8 +489,40 @@ const Logic = (() => {
   function emptyData() { return { version: 1, records: [] }; }
 
   // 暫定: records が配列ならそのまま通す。レコードごとの検証は後続タスクで足す。
+  const LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+  function validLocal(s) {
+    if (typeof s !== 'string' || !LOCAL_RE.test(s)) return false;
+    const d = parseLocal(s);
+    return !isNaN(d.getTime()) && formatLocal(d) === s;
+  }
+  function cleanRecord(r) {
+    if (!r || typeof r !== 'object' || typeof r.id !== 'string' || !r.id) return null;
+    if (!validLocal(r.bedAt)) return null;
+    let wakeAt = null;
+    if (r.wakeAt !== null && r.wakeAt !== undefined) {
+      if (!validLocal(r.wakeAt) || r.wakeAt <= r.bedAt) return null;
+      wakeAt = r.wakeAt;
+    }
+    return { id: r.id, bedAt: r.bedAt, wakeAt, createdAt: typeof r.createdAt === 'string' ? r.createdAt : '' };
+  }
   function normalizeData(raw) {
-    return { version: 1, records: Array.isArray(raw && raw.records) ? raw.records : [] };
+    const src = raw && Array.isArray(raw.records) ? raw.records : [];
+    const out = [];
+    let sleeping = null;
+    for (const r of src) {
+      const c = cleanRecord(r);
+      if (!c) continue;
+      if (c.wakeAt === null) {
+        if (!sleeping || c.bedAt > sleeping.bedAt) sleeping = c;
+      } else out.push(c);
+    }
+    if (sleeping) out.push(sleeping);
+    out.sort((a, b) => (a.bedAt < b.bedAt ? -1 : a.bedAt > b.bedAt ? 1 : 0));
+    return { version: 1, records: out };
+  }
+  function invalidCount(raw) {
+    const src = raw && Array.isArray(raw.records) ? raw.records : [];
+    return src.length - normalizeData(raw).records.length;
   }
 
   // 設定とデータの両方、またはどちらかを受け付けるインポート解析。DOM に触らない。
@@ -571,7 +603,50 @@ const Logic = (() => {
     return todayStr(d);
   }
 
-  return { VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, emptyData, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
+  function isNap(r) { return r.wakeAt !== null && durationMin(r.bedAt, r.wakeAt) < 180; }
+  function wakeDate(r) { return r.wakeAt.slice(0, 10); }
+  function sleepingRecord(records) {
+    let best = null;
+    for (const r of records) if (r.wakeAt === null && (!best || r.bedAt > best.bedAt)) best = r;
+    return best;
+  }
+  function completed(records) { return records.filter((r) => r.wakeAt !== null); }
+  function inWindow(r, days, today) {
+    if (r.wakeAt === null) return false;
+    const w = wakeDate(r);
+    return w >= addDays(today, -(days - 1)) && w <= today;
+  }
+  function stats(records, days, today) {
+    const used = completed(records).filter((r) => inWindow(r, days, today) && !isNap(r));
+    const count = used.length;
+    if (count < 2) return { count, targetMin: null, sdMin: null, avgSleepMin: null };
+    const mids = used.map((r) => midMinutes(r.bedAt, r.wakeAt));
+    const targetMin = circularMean(mids);
+    const diffs = mids.map((m) => circularDiff(m, targetMin));
+    const sdMin = Math.round(Math.sqrt(diffs.reduce((a, d) => a + d * d, 0) / count));
+    const avgSleepMin = Math.round(used.reduce((a, r) => a + durationMin(r.bedAt, r.wakeAt), 0) / count);
+    return { count, targetMin, sdMin, avgSleepMin };
+  }
+  function validateRecord(record, records) {
+    const open = record.wakeAt === null;
+    if (!open) {
+      if (record.wakeAt <= record.bedAt) return { ok: false, error: 'order' };
+      if (durationMin(record.bedAt, record.wakeAt) > 1440) return { ok: false, error: 'too_long' };
+    }
+    for (const o of records) {
+      if (o.id === record.id) continue;
+      const oEndsAfterStart = o.wakeAt === null || o.wakeAt > record.bedAt;
+      const startsBeforeEnd = open || o.bedAt < record.wakeAt;
+      if (oEndsAfterStart && startsBeforeEnd) return { ok: false, error: 'overlap' };
+    }
+    return { ok: true };
+  }
+  function isStale(r, now, staleHours) {
+    return r.wakeAt === null && (now.getTime() - parseLocal(r.bedAt).getTime()) / 60000 >= staleHours * 60;
+  }
+  function newId(now) { return 'r_' + now.getTime(); }
+
+  return { isNap, wakeDate, sleepingRecord, completed, inWindow, stats, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, emptyData, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
 })();
 </script>
 <script id="app-ui">

@@ -55,10 +55,10 @@ test('URL query beats stored settings', () => {
   assert.equal(resolve({ avgDays: 10 }, { avgDays: '12' }).avgDays, 12);
 });
 
-test('normalizeData stub keeps a records array only', () => {
+test('normalizeData tolerates non-record input', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(Logic.normalizeData(null))), { version: 1, records: [] });
   assert.deepEqual(JSON.parse(JSON.stringify(Logic.normalizeData({ records: 'x' }))), { version: 1, records: [] });
-  assert.equal(Logic.normalizeData({ records: [{}] }).records.length, 1);
+  assert.equal(Logic.normalizeData({ records: [{}] }).records.length, 0);
   assert.equal(Logic.VERSION, 1);
   assert.equal(Logic.DATA_VERSION, 1);
 });
