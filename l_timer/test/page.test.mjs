@@ -21,21 +21,21 @@ test('app-logic and app-ui scripts parse', () => {
   assert.doesNotThrow(() => new Function(ui[1]));
 });
 
-test('Libertinus Mono is bundled and used for the timer digits', () => {
+test('Courier Prime is bundled and used for the timer digits', () => {
   const faces = src.match(/@font-face/g) || [];
   assert.equal(faces.length, 1);
-  assert.match(src, /font-family: 'Libertinus Mono';/);
-  assert.match(src, /url\(fonts\/libertinus-mono\/LibertinusMono-Regular\.woff2\) format\('woff2'\)/);
-  assert.ok(existsSync(fileURLToPath(new URL('../fonts/libertinus-mono/LibertinusMono-Regular.woff2', import.meta.url))));
-  assert.ok(existsSync(fileURLToPath(new URL('../fonts/libertinus-mono/OFL.txt', import.meta.url))));
-  assert.match(src, /--font-num: 'Libertinus Mono', ui-monospace/);
+  assert.match(src, /font-family: 'Courier Prime';/);
+  assert.match(src, /url\(fonts\/courier-prime\/CourierPrime-Regular-latin\.woff2\) format\('woff2'\)/);
+  assert.ok(existsSync(fileURLToPath(new URL('../fonts/courier-prime/CourierPrime-Regular-latin.woff2', import.meta.url))));
+  assert.ok(existsSync(fileURLToPath(new URL('../fonts/courier-prime/OFL.txt', import.meta.url))));
+  assert.match(src, /--font-num: 'Courier Prime', ui-monospace/);
   for (const sel of ['#main-remaining', '.end-row', '.ex-time', '.ex-next-time', '#ed-zoom-level']) {
     const rule = src.match(new RegExp(`^${sel.replace('.', '\\.')} \\{[^}]*\\}`, 'm'));
     assert.ok(rule, sel);
     assert.match(rule[0], /font-family: var\(--font-num\)/, sel);
     assert.doesNotMatch(rule[0], /font-weight: 700/, sel);
   }
-  assert.match(src, /name: 'Libertinus Mono', url: 'https:\/\/github\.com\/alerque\/libertinus'/);
+  assert.match(src, /name: 'Courier Prime', url: 'https:\/\/github\.com\/quoteunquoteapps\/CourierPrime'/);
 });
 
 test('every data-i18n key and every t() key exists in ja and en', () => {

@@ -66,7 +66,7 @@ localStorage キー `simplePages.l_timer.data`(文書・下書き・演習タイ
 
 ## 書体
 
-残り時間・終了時刻・演習タイマーの数字と、エディタの拡大率表示には Libertinus Mono(The Libertinus Project、SIL Open Font License 1.1)を `fonts/libertinus-mono/LibertinusMono-Regular.woff2`(51 KB)として同梱し、CSS 変数 `--font-num` で当てている。Regular しかないので太字にはしない。ライセンス全文は同ディレクトリの `OFL.txt`。他の文字はシステム書体。
+残り時間・終了時刻・演習タイマーの数字と、エディタの拡大率表示には Courier Prime(The Courier Prime Project Authors、SIL Open Font License 1.1)の Regular を `fonts/courier-prime/CourierPrime-Regular-latin.woff2`(Google Fonts の latin 分割、11 KB)として同梱し、CSS 変数 `--font-num` で当てている。太字は使わない。ライセンス全文は同ディレクトリの `OFL.txt`。他の文字はシステム書体。
 
 ## 音声
 

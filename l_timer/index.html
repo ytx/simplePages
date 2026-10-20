@@ -6,11 +6,12 @@
 <title>l_timer</title>
 <style>
 @font-face {
-  font-family: 'Libertinus Mono';
+  font-family: 'Courier Prime';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(fonts/libertinus-mono/LibertinusMono-Regular.woff2) format('woff2');
+  src: url(fonts/courier-prime/CourierPrime-Regular-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 :root {
   --bg: #f6f7f9;
@@ -30,7 +31,7 @@
   --fs-large: calc(var(--fs-base) * 1.6);
   --fs-timer: calc(clamp(64px, min(14vw, 20vh), 180px) * var(--zoom));
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
-  --font-num: 'Libertinus Mono', ui-monospace, Menlo, Consolas, monospace;
+  --font-num: 'Courier Prime', ui-monospace, Menlo, Consolas, monospace;
 }
 html[data-theme="dark"] {
   --bg: #12151b;
@@ -1174,7 +1175,7 @@ const App = (() => {
     page: 'l_timer',
     credits: [
       { name: 'Mixkit', url: 'https://mixkit.co/free-sound-effects/notification/', note: '予鈴音 sound1-1 (mixkit-correct-answer-tone-2870) / 終了音 sound2-1 (mixkit-happy-bells-notification-937) / 経過音 sound3-1 (mixkit-access-allowed-tone-2869) — Mixkit License' },
-      { name: 'Libertinus Mono', url: 'https://github.com/alerque/libertinus', note: '数字の書体 (The Libertinus Project) — SIL Open Font License 1.1' },
+      { name: 'Courier Prime', url: 'https://github.com/quoteunquoteapps/CourierPrime', note: '数字の書体 (The Courier Prime Project Authors) — SIL Open Font License 1.1' },
     ],
   };
   const SCHEMA = {
