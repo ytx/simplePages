@@ -1,0 +1,49 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { loadLogic } from './load-logic.mjs';
+
+const html = fileURLToPath(new URL('../index.html', import.meta.url));
+const src = readFileSync(html, 'utf8');
+const Logic = loadLogic(html);
+const logic = src.match(/<script id="app-logic">([\s\S]*?)<\/script>/);
+const ui = src.match(/<script id="app-ui">([\s\S]*?)<\/script>/);
+
+test('no external resources and no innerHTML with external data', () => {
+  assert.doesNotMatch(src, /<link\s/);
+  assert.doesNotMatch(src, /<script\s[^>]*src=/);
+});
+
+test('app-logic and app-ui scripts parse', () => {
+  assert.ok(logic && ui);
+  assert.doesNotThrow(() => new Function(logic[1]));
+  assert.doesNotThrow(() => new Function(ui[1]));
+});
+
+test('Libertinus Mono is bundled and used for the timer digits', () => {
+  const faces = src.match(/@font-face/g) || [];
+  assert.equal(faces.length, 1);
+  assert.match(src, /font-family: 'Libertinus Mono';/);
+  assert.match(src, /url\(fonts\/libertinus-mono\/LibertinusMono-Regular\.woff2\) format\('woff2'\)/);
+  assert.ok(existsSync(fileURLToPath(new URL('../fonts/libertinus-mono/LibertinusMono-Regular.woff2', import.meta.url))));
+  assert.ok(existsSync(fileURLToPath(new URL('../fonts/libertinus-mono/OFL.txt', import.meta.url))));
+  assert.match(src, /--font-num: 'Libertinus Mono', ui-monospace/);
+  for (const sel of ['#main-remaining', '.end-row', '.ex-time', '.ex-next-time', '#ed-zoom-level']) {
+    const rule = src.match(new RegExp(`^${sel.replace('.', '\\.')} \\{[^}]*\\}`, 'm'));
+    assert.ok(rule, sel);
+    assert.match(rule[0], /font-family: var\(--font-num\)/, sel);
+    assert.doesNotMatch(rule[0], /font-weight: 700/, sel);
+  }
+  assert.match(src, /name: 'Libertinus Mono', url: 'https:\/\/github\.com\/alerque\/libertinus'/);
+});
+
+test('every data-i18n key and every t() key exists in ja and en', () => {
+  const keys = new Set();
+  for (const m of src.matchAll(/data-i18n(?:-label|-placeholder)?="([\w-]+)"/g)) keys.add(m[1]);
+  for (const k of keys) {
+    assert.equal(typeof Logic.I18N.ja[k], 'string', `ja ${k}`);
+    assert.equal(typeof Logic.I18N.en[k], 'string', `en ${k}`);
+  }
+  assert.deepEqual(Object.keys(Logic.I18N.ja).sort(), Object.keys(Logic.I18N.en).sort());
+});

@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>l_timer</title>
 <style>
+@font-face {
+  font-family: 'Libertinus Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/libertinus-mono/LibertinusMono-Regular.woff2) format('woff2');
+}
 :root {
   --bg: #f6f7f9;
   --bg-panel: #ffffff;
@@ -23,6 +30,7 @@
   --fs-large: calc(var(--fs-base) * 1.6);
   --fs-timer: calc(clamp(64px, min(14vw, 20vh), 180px) * var(--zoom));
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --font-num: 'Libertinus Mono', ui-monospace, Menlo, Consolas, monospace;
 }
 html[data-theme="dark"] {
   --bg: #12151b;
@@ -141,7 +149,7 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 @media (prefers-reduced-motion: reduce) { #page-title.warning { animation: none; } }
 #timer-pane { display: flex; align-items: stretch; justify-content: center; gap: var(--gap); min-width: 0; min-height: 0; overflow: hidden; padding: 0 var(--gap); }
 #timer-stack { container-type: inline-size; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: var(--gap); min-width: 0; min-height: 0; overflow: auto; }
-#main-remaining { font-size: var(--fs-timer); font-variant-numeric: tabular-nums; line-height: 1; font-weight: 700; color: var(--c-lecture); transition: font-size 0.3s, opacity 0.3s; }
+#main-remaining { font-family: var(--font-num); font-size: var(--fs-timer); font-variant-numeric: tabular-nums; line-height: 1; color: var(--c-lecture); transition: font-size 0.3s, opacity 0.3s; }
 #main-remaining.break { color: var(--c-break); }
 #main-remaining.overtime { color: var(--c-overtime); }
 #timer-pane.exercise-active #main-remaining { font-size: var(--fs-timer-small); }
@@ -154,7 +162,7 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 #main-remaining.break ~ .progress .progress-fill, .progress-fill.break { background: var(--c-break); }
 .progress-fill.overtime { background: var(--c-overtime); }
 .progress-fill.exercise { background: var(--c-exercise); }
-.end-row { display: flex; align-items: center; justify-content: center; gap: var(--gap); flex-wrap: wrap; min-height: 2.6em; font-size: var(--fs-large); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.end-row { display: flex; align-items: center; justify-content: center; gap: var(--gap); flex-wrap: wrap; min-height: 2.6em; font-family: var(--font-num); font-size: var(--fs-large); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 .adj { display: inline-flex; color: var(--c-lecture); border: 1px solid currentColor; border-radius: 999px; overflow: hidden; }
 .adj[hidden] { display: none; }
 .adj .tbtn { border: none; border-radius: 0; border-left: 1px solid currentColor; background: transparent; color: inherit; font-weight: 700; padding: 0 0.7em; }
@@ -190,7 +198,7 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 #exercise-setup[hidden], #exercise-running[hidden] { display: none; }
 .ex-title-row { display: flex; align-items: center; gap: calc(var(--gap) / 2); justify-content: center; width: 100%; max-width: 30em; }
 .ex-title-row input { flex: 1; min-width: 0; border-color: var(--c-exercise); }
-.ex-time { font-size: var(--fs-timer); font-variant-numeric: tabular-nums; line-height: 1; font-weight: 700; color: var(--c-exercise); transition: font-size 0.3s; }
+.ex-time { font-family: var(--font-num); font-size: var(--fs-timer); font-variant-numeric: tabular-nums; line-height: 1; color: var(--c-exercise); transition: font-size 0.3s; }
 .ex-time.overtime { color: var(--c-overtime); }
 .ex-current { width: 100%; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 2); }
 #ex-title { font-size: var(--fs-large); font-weight: 600; color: var(--c-exercise); }
@@ -209,7 +217,7 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 .ex-next-row { display: flex; flex-direction: column; align-items: center; gap: calc(var(--gap) / 4); padding-top: calc(var(--gap) / 2); border-top: 1px dashed var(--border); }
 .ex-next-row:first-child { border-top: none; padding-top: 0; }
 .ex-next-row .ex-title-row input { border-color: var(--border); }
-.ex-next-time { font-size: calc(var(--fs-large) * 1.4); font-weight: 700; color: var(--c-exercise); font-variant-numeric: tabular-nums; }
+.ex-next-time { font-family: var(--font-num); font-size: calc(var(--fs-large) * 1.4); color: var(--c-exercise); font-variant-numeric: tabular-nums; }
 #resizer { cursor: col-resize; background: var(--border); display: grid; place-items: center; touch-action: none; user-select: none; }
 #resizer:hover, #resizer.active { background: var(--accent); }
 #resizer[hidden] { display: none; }
@@ -219,7 +227,7 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 .editor-tools { display: flex; align-items: center; gap: calc(var(--gap) / 2); flex-wrap: wrap; }
 .editor-tools .spacer { flex: 1; }
 .editor-tools .tbtn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-#ed-zoom-level { min-width: 3.5em; text-align: center; font-variant-numeric: tabular-nums; color: var(--fg-muted); }
+#ed-zoom-level { min-width: 3.5em; text-align: center; font-family: var(--font-num); font-variant-numeric: tabular-nums; color: var(--fg-muted); }
 #editor {
   position: relative; flex: 1; min-height: 0; overflow: auto; padding: var(--gap); border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-panel);
   font-size: calc(var(--fs-base) * var(--editor-zoom)); line-height: 1.6; outline: none; overflow-wrap: anywhere;
@@ -1166,6 +1174,7 @@ const App = (() => {
     page: 'l_timer',
     credits: [
       { name: 'Mixkit', url: 'https://mixkit.co/free-sound-effects/notification/', note: '予鈴音 sound1-1 (mixkit-correct-answer-tone-2870) / 終了音 sound2-1 (mixkit-happy-bells-notification-937) / 経過音 sound3-1 (mixkit-access-allowed-tone-2869) — Mixkit License' },
+      { name: 'Libertinus Mono', url: 'https://github.com/alerque/libertinus', note: '数字の書体 (The Libertinus Project) — SIL Open Font License 1.1' },
     ],
   };
   const SCHEMA = {

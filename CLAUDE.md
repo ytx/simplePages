@@ -12,7 +12,7 @@ index.html 1 ファイルで動く小さな Web ページの集まり。各ペ�
 | キオスク向け | `weather/` | 1 地点の天気予報を横長 1 画面に常時表示 | 気象庁 bosai JSON、Open-Meteo Forecast / Geocoding |
 | キオスク向け | `calendar/` | Google カレンダーの予定を日・週・月で常時表示 | Google Apps Script ウェブアプリ(`calendar/gas/Code.gs`、CalendarApp) |
 | キオスク向け | `k_timer/` | キッチンタイマー(アナログ時計 + プリセット/± 調整、終了音ループ) | なし(`k_timer/audio/*.wav` を同梱) |
-| PC 作業向け | `l_timer/` | 講義用タイマー(講義/休憩サイクル、予鈴・終了音・経過音、演習サブタイマー、メモエディタ) | なし(`l_timer/audio/*.wav` を同梱) |
+| PC 作業向け | `l_timer/` | 講義用タイマー(講義/休憩サイクル、予鈴・終了音・経過音、演習サブタイマー、メモエディタ) | なし(`l_timer/audio/*.wav` と書体 `l_timer/fonts/` を同梱) |
 | スマートフォン向け | `time4u/` | 面会日程の候補提示ツール(週単位の面会可能帯、空き枠の提示文面、仮押さえ・確定) | なし(書体 `time4u/fonts/` を同梱) |
 | スマートフォン向け | `midsleep/` | 睡眠中央時刻を保つための記録・目安ツール(就寝/起床をワンタップ、目標中央時刻からの起床・就寝の目安、履歴グラフ) | なし(書体 `midsleep/fonts/` を同梱) |
 

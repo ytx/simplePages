@@ -64,6 +64,10 @@ localStorage キー `simplePages.l_timer.data`(文書・下書き・演習タイ
 
 データタブの書き出しは `{ "version": 1, "settings": …, "data": … }`。読み込みは設定を置き換え、文書は追加(id が重なれば改名)、履歴は結合する。旧 l_timer の書き出し JSON(`version: "1.0"`、`settings.timerSettings`、`documents.documents[]`)も読み込め、Quill の HTML は太字・箇条書き・見出しだけ残して取り込む。
 
+## 書体
+
+残り時間・終了時刻・演習タイマーの数字と、エディタの拡大率表示には Libertinus Mono(The Libertinus Project、SIL Open Font License 1.1)を `fonts/libertinus-mono/LibertinusMono-Regular.woff2`(51 KB)として同梱し、CSS 変数 `--font-num` で当てている。Regular しかないので太字にはしない。ライセンス全文は同ディレクトリの `OFL.txt`。他の文字はシステム書体。
+
 ## 音声
 
 `audio/sound1-1.wav`(予鈴、mixkit.co `mixkit-correct-answer-tone-2870`)、`sound2-1.wav`(終了、`mixkit-happy-bells-notification-937`)、`sound3-1.wav`(経過、`mixkit-access-allowed-tone-2869`)は Mixkit License。他の 6 本は生成音。読み込めないときはステータスが赤になり、Web Audio の 880 Hz ビープで代替する。
