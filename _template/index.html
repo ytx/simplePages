@@ -63,7 +63,7 @@ body {
 .icon-btn svg { width: 1.3em; height: 1.3em; fill: currentColor; }
 .icon-btn.attention { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
 #content { flex: 1; min-height: 0; padding: 0 var(--gap) var(--gap); }
-#page-title { margin: 0 0 var(--gap); text-align: center; font-size: var(--fs-large); font-weight: 600; }
+#page-title { margin: 0 0 var(--gap); text-align: center; font-size: var(--fs-large); font-weight: 400; }
 #status-bar {
   display: flex; justify-content: center; align-items: center; gap: var(--gap);
   padding: calc(var(--gap) / 2) var(--gap);
@@ -86,6 +86,14 @@ dialog#settings {
 }
 dialog#settings[open] { display: grid; }
 dialog#settings::backdrop { background: rgba(0,0,0,0.5); }
+dialog#dialog {
+  background: var(--bg-panel); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius);
+  width: min(90vw, 24em); padding: var(--gap); display: none;
+}
+dialog#dialog[open] { display: block; }
+dialog#dialog::backdrop { background: rgba(0,0,0,0.5); }
+#dialog-message { margin: 0 0 var(--gap); white-space: pre-wrap; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: calc(var(--gap) / 2); }
 .dlg-header { display: flex; align-items: center; padding: calc(var(--gap) / 2) var(--gap); border-bottom: 1px solid var(--border); }
 .dlg-header h2 { margin: 0; font-size: var(--fs-base); flex: 1; }
 .tabs { display: flex; gap: 2px; padding: 0 var(--gap); border-bottom: 1px solid var(--border); overflow-x: auto; }
@@ -191,6 +199,7 @@ button.btn.danger { color: var(--error); }
       <p class="hint" data-i18n="data_hint"></p>
       <textarea id="data-text" spellcheck="false"></textarea>
       <div class="row">
+        <button type="button" class="btn" id="btn-copy-text" data-i18n="copy_text"></button>
         <button type="button" class="btn" id="btn-import-text" data-i18n="import_text"></button>
       </div>
       <div id="data-message" data-state="none"></div>
@@ -210,6 +219,15 @@ button.btn.danger { color: var(--error); }
       </ul>
     </section>
   </div>
+</dialog>
+<dialog id="dialog">
+  <form method="dialog">
+    <p id="dialog-message"></p>
+    <div class="dialog-actions">
+      <button id="dialog-cancel" class="btn" type="button" data-i18n="cancel"></button>
+      <button id="dialog-ok" class="btn" type="submit" value="ok" data-i18n="ok"></button>
+    </div>
+  </form>
 </dialog>
 <script id="app-logic">
 const Logic = (() => {
@@ -294,6 +312,11 @@ const Logic = (() => {
       export_file: 'ファイルに書き出す',
       import_file: 'ファイルから読み込む',
       import_text: 'テキストから読み込む',
+      copy_text: 'テキストをコピー',
+      copied: 'コピーしました',
+      copy_failed: 'コピーできませんでした。テキストを選択して手動でコピーしてください',
+      ok: 'OK',
+      cancel: 'キャンセル',
       data_hint: '現在の設定(JSON)。編集して「テキストから読み込む」で反映できます。',
       import_ok: '読み込みました',
       import_failed_json: '読み込み失敗: JSON として解釈できません',
@@ -336,6 +359,11 @@ const Logic = (() => {
       export_file: 'Export to file',
       import_file: 'Import from file',
       import_text: 'Import from text',
+      copy_text: 'Copy text',
+      copied: 'Copied',
+      copy_failed: 'Could not copy. Select the text and copy it by hand',
+      ok: 'OK',
+      cancel: 'Cancel',
       data_hint: 'Current settings as JSON. Edit and press "Import from text" to apply.',
       import_ok: 'Imported',
       import_failed_json: 'Import failed: not valid JSON',
@@ -621,6 +649,41 @@ const App = (() => {
     setDataMessage('none', '');
   }
 
+  // 確認ダイアログ。{ ok } を返す Promise。danger は OK ボタンを赤にする。
+  function dialog({ message, okLabel = '', danger = false }) {
+    return new Promise((resolve) => {
+      const dlg = $('#dialog');
+      const okBtn = $('#dialog-ok');
+      $('#dialog-message').textContent = message;
+      okBtn.textContent = okLabel || Logic.t(settings.lang, 'ok');
+      okBtn.classList.toggle('danger', !!danger);
+      const onClose = () => {
+        dlg.removeEventListener('close', onClose);
+        resolve({ ok: dlg.returnValue === 'ok' });
+      };
+      dlg.addEventListener('close', onClose);
+      dlg.returnValue = '';
+      dlg.showModal();
+    });
+  }
+
+  // クリップボードへコピー。writeText が返ってこない端末があるので 1.5 秒で打ち切り、execCommand に落とす。
+  async function copyText(text, area) {
+    try {
+      let timer;
+      const timeout = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), 1500); });
+      try { await Promise.race([navigator.clipboard.writeText(text), timeout]); } finally { clearTimeout(timer); }
+      return true;
+    } catch { /* フォールバックへ */ }
+    try {
+      area.focus();
+      area.select();
+      return !!document.execCommand('copy');
+    } catch {
+      return false;
+    }
+  }
+
   function setDataMessage(state, text) {
     const el = $('#data-message');
     el.dataset.state = state;
@@ -686,12 +749,18 @@ const App = (() => {
       if (file) importText(await file.text());
       ev.target.value = '';
     });
+    $('#btn-copy-text').addEventListener('click', async () => {
+      const ta = $('#data-text');
+      const ok = await copyText(ta.value, ta);
+      setDataMessage(ok ? 'ok' : 'error', Logic.t(settings.lang, ok ? 'copied' : 'copy_failed'));
+    });
     $('#btn-import-text').addEventListener('click', () => importText($('#data-text').value));
-    $('#btn-clear').addEventListener('click', () => {
-      if (!confirm(Logic.t(settings.lang, 'confirm_clear'))) return;
+    $('#btn-clear').addEventListener('click', async () => {
+      if (!(await dialog({ message: Logic.t(settings.lang, 'confirm_clear'), danger: true })).ok) return;
       storage.clear();
       location.href = location.pathname;
     });
+    $('#dialog-cancel').addEventListener('click', () => $('#dialog').close());
     renderAbout();
   }
 
@@ -711,7 +780,7 @@ const App = (() => {
 
   document.addEventListener('DOMContentLoaded', init);
 
-  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh, fetchJson, applyZoom, setToolbarAttention };
+  return { getSettings, updateSettings, setStatus, scheduleRefresh, refresh, fetchJson, applyZoom, setToolbarAttention, dialog, copyText };
 })();
 </script>
 </body>

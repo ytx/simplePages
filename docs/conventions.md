@@ -56,7 +56,7 @@ docs/superpowers/plans/      実装計画
 - テーマは `html[data-theme="light"|"dark"]` で変数を上書き。初期値は `prefers-color-scheme`(`html:not([data-theme="light"])` の media ブロック)。ダーク用の値は属性ルールと media ブロックの両方に書く。
 - 拡縮は `:root` の `--zoom`(設定 `zoom` 50〜200、刻み 10、既定 100)を全サイズ変数(`--gap`、`--fs-*`)に `calc(… * var(--zoom))` で掛ける。
 - 書体はシステムフォントスタック(`system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif`)。同梱書体を使うときはその前に置く。
-- 太字(`font-weight` 600 以上、`<b>`、`<strong>`)は使わない。強調は大きさと色で行う。同梱書体の 700 を大きな数字だけに使う例外は設計書で明記する。
+- 太字(`font-weight` 600 以上、`<b>`、`<strong>`)は使わない。強調は大きさと色で行う。同梱書体の 700 を大きな数字だけに使う例外は設計書で明記する(time4u、midsleep、`_template` で適用。キオスク向け 3 ページと l_timer には見出しなどに太字が残っており、改修時に揃える)。
 
 ### 2.5 設定ストア
 
@@ -70,9 +70,9 @@ docs/superpowers/plans/      実装計画
 
 - 設定の置き場は分類で異なる(キオスク/PC は `dialog#settings` モーダル、スマートフォンは設定タブ。3 章)。中身の構成は共通:
   - セクション順は 一般 / 表示 / (ページ固有) / データ / About。About は常に最後。
-  - 「データ」: ファイルへの書き出し、ファイルからの読み込み、テキストエリアでの表示・コピー・読み込み、全消去(確認付き)。形式は `{ version, settings }`、ユーザーデータがあれば `{ version, settings, data }` を 1 つにまとめた JSON。読み込みは `Logic.parseImport`(または `parseImportAll`)を通し、含まれている側だけを置き換える。
+  - 「データ」: ファイルへの書き出し、ファイルからの読み込み、テキストエリアでの表示・コピー・読み込み、全消去(確認付き)。コピーは先に保存してから `navigator.clipboard.writeText` を 1.5 秒で打ち切り、失敗したら `execCommand('copy')` に落とす(`App.copyText`)。形式は `{ version, settings }`、ユーザーデータがあれば `{ version, settings, data }` を 1 つにまとめた JSON。読み込みは `Logic.parseImport`(または `parseImportAll`)を通し、含まれている側だけを置き換える。
   - 「About」: ページ説明、GitHub リンク、MIT ライセンス、クレジット(`ABOUT.credits` に Material Icons、使用 API、同梱書体)。
-- 確認ダイアログは `dialog#dialog`(`dialog({ message, danger })` が Promise を返す)を使う(l_timer、time4u、midsleep)。キオスク向けの 3 ページと `_template` は `window.confirm` のままで、改修時に揃える。
+- 確認ダイアログは `dialog#dialog`(`dialog({ message, danger })` が Promise を返す)を使う(l_timer、time4u、midsleep、`_template`)。キオスク向けの 3 ページは `window.confirm` のままで、改修時に揃える。
 
 ### 2.7 i18n
 
@@ -100,7 +100,7 @@ node --test <page>/test/*.test.mjs
 
 - グロブ形式で指定する(ディレクトリ指定は Node 24 で失敗する)。`test/load-logic.mjs` はヘルパーでテストではない。
 - `app-logic` の純粋関数をテストする。外部 API の応答は `test/fixtures/` に保存し、ネットワークに依存するテストは書かない。
-- `page.test.mjs` で index.html の静的検査を行う(time4u、midsleep で導入。新ページは必ず付け、既存ページは改修時に足す): 外部リソースなし、`innerHTML` なし、絵文字なし、太字なし、必要な id と `data-section` の存在と順序、i18n の ja/en 対応、`tr('…')` キーの存在、`app-logic` と `app-ui` が構文解析できること、同梱ファイルの存在。
+- `page.test.mjs` で index.html の静的検査を行う(time4u、midsleep、`_template` にある。新ページは必ず付け、既存ページは改修時に足す): 外部リソースなし、`innerHTML` なし、絵文字なし、太字なし、必要な id と `data-section` の存在と順序、i18n の ja/en 対応、`tr('…')` キーの存在、`app-logic` と `app-ui` が構文解析できること、同梱ファイルの存在。
 - TDD で進める(失敗するテストを先に書く)。
 
 ### 2.11 ドキュメント
