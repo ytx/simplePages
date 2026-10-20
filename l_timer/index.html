@@ -2467,7 +2467,6 @@ const Logic = (() => {
   const EXERCISE_MIN = 1;
   const EXERCISE_MAX = 120;
   const MAX_TITLES = 20;
-  const DEFAULT_EXERCISE_TITLE = '演習';
   const clampMin = (m) => Math.min(EXERCISE_MAX, Math.max(EXERCISE_MIN, m));
 
   // next は次の演習のキュー(常に 1 件以上)。先頭にタイトルがあれば終了時に自動で始まる。
@@ -2488,7 +2487,7 @@ const Logic = (() => {
 
   function exerciseStart(e, now, title, minutes, nextDefaultMin) {
     const ms = clampMin(minutes) * 60000;
-    const t = String(title ?? '').trim() || DEFAULT_EXERCISE_TITLE;
+    const t = String(title ?? '').trim(); // 空は「無題」。表示時に言語ごとの既定名を出す
     return { ...e, phase: 'running', title: t, startedAt: now, endAt: now + ms, totalMs: ms, remainingMs: null, overtime: false, lastTickAt: now,
       next: [{ title: '', minutes: clampMin(nextDefaultMin) }], nextOpen: false };
   }
@@ -2596,10 +2595,10 @@ const Logic = (() => {
     return 'title_idle';
   }
 
-  // 演習タイトル履歴: 空と既定タイトルは入れない。新しい順、重複なし、20 件まで。
+  // 演習タイトル履歴: 空は入れない。新しい順、重複なし、20 件まで。
   function addTitle(list, title) {
     const t2 = String(title ?? '').trim();
-    if (!t2 || t2 === DEFAULT_EXERCISE_TITLE) return list.slice();
+    if (!t2) return list.slice();
     return [t2, ...list.filter((x) => x !== t2)].slice(0, MAX_TITLES);
   }
 
@@ -2901,7 +2900,7 @@ const Logic = (() => {
       title_idle: '講義の準備', title_lecture: '講義中', title_overtime: '講義超過', title_break: '休憩中',
       end_at: '終了 {time}',
       start_lecture: '講義開始', start_break: '休憩開始({min} 分)', stop: '停止', start_exercise: '演習タイマー',
-      exercise_title_placeholder: '演習タイトル', exercise_start: 'スタート', exercise_cancel: 'キャンセル', exercise_stop: '演習終了', exercise_paused: '一時停止中',
+      exercise_title_placeholder: '演習タイトル', exercise_start: 'スタート', exercise_cancel: 'キャンセル', exercise_stop: '演習終了', exercise_paused: '一時停止中', exercise_default_title: '演習',
       next_exercise: '次の演習', next_title_placeholder: 'タイトル', next_open: '次の演習', next_close: '非表示', next_add: '追加', next_remove: '削除',
       mute: 'ミュート', unmute: 'ミュート解除', toggle_editor: 'エディタの表示/非表示',
       editor_bold: '太字', editor_list: '箇条書き', editor_heading: '見出し', editor_placeholder: 'メモを入力…',
@@ -2931,7 +2930,7 @@ const Logic = (() => {
       title_idle: 'Lecture Preparation', title_lecture: 'Lecture', title_overtime: 'Lecture Overtime', title_break: 'Break',
       end_at: 'Ends {time}',
       start_lecture: 'Start lecture', start_break: 'Start break ({min} min)', stop: 'Stop', start_exercise: 'Exercise timer',
-      exercise_title_placeholder: 'Exercise title', exercise_start: 'Start', exercise_cancel: 'Cancel', exercise_stop: 'Stop exercise', exercise_paused: 'Paused',
+      exercise_title_placeholder: 'Exercise title', exercise_start: 'Start', exercise_cancel: 'Cancel', exercise_stop: 'Stop exercise', exercise_paused: 'Paused', exercise_default_title: 'Exercise',
       next_exercise: 'Next exercise', next_title_placeholder: 'Title', next_open: 'Next exercise', next_close: 'Hide', next_add: 'Add', next_remove: 'Remove',
       mute: 'Mute', unmute: 'Unmute', toggle_editor: 'Show/hide the editor',
       editor_bold: 'Bold', editor_list: 'Bullet list', editor_heading: 'Heading', editor_placeholder: 'Type your notes…',
@@ -3001,7 +3000,7 @@ const Logic = (() => {
   return { VERSION, DATA_VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport,
     SOUND_FILES, SOUND_GROUPS, EDITOR_ZOOM_LEVELS, formatDateTimeLine,
     ADJUST_STEPS, initialMain, startLecture, startBreak, stopMain, floorToMinute, adjustEnd, thresholdEvents, tickMain, remainingMain,
-    EXERCISE_MIN, EXERCISE_MAX, MAX_TITLES, DEFAULT_EXERCISE_TITLE, initialExercise, exerciseOpenSetup, exerciseAdjustSetup, exerciseCancelSetup, exerciseStart, exerciseStop, exerciseAdjust, exercisePause, exerciseResume, exerciseSetNext, exerciseAdjustNext, exerciseAddNext, exerciseRemoveNext, exerciseToggleNext, tickExercise, remainingExercise, canStartExercise, buttonVisibility, pageTitleKey, addTitle,
+    EXERCISE_MIN, EXERCISE_MAX, MAX_TITLES, initialExercise, exerciseOpenSetup, exerciseAdjustSetup, exerciseCancelSetup, exerciseStart, exerciseStop, exerciseAdjust, exercisePause, exerciseResume, exerciseSetNext, exerciseAdjustNext, exerciseAddNext, exerciseRemoveNext, exerciseToggleNext, tickExercise, remainingExercise, canStartExercise, buttonVisibility, pageTitleKey, addTitle,
     formatClock, formatMinutes, formatEndAt, progress, stepEditorZoom,
     emptyBlocks, normalizeBlocks, blocksToPlainText, firstLine, normalizeDocument, normalizeData, importLegacyHtml, isLegacyExport, parseLegacyExport, parseImportAll, mergeImport };
 })();
@@ -3581,7 +3580,7 @@ const App = (() => {
     if (ex.phase === 'setup') $('#ex-setup-time').textContent = Logic.formatMinutes(ex.setupMinutes);
     if (!active) return;
     const rem = Logic.remainingExercise(ex, at);
-    $('#ex-title').textContent = ex.title;
+    $('#ex-title').textContent = ex.title || Logic.t(settings.lang, 'exercise_default_title');
     $('#ex-paused').hidden = ex.phase !== 'paused';
     const r = $('#ex-remaining');
     r.textContent = Logic.formatClock(rem);

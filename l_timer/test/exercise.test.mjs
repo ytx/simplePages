@@ -44,8 +44,8 @@ test('exerciseStart trims the title, defaults it, resets next', () => {
   assert.equal(r.lastTickAt, T0);
   assert.deepEqual(r.next, [{ title: '', minutes: 20 }]);
   assert.equal(r.nextOpen, false);
-  assert.equal(Logic.exerciseStart(e, T0, '   ', 10, 15).title, Logic.DEFAULT_EXERCISE_TITLE);
-  assert.equal(Logic.DEFAULT_EXERCISE_TITLE, '演習');
+  assert.equal(Logic.exerciseStart(e, T0, '   ', 10, 15).title, '', 'untitled is stored as empty; the UI shows a localized default');
+  assert.equal(Logic.DEFAULT_EXERCISE_TITLE, undefined);
   assert.equal(Logic.remainingExercise(r, T0 + MIN), 9 * MIN);
 });
 
@@ -214,7 +214,7 @@ test('addTitle: dedupe, newest first, cap at 20, skip empty and the default titl
   assert.deepEqual(Logic.addTitle(['a', 'b'], 'b'), ['b', 'a']);
   assert.deepEqual(Logic.addTitle(['a'], ''), ['a']);
   assert.deepEqual(Logic.addTitle(['a'], '   '), ['a']);
-  assert.deepEqual(Logic.addTitle(['a'], '演習'), ['a']);
+  assert.deepEqual(Logic.addTitle(['a'], '演習'), ['演習', 'a'], 'a typed title is remembered even if it equals the old default');
   const many = Array.from({ length: 20 }, (_, i) => `t${i}`);
   const r = Logic.addTitle(many, 'new');
   assert.equal(r.length, 20);
