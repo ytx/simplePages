@@ -66,7 +66,7 @@ localStorage キー `simplePages.l_timer.data`(文書・下書き・演習タイ
 
 ## 書体
 
-残り時間・終了時刻・演習タイマーの数字と、エディタの拡大率表示には Courier Prime(The Courier Prime Project Authors、SIL Open Font License 1.1)の Regular と Bold を `fonts/courier-prime/CourierPrime-Regular-latin.woff2` / `CourierPrime-Bold-latin.woff2`(Google Fonts の latin 分割、各 11 KB)として同梱し、CSS 変数 `--font-num` で当てている。大きな数字(残り時間、演習タイマー、次回の時間)は Bold、終了時刻の行と拡大率表示は Regular。ライセンス全文は同ディレクトリの `OFL.txt`。他の文字はシステム書体。
+残り時間・終了時刻・演習タイマーの数字と、エディタの拡大率表示には Courier Prime(The Courier Prime Project Authors、SIL Open Font License 1.1)の Regular を `fonts/courier-prime/CourierPrime-Regular-latin.woff2`(Google Fonts の latin 分割、11 KB)として同梱し、CSS 変数 `--font-num` で当てている。太字は使わない。ライセンス全文は同ディレクトリの `OFL.txt`。他の文字はシステム書体。
 
 ## 音声
 

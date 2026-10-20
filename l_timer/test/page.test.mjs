@@ -23,20 +23,17 @@ test('app-logic and app-ui scripts parse', () => {
 
 test('Courier Prime is bundled and used for the timer digits', () => {
   const faces = src.match(/@font-face/g) || [];
-  assert.equal(faces.length, 2);
+  assert.equal(faces.length, 1);
   assert.match(src, /font-family: 'Courier Prime';/);
-  for (const w of ['Regular', 'Bold']) {
-    assert.match(src, new RegExp(`url\\(fonts/courier-prime/CourierPrime-${w}-latin\\.woff2\\) format\\('woff2'\\)`));
-    assert.ok(existsSync(fileURLToPath(new URL(`../fonts/courier-prime/CourierPrime-${w}-latin.woff2`, import.meta.url))), w);
-  }
+  assert.match(src, /url\(fonts\/courier-prime\/CourierPrime-Regular-latin\.woff2\) format\('woff2'\)/);
+  assert.ok(existsSync(fileURLToPath(new URL('../fonts/courier-prime/CourierPrime-Regular-latin.woff2', import.meta.url))));
   assert.ok(existsSync(fileURLToPath(new URL('../fonts/courier-prime/OFL.txt', import.meta.url))));
   assert.match(src, /--font-num: 'Courier Prime', ui-monospace/);
-  const bold = { '#main-remaining': true, '.end-row': false, '.ex-time': true, '.ex-next-time': true, '#ed-zoom-level': false };
-  for (const sel of Object.keys(bold)) {
+  for (const sel of ['#main-remaining', '.end-row', '.ex-time', '.ex-next-time', '#ed-zoom-level']) {
     const rule = src.match(new RegExp(`^${sel.replace('.', '\\.')} \\{[^}]*\\}`, 'm'));
     assert.ok(rule, sel);
     assert.match(rule[0], /font-family: var\(--font-num\)/, sel);
-    assert.equal(/font-weight: 700/.test(rule[0]), bold[sel], sel);
+    assert.doesNotMatch(rule[0], /font-weight: 700/, sel);
   }
   assert.match(src, /name: 'Courier Prime', url: 'https:\/\/github\.com\/quoteunquoteapps\/CourierPrime'/);
 });
