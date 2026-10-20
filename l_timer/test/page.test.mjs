@@ -34,7 +34,7 @@ test('Courier Prime is bundled and used for the timer digits', () => {
   assert.match(src, /url\(fonts\/courier-prime\/CourierPrime-Regular-latin\.woff2\) format\('woff2'\)/);
   assert.ok(existsSync(fileURLToPath(new URL('../fonts/courier-prime/CourierPrime-Regular-latin.woff2', import.meta.url))));
   assert.ok(existsSync(fileURLToPath(new URL('../fonts/courier-prime/OFL.txt', import.meta.url))));
-  assert.match(src, /--font-num: 'Courier Prime', ui-monospace/);
+  assert.match(src, /--font-num: 'Courier Prime', var\(--font\)/);
   for (const sel of ['#main-remaining', '.end-row', '.ex-time', '.ex-next-time', '#ed-zoom-level']) {
     const rule = src.match(new RegExp(`^${sel.replace('.', '\\.')} \\{[^}]*\\}`, 'm'));
     assert.ok(rule, sel);
