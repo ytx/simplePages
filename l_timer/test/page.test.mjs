@@ -23,7 +23,13 @@ test('app-logic and app-ui scripts parse', () => {
 
 test('Courier Prime is bundled and used for the timer digits', () => {
   const faces = src.match(/@font-face/g) || [];
-  assert.equal(faces.length, 1);
+  assert.equal(faces.length, 123);
+  const zmg = [...new Set([...src.matchAll(/url\((fonts\/zen-maru-gothic\/zmg-400-\d{3}\.woff2)\)/g)].map((m) => m[1]))];
+  assert.equal(zmg.length, 122);
+  for (const u of zmg) assert.ok(existsSync(fileURLToPath(new URL('../' + u, import.meta.url))), u);
+  assert.ok(existsSync(fileURLToPath(new URL('../fonts/zen-maru-gothic/OFL.txt', import.meta.url))));
+  assert.match(src, /--font: 'Zen Maru Gothic', system-ui/);
+  assert.match(src, /name: 'Zen Maru Gothic', url: 'https:\/\/github\.com\/googlefonts\/zen-marugothic'/);
   assert.match(src, /font-family: 'Courier Prime';/);
   assert.match(src, /url\(fonts\/courier-prime\/CourierPrime-Regular-latin\.woff2\) format\('woff2'\)/);
   assert.ok(existsSync(fileURLToPath(new URL('../fonts/courier-prime/CourierPrime-Regular-latin.woff2', import.meta.url))));
