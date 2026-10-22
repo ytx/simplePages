@@ -70,6 +70,25 @@ test('filters: range, weekday, time of day, past slots, interval 0', () => {
 
 test('defaultConditions from settings', () => {
   assert.deepEqual(Logic.defaultConditions(S, '2026-10-17'), { from: '2026-10-18', to: '2026-11-07', weekdays: [1, 2, 3, 4, 5], timeOfDay: ['am', 'pm'], slotMin: 90 });
+  assert.deepEqual(Logic.defaultConditions(S, '2026-10-17', []), Logic.defaultConditions(S, '2026-10-17'));
+});
+
+test('defaultConditions spans the days that have availability bands', () => {
+  const bands = [
+    { id: 'b0', date: '2026-10-10', start: '09:00', end: '12:00' }, // 過去は無視
+    { id: 'b1', date: '2026-10-17', start: '09:00', end: '12:00' }, // 今日は rangeStartDays=1 で除外
+    { id: 'b2', date: '2026-10-21', start: '09:00', end: '12:00' },
+    { id: 'b3', date: '2026-11-20', start: '13:00', end: '15:00' },
+  ];
+  const c = Logic.defaultConditions(S, '2026-10-17', bands);
+  assert.equal(c.from, '2026-10-21');
+  assert.equal(c.to, '2026-11-20');
+  assert.deepEqual([c.weekdays, c.timeOfDay, c.slotMin], [[1, 2, 3, 4, 5], ['am', 'pm'], 90]);
+  // 帯が未来に 1 日だけなら from = to
+  const one = Logic.defaultConditions(S, '2026-10-17', [{ id: 'b', date: '2026-10-30', start: '09:00', end: '12:00' }]);
+  assert.deepEqual([one.from, one.to], ['2026-10-30', '2026-10-30']);
+  // 未来の帯がなければ設定の期間
+  assert.deepEqual(Logic.defaultConditions(S, '2026-10-17', bands.slice(0, 2)), Logic.defaultConditions(S, '2026-10-17'));
 });
 
 test('pickSpread keeps selection, spreads across dates, fills what it can', () => {

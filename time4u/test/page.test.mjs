@@ -124,7 +124,16 @@ test('confirmed section has a copy-all button', () => {
 });
 
 test('data tab has a copy-text button before import-from-text', () => {
-  assert.match(src, /id="data-copy-text"[^>]*>[\s\S]{0,200}id="data-import-text"/);
+  // データタブ: ファイル経由 / クリップボード経由 / 直接編集 の順。各行はラベル + 書き出し + 読み込み。
+  const dataPane = src.slice(src.indexOf('data-section="data"'), src.indexOf('data-section="about"'));
+  const order = ['data-export', 'data-import', 'data-copy-text', 'data-paste-text', 'data-text', 'data-import-text', 'data-clear'].map((id) => dataPane.indexOf(`id="${id}"`));
+  assert.ok(order.every((i) => i >= 0), 'all data buttons exist');
+  assert.deepEqual([...order].sort((a, b) => a - b), order, 'data buttons in use-case order');
+  for (const k of ['data_via_file', 'data_via_clipboard', 'data_edit_text', 'paste_text', 'paste_failed']) assert.ok(k in Logic.I18N.ja && k in Logic.I18N.en, k);
+  assert.match(src, /textarea#data-text \{[^}]*font-size: max\(16px, var\(--fs-small\)\)/, 'iOS zoom guard on the data textarea');
+  assert.match(src, /\.fab \{[^}]*z-index: 4/, 'fab above day/week items');
+  assert.match(src, /#day-scroll \{[^}]*isolation: isolate/);
+  assert.match(src, /#view-week #week-grid \{[^}]*isolation: isolate/);
 });
 
 test('PWA manifest and icons', () => {
