@@ -2147,7 +2147,7 @@ h2.cal-title { cursor: default; }
 .now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--error); z-index: 2; pointer-events: none; }
 #view-day { overflow: hidden; display: flex; flex-direction: column; }
 #day-scroll { flex: 1; min-height: 0; overflow: auto; touch-action: pan-y; padding: 0.8em 0 5em; isolation: isolate; }
-#day-lane { --hour-h: 4.2em; --hours: 13; position: relative; height: calc(var(--hour-h) * var(--hours)); cursor: pointer; }
+#day-lane { --hour-h: 4.2em; --hours: 13; position: relative; height: calc(var(--hour-h) * var(--hours)); }
 #day-lane .hline { position: absolute; left: 3.4em; right: 0; height: 1px; background: var(--border); }
 #day-lane .hour-label { left: 0; right: auto; }
 #day-lane .item { left: 3.4em; right: 0; min-height: 44px; border: none; padding: 0.2em 0.6em; text-align: left; font: inherit; cursor: pointer; }
@@ -2704,6 +2704,7 @@ const Logic = (() => {
       hold_suffix: '(仮)',
       today: '今日',
       add_item: '項目を追加',
+      edit_item: '{kind}の編集',
       free_count: '空き枠 {n} 件',
       help: '使い方',
       help_title: 'time4u',
@@ -2876,6 +2877,7 @@ const Logic = (() => {
       hold_suffix: ' (hold)',
       today: 'Today',
       add_item: 'Add item',
+      edit_item: 'Edit {kind}',
       free_count: '{n} free slots',
       help: 'Help',
       help_title: 'time4u',
@@ -4843,17 +4845,6 @@ const App = (() => {
     openItemSheet({ kind: 'band', date: dayDate, start: Logic.toHHMM(s), end: Logic.toHHMM(defaultEnd(s)), isNew: true });
   }
 
-  function onLaneClick(e) {
-    if (justSwiped()) return;
-    if (e.target.closest('.item')) return;
-    const lane = $('#day-lane');
-    const rect = lane.getBoundingClientRect();
-    if (rect.height <= 0) return;
-    const range = dayRange(Logic.itemsForDay(data, dayDate));
-    const frac = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-    newItemAt(range.startMin + frac * (range.endMin - range.startMin));
-  }
-
   function onDayAdd() {
     const range = dayRange(Logic.itemsForDay(data, dayDate));
     newItemAt(Math.max(range.startMin, 9 * 60));
@@ -4877,26 +4868,29 @@ const App = (() => {
     const existing = !item.isNew;
     const refs = { kind: item.kind };
     openSheet({
-      title: existing ? tr(`item_${item.kind}`) : tr('add_item'),
+      title: existing ? tr('edit_item', { kind: tr(`item_${item.kind}`) }) : tr('add_item'),
       build(body) {
         const label = (key) => body.append(el('div', 'sheet-label', tr(key)));
-        const seg = el('div', 'toggle-row');
-        seg.setAttribute('role', 'radiogroup');
-        const segBtns = ['band', 'busy', 'meeting'].map((k) => {
-          const b = el('button', 'toggle', tr(`item_${k}`));
-          b.type = 'button';
-          b.dataset.value = k;
-          b.setAttribute('role', 'radio');
-          b.setAttribute('aria-checked', String(k === refs.kind));
-          if (existing && k !== item.kind) b.disabled = true;
-          b.addEventListener('click', () => {
-            refs.kind = k;
-            sync();
-          });
-          seg.append(b);
-          return b;
-        });
-        body.append(seg);
+        // 種類は追加時だけ選べる。編集時は見出しに種類を出し、切り替えボタンは置かない。
+        const segBtns = [];
+        if (!existing) {
+          const seg = el('div', 'toggle-row');
+          seg.setAttribute('role', 'radiogroup');
+          for (const k of ['band', 'busy', 'meeting']) {
+            const b = el('button', 'toggle', tr(`item_${k}`));
+            b.type = 'button';
+            b.dataset.value = k;
+            b.setAttribute('role', 'radio');
+            b.setAttribute('aria-checked', String(k === refs.kind));
+            b.addEventListener('click', () => {
+              refs.kind = k;
+              sync();
+            });
+            seg.append(b);
+            segBtns.push(b);
+          }
+          body.append(seg);
+        }
         label('start');
         refs.start = el('select');
         timeOptions(refs.start, item.start);
@@ -5155,7 +5149,6 @@ const App = (() => {
     $('#day-next').addEventListener('click', () => shiftDay(1));
     $('#day-close').addEventListener('click', () => showView('tab-week', 'view-week'));
     $('#day-add').addEventListener('click', onDayAdd);
-    $('#day-lane').addEventListener('click', onLaneClick);
     bindSwipe($('#day-scroll'), () => shiftDay(-1), () => shiftDay(1));
     $('#month-prev').addEventListener('click', () => shiftMonth(-1));
     $('#month-next').addEventListener('click', () => shiftMonth(1));

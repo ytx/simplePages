@@ -130,6 +130,11 @@ test('data tab has a copy-text button before import-from-text', () => {
   assert.ok(order.every((i) => i >= 0), 'all data buttons exist');
   assert.deepEqual([...order].sort((a, b) => a - b), order, 'data buttons in use-case order');
   for (const k of ['data_via_file', 'data_via_clipboard', 'data_edit_text', 'paste_text', 'paste_failed']) assert.ok(k in Logic.I18N.ja && k in Logic.I18N.en, k);
+  // 日ビュー: 追加は ＋ からだけ。レーンのタップでは追加しない。既存アイテムのタップは「〜の編集」。
+  assert.doesNotMatch(src, /#day-lane'\)\.addEventListener\('click'/);
+  assert.match(src, /tr\('edit_item', \{ kind: tr\(`item_\$\{item\.kind\}`\) \}\)/);
+  assert.equal(Logic.t('ja', 'edit_item', { kind: Logic.t('ja', 'item_band') }), '面会可能帯の編集');
+  assert.equal(Logic.t('en', 'edit_item', { kind: Logic.t('en', 'item_meeting') }), 'Edit Meeting');
   assert.match(src, /textarea#data-text \{[^}]*font-size: max\(16px, var\(--fs-small\)\)/, 'iOS zoom guard on the data textarea');
   assert.match(src, /\.fab \{[^}]*z-index: 4/, 'fab above day/week items');
   assert.match(src, /#day-scroll \{[^}]*isolation: isolate/);
