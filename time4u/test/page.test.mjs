@@ -130,6 +130,9 @@ test('data tab has a copy-text button before import-from-text', () => {
   assert.ok(order.every((i) => i >= 0), 'all data buttons exist');
   assert.deepEqual([...order].sort((a, b) => a - b), order, 'data buttons in use-case order');
   for (const k of ['data_via_file', 'data_via_clipboard', 'data_edit_text', 'paste_text', 'paste_failed']) assert.ok(k in Logic.I18N.ja && k in Logic.I18N.en, k);
+  // 週タブを押すと(日ビューを開いていても)週ビューへ戻る
+  assert.match(src, /if \(b\.dataset\.tab === 'week'\) showView\('tab-week', 'view-week'\)/);
+  assert.equal(Logic.t('ja', 'bands_count', { n: 2, m: 1 }), '帯 2 件 · 予定 1 件');
   // 日ビュー: 追加は ＋ からだけ。レーンのタップでは追加しない。既存アイテムのタップは「〜の編集」。
   assert.doesNotMatch(src, /#day-lane'\)\.addEventListener\('click'/);
   assert.match(src, /tr\('edit_item', \{ kind: tr\(`item_\$\{item\.kind\}`\) \}\)/);

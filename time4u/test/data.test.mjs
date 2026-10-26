@@ -58,22 +58,36 @@ test('mergeBands merges overlapping and touching bands per day', () => {
   assert.equal(out[0].id, 'b_1');
 });
 
-test('copyWeekBands shifts by whole weeks, replace vs add, keeps blocks', () => {
+test('copyWeekBands shifts by whole weeks, replace vs add, copies busy blocks but never meetings', () => {
   const d = sample();
   d.bands.push({ id: 'b_2', date: '2026-10-28', start: '09:00', end: '10:00' });
+  d.blocks.push({ id: 'k_9', date: '2026-10-28', start: '15:00', end: '16:00', kind: 'busy', title: '別件' });
   const rep = Logic.copyWeekBands(d, '2026-10-19', '2026-10-26', 'replace');
   assert.deepEqual(rep.bands.filter((b) => b.date >= '2026-10-26').map((b) => [b.date, b.start, b.end]), [['2026-10-27', '13:00', '17:00']]);
-  assert.equal(rep.blocks.length, d.blocks.length);
+  // 予定(busy)は複写され、置き換えでは対象週の予定は消える。面会(meeting)は複写も削除もされない
+  assert.deepEqual(rep.blocks.filter((b) => b.date >= '2026-10-26').map((b) => [b.date, b.start, b.kind, b.title]), [['2026-10-27', '12:00', 'busy', 'ランチ']]);
+  assert.ok(rep.blocks.some((b) => b.id === 'k_2'), 'meeting in the source week stays');
+  assert.ok(!rep.blocks.some((b) => b.kind === 'meeting' && b.date >= '2026-10-26'), 'meeting is not copied');
+  assert.equal(new Set(rep.blocks.map((b) => b.id)).size, rep.blocks.length);
   const add = Logic.copyWeekBands(d, '2026-10-19', '2026-10-26', 'add');
   assert.deepEqual(add.bands.filter((b) => b.date >= '2026-10-26').map((b) => b.date), ['2026-10-27', '2026-10-28']);
+  assert.deepEqual(add.blocks.filter((b) => b.date >= '2026-10-26').map((b) => [b.date, b.title]), [['2026-10-28', '別件'], ['2026-10-27', 'ランチ']]);
+  // 追加をもう一度しても同じ予定は増えない
+  const again = Logic.copyWeekBands(add, '2026-10-19', '2026-10-26', 'add');
+  assert.equal(again.blocks.length, add.blocks.length);
   assert.notEqual(add, d);
 });
 
-test('weeksWithBands lists past weeks newest first', () => {
+test('weeksWithBands lists past weeks newest first, counting bands and busy blocks', () => {
   const d = sample();
   d.bands.push({ id: 'b_2', date: '2026-10-06', start: '09:00', end: '10:00' }, { id: 'b_3', date: '2026-10-07', start: '09:00', end: '10:00' });
-  assert.deepEqual(Logic.weeksWithBands(d, '2026-10-26', 1), [{ weekStart: '2026-10-19', count: 1 }, { weekStart: '2026-10-05', count: 2 }]);
-  assert.deepEqual(Logic.weeksWithBands(d, '2026-10-19', 1), [{ weekStart: '2026-10-05', count: 2 }]);
+  d.blocks.push({ id: 'k_8', date: '2026-09-29', start: '09:00', end: '10:00', kind: 'busy', title: '予定だけの週' });
+  assert.deepEqual(Logic.weeksWithBands(d, '2026-10-26', 1), [
+    { weekStart: '2026-10-19', count: 1, busy: 1 },
+    { weekStart: '2026-10-05', count: 2, busy: 0 },
+    { weekStart: '2026-09-28', count: 0, busy: 1 },
+  ]);
+  assert.deepEqual(Logic.weeksWithBands(d, '2026-10-19', 1), [{ weekStart: '2026-10-05', count: 2, busy: 0 }, { weekStart: '2026-09-28', count: 0, busy: 1 }]);
 });
 
 test('holds are pending slots only, including expired, with exclusion', () => {

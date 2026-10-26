@@ -2684,9 +2684,9 @@ const Logic = (() => {
       err_range: '開始日は終了日以前にしてください',
       err_weekday: '曜日を 1 つ以上選んでください',
       err_tod: '時間帯を 1 つ以上選んでください',
-      week_copy: '前の週から複写',
-      bands_count: '帯 {n} 件',
-      no_past_weeks: '複写できる過去の週がありません',
+      week_copy: '前の週から複写(帯と予定)',
+      bands_count: '帯 {n} 件 · 予定 {m} 件',
+      no_past_weeks: '複写できる過去の週(帯か予定のある週)がありません',
       copy_replace: '置き換える',
       copy_add: '追加する',
       item_band: '面会可能帯',
@@ -2857,9 +2857,9 @@ const Logic = (() => {
       err_range: 'The start date must not be after the end date',
       err_weekday: 'Select at least one weekday',
       err_tod: 'Select at least one time of day',
-      week_copy: 'Copy from a past week',
-      bands_count: '{n} bands',
-      no_past_weeks: 'No past weeks to copy from',
+      week_copy: 'Copy bands and busy blocks from a past week',
+      bands_count: '{n} bands · {m} busy',
+      no_past_weeks: 'No past week with bands or busy blocks to copy from',
       copy_replace: 'Replace',
       copy_add: 'Add',
       item_band: 'Available band',
@@ -3162,24 +3162,36 @@ const Logic = (() => {
     return out;
   }
 
+  // 週の複写: 面会可能帯と予定(busy)を丸ごと週単位でずらしてコピーする。面会(meeting)は対象外。
+  // replace は対象週の帯と予定を消してから入れる。add は足すが、同じ日時・題名の予定は重ねて増やさない。
   function copyWeekBands(data, fromWeekStart, toWeekStart, mode) {
     const fromDates = new Set(weekDates(fromWeekStart));
     const toDates = new Set(weekDates(toWeekStart));
     const shift = Math.round((noon(toWeekStart) - noon(fromWeekStart)) / 86400000);
-    const copied = data.bands
-      .filter((b) => fromDates.has(b.date))
-      .map((b) => { const date = addDays(b.date, shift); return { ...b, id: b.id + '_' + date, date }; });
-    const kept = mode === 'replace' ? data.bands.filter((b) => !toDates.has(b.date)) : data.bands;
-    return { ...data, bands: mergeBands([...kept, ...copied]) };
+    const move = (x) => { const date = addDays(x.date, shift); return { ...x, id: x.id + '_' + date, date }; };
+    const copiedBands = data.bands.filter((b) => fromDates.has(b.date)).map(move);
+    const keptBands = mode === 'replace' ? data.bands.filter((b) => !toDates.has(b.date)) : data.bands;
+    const isBusy = (k) => k.kind === 'busy';
+    const keptBlocks = mode === 'replace' ? data.blocks.filter((k) => !(isBusy(k) && toDates.has(k.date))) : data.blocks;
+    const sig = (k) => `${k.date} ${k.start} ${k.end} ${k.title || ''}`;
+    const have = new Set(keptBlocks.filter(isBusy).map(sig));
+    const copiedBlocks = data.blocks.filter((k) => isBusy(k) && fromDates.has(k.date)).map(move).filter((k) => !have.has(sig(k)));
+    return { ...data, bands: mergeBands([...keptBands, ...copiedBands]), blocks: [...keptBlocks, ...copiedBlocks] };
   }
 
+  // 複写元になれる過去の週: 帯か予定(busy)のある週。新しい順、limit 件まで。count は帯、busy は予定の件数。
   function weeksWithBands(data, beforeWeekStart, weekStart, limit = 8) {
     const counts = new Map();
-    for (const b of data.bands) {
-      const w = weekStartOf(b.date, weekStart);
-      if (w < beforeWeekStart) counts.set(w, (counts.get(w) || 0) + 1);
-    }
-    return [...counts.keys()].sort().reverse().slice(0, limit).map((w) => ({ weekStart: w, count: counts.get(w) }));
+    const bump = (date, key) => {
+      const w = weekStartOf(date, weekStart);
+      if (w >= beforeWeekStart) return;
+      const c = counts.get(w) || { count: 0, busy: 0 };
+      c[key] += 1;
+      counts.set(w, c);
+    };
+    for (const b of data.bands) bump(b.date, 'count');
+    for (const k of data.blocks) if (k.kind === 'busy') bump(k.date, 'busy');
+    return [...counts.keys()].sort().reverse().slice(0, limit).map((w) => ({ weekStart: w, ...counts.get(w) }));
   }
 
   function holds(data, excludeProposalId) {
@@ -3637,7 +3649,13 @@ const App = (() => {
   }
 
   function bindTabs() {
-    for (const b of $$('#tabbar .tab')) b.addEventListener('click', () => showTab(b.dataset.tab));
+    for (const b of $$('#tabbar .tab')) {
+      b.addEventListener('click', () => {
+        // 週タブは、日ビューを開いていても週ビューへ戻す
+        if (b.dataset.tab === 'week') showView('tab-week', 'view-week');
+        showTab(b.dataset.tab);
+      });
+    }
     for (const b of $$('.view .back')) {
       b.addEventListener('click', () => {
         const pane = b.closest('.tab-pane');
@@ -5064,7 +5082,7 @@ const App = (() => {
       build(body) {
         if (!weeks.length) { body.append(el('p', 'sheet-note', tr('no_past_weeks'))); return; }
         const rows = weeks.map((w, i) => {
-          const b = el('button', 'radio-row', Logic.formatWeekTitle(w.weekStart) + ' · ' + tr('bands_count', { n: w.count }));
+          const b = el('button', 'radio-row', Logic.formatWeekTitle(w.weekStart) + ' · ' + tr('bands_count', { n: w.count, m: w.busy }));
           b.type = 'button';
           b.setAttribute('role', 'radio');
           b.setAttribute('aria-checked', String(i === 0));
@@ -5080,7 +5098,7 @@ const App = (() => {
       onOk() {
         if (!refs.from) return;
         const target = weekStartDate;
-        const has = Logic.weekDates(target).some((d) => data.bands.some((b) => b.date === d));
+        const has = Logic.weekDates(target).some((d) => data.bands.some((b) => b.date === d) || data.blocks.some((k) => k.kind === 'busy' && k.date === d));
         if (!has) { setData(Logic.copyWeekBands(data, refs.from, target, 'add')); return; }
         let mode = '';
         openSheet({

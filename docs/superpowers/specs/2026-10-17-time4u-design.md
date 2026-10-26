@@ -207,7 +207,8 @@ time4u/
 - 縦軸は設定 `dayStart`〜`dayEnd`(既定 8〜21 時)。その範囲外に帯や予定があれば、その週だけ軸を伸ばして全部見せる。
 - 各列に可能帯(緑)、その上に予定(グレー)・面会(青)・仮押さえ(黄)を重ねる。文字は入れない。本日の列に印、現在時刻に細線。
 - **列をタップ**すると、その日の **1 日ビュー**(`#view-day`)が右からスライドして開く。
-- **複写**: ダイアログで、可能帯を 1 つ以上持つ過去 8 週(新しい順。「10/12 週 · 可能帯 5 本」のように表示)から 1 週を選ぶ。選んだ週の可能帯だけを、曜日を揃えて今の週に写す(`Logic.copyWeekBands(data, fromWeekStart, toWeekStart)`)。予定・面会・仮押さえは写さない。今の週にすでに可能帯があるときは「置き換える / 追加する / キャンセル」を聞く。
+- **複写**: ダイアログで、可能帯か予定(busy)を 1 つ以上持つ過去 8 週(新しい順。「10/12 週 · 帯 5 件 · 予定 2 件」のように表示)から 1 週を選ぶ。選んだ週の可能帯と予定を、曜日を揃えて今の週に写す(`Logic.copyWeekBands(data, fromWeekStart, toWeekStart, mode)`。2026-10-26 改訂で予定も対象にした)。面会・仮押さえは写さない。今の週にすでに可能帯か予定があるときは「置き換える / 追加する / キャンセル」を聞く。置き換えは今の週の可能帯と予定を消してから写す(面会は残す)。追加は同じ日時・題名の予定を重ねて増やさない。
+- **週タブ**: 1 日ビューを開いているときに下のタブバーの「週」を押すと、週ビューへ戻る(2026-10-26 改訂)。
 
 ### 1 日ビュー(`#view-day`)
 
@@ -316,7 +317,7 @@ localStorage キー `simplePages.time4u`、`version: 1`。全キーが表示だ�
 | `daysUntil(deadline, today)` | 残り日数(負なら経過) |
 | `addDays`, `weekStartOf`, `weekDates(weekStart)` | 日付計算 |
 | `mergeBands(bands)` | 同日で重なる・接する可能帯を結合 |
-| `copyWeekBands(data, from, to, mode)` | `mode: 'replace' \| 'add'`。曜日を揃えて複写し、結合する |
+| `copyWeekBands(data, from, to, mode)` | `mode: 'replace' \| 'add'`。可能帯と予定(busy)を曜日を揃えて複写し、帯は結合する。面会は対象外 |
 | `itemsForDay(data, date)` / `itemsForWeek(data, weekStart)` | 描画用の帯・予定・面会・仮押さえの一覧(色種別付き) |
 | `monthCells(data, year, month, weekStart, now)` | 月タブの 42 セル |
 | `parseSlotList(text)` | `"60, 90,120"` → `[60, 90, 120]`。不正は既定 |
