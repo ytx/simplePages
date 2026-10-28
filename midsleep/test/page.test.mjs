@@ -179,4 +179,8 @@ test('initial target sheet, settings row and first-open flag', () => {
     assert.equal(typeof Logic.I18N.en[k], 'string', `en ${k}`);
   }
   assert.match(Logic.I18N.en.tile_sleep_mid, /\{src\}/);
+  assert.match(ui[1], /data-clear[\s\S]*?storage\.clearFlag\(\)/);
+  assert.match(ui[1], /!settings\.targetMode && Logic\.completed\(data\.records\)\.length < 2 && !storage\.getFlag\(\)\) openTargetSheet\(\)/);
+  assert.match(src, /novalidate|formNoValidate/);
+  assert.ok('err_empty_time' in Logic.I18N.ja && 'err_empty_time' in Logic.I18N.en);
 });

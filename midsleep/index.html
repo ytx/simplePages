@@ -2190,7 +2190,7 @@ button.seg[aria-pressed="true"] { background: var(--accent); border-color: var(-
   </form>
 </dialog>
 <dialog id="sheet">
-  <form method="dialog">
+  <form method="dialog" novalidate>
     <h2 id="sheet-title" tabindex="-1"></h2>
     <div id="sheet-body"></div>
     <div class="dialog-actions">
@@ -2357,6 +2357,7 @@ const Logic = (() => {
       label_target_sleep: '睡眠時間',
       target_preview: '中央時刻 {m} ・ 睡眠 {d}',
       err_same_time: '寝る時刻と起きる時刻が同じです',
+      err_empty_time: '時刻を入力してください',
       later: 'あとで',
       set_target: '目標を決める',
       target_src_manual: '(設定から)',
@@ -2459,7 +2460,7 @@ const Logic = (() => {
       diff_late_t: '{n} min later than target {t}',
       diff_on_t: 'on target {t}',
       tile_if_sleep_now: 'Sleep now and wake at',
-      tile_sleep_mid: 'Sleep {d} · mid {m}{src}',
+      tile_sleep_mid: 'Sleep {d} · mid {m} {src}',
       target_title: 'Set your target mid-sleep time',
       target_intro: 'Enter two of the three and you get a first target. After two recorded nights the average of your records takes over',
       mode_bed_wake: 'Bed and wake times',
@@ -2470,6 +2471,7 @@ const Logic = (() => {
       label_target_sleep: 'Sleep length',
       target_preview: 'Mid {m} · sleep {d}',
       err_same_time: 'Bed and wake times are the same',
+      err_empty_time: 'Enter a time',
       later: 'Later',
       set_target: 'Set a target',
       target_src_manual: '(from settings)',
@@ -3172,7 +3174,7 @@ const App = (() => {
         footNodes.push(big(tr('no_time'), 'none'), el('div', 'tile-sub', tr('tile_first_night')));
       } else {
         const w = Logic.wakeFor(nowM, targetMin);
-        nodes.push(big(hmOf(w.wakeAt)), el('div', 'tile-sub', tr('tile_sleep_mid', { d: Logic.formatDuration(w.sleepMin, settings.lang), m: Logic.formatHM(targetMin), src: ' ' + (st.source === 'manual' ? tr('target_src_manual') : tr('target_src_records', { d: settings.avgDays })) })));
+        nodes.push(big(hmOf(w.wakeAt)), el('div', 'tile-sub', tr('tile_sleep_mid', { d: Logic.formatDuration(w.sleepMin, settings.lang), m: Logic.formatHM(targetMin), src: (st.source === 'manual' ? tr('target_src_manual') : tr('target_src_records', { d: settings.avgDays })) })));
         const nextWake = Logic.nextOccurrence(nowM, settings.wakeTarget);
         const b = Logic.bedFor(nextWake, targetMin);
         if (b.bedAt.getTime() < now.getTime()) {
@@ -3349,13 +3351,16 @@ const App = (() => {
       rows.bed.hidden = mode === 'wake_sleep';
       rows.wake.hidden = mode === 'bed_sleep';
       rows.sleep.hidden = mode === 'bed_wake';
-      const mt = bedIn.value && wakeIn.value ? current() : null;
+      const needBed = mode !== 'wake_sleep';
+      const needWake = mode !== 'bed_sleep';
+      const empty = (needBed && !bedIn.value) || (needWake && !wakeIn.value);
+      const mt = empty ? null : current();
       if (mt) {
         preview.textContent = tr('target_preview', { m: Logic.formatHM(mt.targetMin), d: Logic.formatDuration(mt.sleepMin, settings.lang) });
         err.textContent = '';
       } else {
         preview.textContent = '';
-        err.textContent = tr('err_same_time');
+        err.textContent = tr(empty ? 'err_empty_time' : 'err_same_time');
       }
       $('#sheet-ok').disabled = !mt;
     };
@@ -3395,14 +3400,14 @@ const App = (() => {
           return i;
         };
         bedIn = mkTime(settings.targetBed);
-        wakeIn = mkTime(settings.targetWake);
+        wakeIn = mkTime(settings.targetMode === '' ? settings.wakeTarget : settings.targetWake);
         sleepSel = el('select');
         for (let m = 240; m <= 720; m += 15) {
           const o = el('option', null, Logic.formatDuration(m, settings.lang));
           o.value = String(m);
           sleepSel.append(o);
         }
-        sleepSel.value = String(sleepMin);
+        sleepSel.value = String(Math.min(720, Math.max(240, Math.round(sleepMin / 15) * 15)));
         sleepSel.addEventListener('change', refresh);
         mkRow('bed', 'label_target_bed', bedIn);
         mkRow('wake', 'label_target_wake', wakeIn);
@@ -3415,8 +3420,8 @@ const App = (() => {
       validate,
       onOk() {
         storage.setFlag();
-        const patch = { targetMode: mode, targetBed: bedIn.value, targetWake: wakeIn.value, targetSleepMin: Number(sleepSel.value) };
-        if (mode !== 'bed_sleep') patch.wakeTarget = wakeIn.value;
+        const patch = { targetMode: mode, targetBed: bedIn.value || settings.targetBed, targetWake: wakeIn.value || settings.targetWake, targetSleepMin: Number(sleepSel.value) };
+        if (mode !== 'bed_sleep') patch.wakeTarget = patch.targetWake;
         updateSettings(patch);
       },
       onCancel() { storage.setFlag(); },
