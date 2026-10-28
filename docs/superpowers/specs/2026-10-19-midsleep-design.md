@@ -191,6 +191,53 @@ Zen Maru Gothic(SIL Open Font License 1.1)を `midsleep/fonts/zen-maru-gothic/` 
 
 About: ページ説明、GitHub リンク、MIT、クレジット(使用 API なし、Material Icons)。
 
+## 初期目標(導入時の手入力。2026-10-28 追加)
+
+記録が 2 回たまるまでは目標の中央時刻が出せず、最初の 2 日は目安が何も出ない。そこで導入時に「寝たい時刻」「起きたい時刻」「確保したい睡眠時間」のうち 2 つを入力してもらい、そこから中央時刻を作って最初の目標にする。
+
+### 入力(`dialog#sheet` を使う「目標を決める」シート)
+
+- 上に 3 択のセグメント(`targetMode`): **寝る時刻と起きる時刻** / **寝る時刻と睡眠時間** / **起きる時刻と睡眠時間**。選んだ 2 項目の入力欄だけを出す。
+  - 寝る時刻 `targetBed`、起きる時刻 `targetWake`: `input type="time"`(step 300)。
+  - 睡眠時間 `targetSleepMin`: `select`、240〜720 分を 15 分刻み(表示は `formatDuration`)。
+- 入力のたびに下に「中央時刻 {m} ・ 睡眠 {d}」を出す(`Logic.manualTarget`)。寝る時刻と起きる時刻が同じ(睡眠 0)なら保存ボタンを無効にし「寝る時刻と起きる時刻が同じです」。
+- ボタンは **保存** と **あとで**(キャンセル)。保存で `targetMode` / `targetBed` / `targetWake` / `targetSleepMin` を設定に書く。起きる時刻を含む 2 択(bed_wake / wake_sleep)で保存したときは `wakeTarget` もその値に更新する(bed_sleep のときは触らない)。
+- 「あとで」は何も保存せず、localStorage `simplePages.midsleep.targetAsked` に `1` を書いて二度と自動では開かない(全消去で消える)。
+
+### 自動で開く条件
+
+初回表示のあと(`init` の描画後)に、`targetMode === ''` かつ 完了した記録が 2 件未満 かつ `targetAsked` が無いときだけ、このシートを開く。記録がすでに 2 件以上ある(以前から使っている)人には出さない。
+
+### 目標の決め方(`Logic.targetFor`)
+
+`Logic.targetFor(records, settings, today)` → `{ targetMin, sdMin, avgSleepMin, count, source }`。
+
+- 窓内の有効な記録が 2 件以上: これまでの `stats` の値、`source: 'records'`。
+- 2 件未満で `manualTarget(settings)` がある: `targetMin` はその中央時刻、`sdMin` と `avgSleepMin` は `null`、`count` は記録数、`source: 'manual'`。
+- どちらも無い: `targetMin: null`、`source: null`。
+
+手入力の目標は最初の 2 日だけのもので、記録が 2 件以上になったら使わない(見比べる表示も置かない)。記録を消して 2 件未満に戻れば再び手入力の値になる。
+
+`Logic.manualTarget(settings)` → `{ targetMin, bedMin, wakeMin, sleepMin }` か `null`(`targetMode === ''` か、睡眠が 0 または 24 時間になる組み合わせ)。計算は 24 時間の環で行う: bed_wake は `sleep = (wake − bed) mod 1440`(0 なら無効)、bed_sleep は `wake = bed + sleep`、wake_sleep は `bed = wake − sleep`、中央は `bed + sleep / 2`(`formatHM` と同じく 1440 で巻く。`Math.round`)。
+
+### 表示への反映
+
+- 今日タブ: 目標を使う場所(夜タイルの中央時刻、朝タイルの逆算、就寝中の「いま起きると」「目標どおりなら」)はすべて `targetFor` の `targetMin` を使う。夜タイルの補足を「睡眠 {d} ・ 中央 {m}(設定から)」のように、`source` に応じて **(設定から)** / **(直近 {avgDays} 日)** を添える(i18n `target_src_manual` / `target_src_records`)。
+- 目標がまったく無いとき(`source: null`)は従来どおり `--:--` で、夜タイルの補足の下に小さなリンクボタン **目標を決める**(`#btn-target`)を置き、シートを開く。
+- 履歴タブの統計行: `source: 'records'` は従来の「目標 {t}(直近 {d} 日) · ばらつき ±{sd} 分 · 平均睡眠 {s}」。`'manual'` は「目標 {t}(設定から) · 記録 {n} 件」(`history_stats_manual`)。グラフの目標線は `targetFor` の値(無ければ描かない)。
+- 設定＞計算: 「初期目標」の行に、現在の内容(「寝る 23:00 ・ 起きる 6:00 → 中央 2:30」か「なし」)と **変更**(シートを開く)/ **消す**(`targetMode` を `''` に戻す)のボタン。生の 4 項目の入力欄は置かない。
+
+### 設定キー(設定表に追加)
+
+| セクション | キー | 型・範囲 | 既定 | 意味 |
+|---|---|---|---|---|
+| 計算 | `targetMode` | enum `''` / `bed_wake` / `bed_sleep` / `wake_sleep` | `''` | 初期目標の入力の組み合わせ。`''` は未設定 |
+| 計算 | `targetBed` | `HH:MM` | `23:00` | 寝たい時刻 |
+| 計算 | `targetWake` | `HH:MM` | `06:00` | 起きたい時刻 |
+| 計算 | `targetSleepMin` | int 240〜720 | 420 | 確保したい睡眠時間(分) |
+
+すべて `DISPLAY_ONLY_KEYS`。`fixupSettings` は `HH:MM` でない値を既定に戻す。
+
 ## データ(`simplePages.midsleep.data`)
 
 ```json
@@ -220,6 +267,8 @@ About: ページ説明、GitHub リンク、MIT、クレジット(使用 API な
 | `isNap(record)` | `durationMin < 180` |
 | `inWindow(record, days, today)` | 起床日が `today − (days − 1)` 以上 |
 | `stats(records, days, today)` | `{ count, targetMin, sdMin, avgSleepMin }`。有効記録 < 2 なら `targetMin: null` |
+| `manualTarget(settings)` | 初期目標 `{ targetMin, bedMin, wakeMin, sleepMin }` か `null`(「初期目標」の節) |
+| `targetFor(records, settings, today)` | `{ targetMin, sdMin, avgSleepMin, count, source }`。記録 ≥ 2 なら `stats`、それ以外は `manualTarget`、無ければ `source: null` |
 | `wakeFor(now, targetMin)` | 「今寝ると」の起床 `Date` と睡眠分 |
 | `bedFor(wakeAt, targetMin)` | 「○時に起きるには」の就寝 `Date` と睡眠分 |
 | `nextOccurrence(now, hhmm)` | `hhmm` が次に来る `Date`(いまと同じ分なら明日) |
