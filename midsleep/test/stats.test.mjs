@@ -26,3 +26,27 @@ test('stats with mids straddling midnight', () => {
   assert.equal(st.targetMin, 0);
   assert.equal(st.sdMin, 10);
 });
+
+test('manualTarget from any two of bed / wake / sleep', () => {
+  const base = { targetBed: '23:00', targetWake: '06:00', targetSleepMin: 420 };
+  assert.equal(Logic.manualTarget({ ...base, targetMode: '' }), null);
+  assert.deepEqual(Logic.manualTarget({ ...base, targetMode: 'bed_wake' }), { targetMin: 150, bedMin: 1380, wakeMin: 360, sleepMin: 420 });
+  assert.deepEqual(Logic.manualTarget({ ...base, targetMode: 'bed_sleep', targetSleepMin: 480 }), { targetMin: 180, bedMin: 1380, wakeMin: 420, sleepMin: 480 });
+  assert.deepEqual(Logic.manualTarget({ ...base, targetMode: 'wake_sleep', targetWake: '05:00', targetSleepMin: 450 }), { targetMin: 75, bedMin: 1290, wakeMin: 300, sleepMin: 450 });
+  assert.equal(Logic.manualTarget({ ...base, targetMode: 'bed_wake', targetWake: '23:00' }), null, 'zero sleep is invalid');
+  assert.deepEqual(Logic.manualTarget({ ...base, targetMode: 'bed_wake', targetBed: '01:00', targetWake: '09:00' }).targetMin, 300);
+});
+
+test('targetFor prefers records, falls back to the manual target, else null', () => {
+  const S = { avgDays: 7, targetMode: 'bed_wake', targetBed: '23:00', targetWake: '06:00', targetSleepMin: 420 };
+  const r = (id, bedAt, wakeAt) => ({ id, bedAt, wakeAt, createdAt: '' });
+  const two = [r('a', '2026-10-25T23:30', '2026-10-26T06:30'), r('b', '2026-10-26T23:30', '2026-10-27T06:30')];
+  const t2 = Logic.targetFor(two, S, '2026-10-27');
+  assert.equal(t2.source, 'records'); assert.equal(t2.targetMin, 180); assert.equal(t2.count, 2);
+  const t1 = Logic.targetFor(two.slice(0, 1), S, '2026-10-27');
+  assert.deepEqual(t1, { targetMin: 150, sdMin: null, avgSleepMin: null, count: 1, source: 'manual' });
+  const t0 = Logic.targetFor([], { ...S, targetMode: '' }, '2026-10-27');
+  assert.deepEqual(t0, { targetMin: null, sdMin: null, avgSleepMin: null, count: 0, source: null });
+  const sleeping = [...two, r('c', '2026-10-27T23:00', null)];
+  assert.equal(Logic.targetFor(sleeping, S, '2026-10-27').source, 'records', 'open record does not count');
+});

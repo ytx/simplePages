@@ -2267,6 +2267,10 @@ const Logic = (() => {
     avgDays: { type: 'int', min: 3, max: 30, default: 7 },
     minSleepMin: { type: 'int', min: 180, max: 720, default: 360 },
     staleHours: { type: 'int', min: 10, max: 36, default: 18 },
+    targetMode: { type: 'enum', values: ['', 'bed_wake', 'bed_sleep', 'wake_sleep'], default: '' },
+    targetBed: { type: 'string', default: '23:00' },
+    targetWake: { type: 'string', default: '06:00' },
+    targetSleepMin: { type: 'int', min: 240, max: 720, default: 420 },
   };
 
   // 解決済み設定の整合性を保つ。wakeTarget は HH:MM(00:00〜23:59)だけを受け付ける。
@@ -2274,6 +2278,10 @@ const Logic = (() => {
     const out = { ...s };
     const m = /^(\d{2}):(\d{2})$/.exec(String(out.wakeTarget));
     if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) out.wakeTarget = SCHEMA.wakeTarget.default;
+    for (const k of ['targetBed', 'targetWake']) {
+      const t = /^(\d{2}):(\d{2})$/.exec(String(out[k]));
+      if (!t || Number(t[1]) > 23 || Number(t[2]) > 59) out[k] = SCHEMA[k].default;
+    }
     return out;
   }
 
@@ -2693,6 +2701,30 @@ const Logic = (() => {
     const avgSleepMin = Math.round(used.reduce((a, r) => a + durationMin(r.bedAt, r.wakeAt), 0) / count);
     return { count, targetMin, sdMin, avgSleepMin };
   }
+  // 導入時の手入力から作る初期目標。24 時間の環で計算する。睡眠が 0 または 24 時間なら null。
+  function manualTarget(settings) {
+    const mode = settings.targetMode;
+    const hm = (v) => { const [h, m] = String(v).split(':').map(Number); return h * 60 + m; };
+    const mod = (n) => ((n % 1440) + 1440) % 1440;
+    let bedMin, wakeMin, sleepMin;
+    if (mode === 'bed_wake') {
+      bedMin = hm(settings.targetBed); wakeMin = hm(settings.targetWake); sleepMin = mod(wakeMin - bedMin);
+    } else if (mode === 'bed_sleep') {
+      bedMin = hm(settings.targetBed); sleepMin = settings.targetSleepMin; wakeMin = mod(bedMin + sleepMin);
+    } else if (mode === 'wake_sleep') {
+      wakeMin = hm(settings.targetWake); sleepMin = settings.targetSleepMin; bedMin = mod(wakeMin - sleepMin);
+    } else return null;
+    if (!(sleepMin > 0 && sleepMin < 1440)) return null;
+    return { targetMin: mod(Math.round(bedMin + sleepMin / 2)), bedMin, wakeMin, sleepMin };
+  }
+  // 窓内の記録が 2 件以上なら記録の統計、そうでなければ手入力の目標、どちらも無ければ null。
+  function targetFor(records, settings, today) {
+    const st = stats(records, settings.avgDays, today);
+    if (st.targetMin !== null) return { ...st, source: 'records' };
+    const m = manualTarget(settings);
+    if (m) return { targetMin: m.targetMin, sdMin: null, avgSleepMin: null, count: st.count, source: 'manual' };
+    return { targetMin: null, sdMin: null, avgSleepMin: null, count: st.count, source: null };
+  }
   function validateRecord(record, records) {
     const open = record.wakeAt === null;
     if (!open) {
@@ -2740,7 +2772,7 @@ const Logic = (() => {
     if (sleepMin > 720) return 'long';
     return null;
   }
-  return { relMinutes, targetRel, chartModel, summaryLine, truncMin, nextOccurrence, wakeFor, bedFor, adviceFlags, isNap, wakeDate, sleepingRecord, completed, inWindow, stats, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, durationParts, midOf, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
+  return { relMinutes, targetRel, chartModel, summaryLine, truncMin, nextOccurrence, wakeFor, bedFor, adviceFlags, isNap, wakeDate, sleepingRecord, completed, inWindow, stats, manualTarget, targetFor, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, durationParts, midOf, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
 })();
 </script>
 <script id="app-ui">
@@ -2756,7 +2788,7 @@ const App = (() => {
   const SCHEMA = { ...Logic.SCHEMA, lang: { ...Logic.SCHEMA.lang, default: Logic.detectLang(navigator.language) } };
   const IDLE_MS = 10000;
   // midsleep は外部データを取得しないので、全キーが表示専用(変更しても再取得しない)。
-  const DISPLAY_ONLY_KEYS = new Set(['lang', 'theme', 'zoom', 'chartDays', 'wakeTarget', 'avgDays', 'minSleepMin', 'staleHours']);
+  const DISPLAY_ONLY_KEYS = new Set(['lang', 'theme', 'zoom', 'chartDays', 'wakeTarget', 'avgDays', 'minSleepMin', 'staleHours', 'targetMode', 'targetBed', 'targetWake', 'targetSleepMin']);
   const TABS = ['today', 'history', 'settings'];
 
   let settings = {};

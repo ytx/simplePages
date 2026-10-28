@@ -10,7 +10,7 @@ const src = readFileSync(html, 'utf8');
 const resolve = (stored = {}, query = {}) => Logic.fixupSettings(Logic.resolveSettings(Logic.SCHEMA, stored, query));
 
 test('schema has exactly the spec keys and all are display-only', () => {
-  const expected = ['avgDays', 'chartDays', 'lang', 'minSleepMin', 'staleHours', 'theme', 'wakeTarget', 'zoom'];
+  const expected = ['avgDays', 'chartDays', 'lang', 'minSleepMin', 'staleHours', 'targetBed', 'targetMode', 'targetSleepMin', 'targetWake', 'theme', 'wakeTarget', 'zoom'];
   assert.deepEqual(Object.keys(Logic.SCHEMA).sort(), expected);
   const only = src.match(/DISPLAY_ONLY_KEYS = new Set\(\[([^\]]*)\]\)/)[1];
   for (const k of expected) assert.match(only, new RegExp(`'${k}'`), k);
@@ -26,6 +26,10 @@ test('defaults', () => {
   assert.equal(s.staleHours, 18);
   assert.equal(s.zoom, 100);
   assert.equal(s.theme, 'auto');
+  assert.equal(s.targetMode, '');
+  assert.equal(s.targetBed, '23:00');
+  assert.equal(s.targetWake, '06:00');
+  assert.equal(s.targetSleepMin, 420);
 });
 
 test('integers are clamped into range', () => {
@@ -49,6 +53,8 @@ test('wakeTarget must be HH:MM', () => {
   assert.equal(resolve({ wakeTarget: '6:00' }).wakeTarget, '06:00');
   assert.equal(resolve({ wakeTarget: '24:00' }).wakeTarget, '06:00');
   assert.equal(resolve({ wakeTarget: '07:30' }).wakeTarget, '07:30');
+  assert.equal(resolve({ targetBed: '25:00' }).targetBed, '23:00');
+  assert.equal(resolve({ targetWake: 'x' }).targetWake, '06:00');
 });
 
 test('URL query beats stored settings', () => {
