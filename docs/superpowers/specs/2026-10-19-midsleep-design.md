@@ -184,6 +184,10 @@ Zen Maru Gothic(SIL Open Font License 1.1)を `midsleep/fonts/zen-maru-gothic/` 
 | 計算 | `avgDays` | int 3〜30 | 7 | 目標の中央時刻を求める窓(日) |
 | 計算 | `minSleepMin` | int 180〜720 | 360 | この分数未満の提案に「短めです」を添える |
 | 計算 | `staleHours` | int 10〜36 | 18 | 就寝中がこの時間を超えたら押し忘れとみなす |
+| 計算 | `targetMode` | enum `''` / `bed_wake` / `bed_sleep` / `wake_sleep` | `''` | 初期目標の入力の組み合わせ(「初期目標」節) |
+| 計算 | `targetBed` | `HH:MM` | `23:00` | 初期目標の寝たい時刻 |
+| 計算 | `targetWake` | `HH:MM` | `06:00` | 初期目標の起きたい時刻 |
+| 計算 | `targetSleepMin` | int 240〜720 | 420 | 初期目標の睡眠時間(分) |
 
 共通キー `lang` / `theme` / `zoom` は規約どおり(入力欄は置かない)。`DISPLAY_ONLY_KEYS` は全キー(取得がないため)。設定は `simplePages.midsleep`(`{ version: 1, settings }`)。
 
