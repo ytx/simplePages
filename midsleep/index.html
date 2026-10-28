@@ -2041,6 +2041,7 @@ button.btn[hidden] { display: none; }
 .link-btn { font: inherit; font-size: var(--fs-small); color: inherit; background: none; border: 0; padding: 0.5em 0; min-height: 44px; cursor: pointer; text-decoration: underline; }
 #sheet-body input[type=datetime-local] { width: 100%; min-height: 44px; margin-bottom: calc(var(--gap) / 3); }
 #sheet-ok:disabled { opacity: 0.4; cursor: default; }
+.seg-row { display: flex; flex-direction: column; gap: calc(var(--gap) / 4); margin-bottom: calc(var(--gap) / 2); }
 .seg-group { display: flex; gap: calc(var(--gap) / 2); margin-bottom: calc(var(--gap) / 2); }
 button.seg { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; min-height: 44px; padding: 0 var(--gap); cursor: pointer; }
 button.seg[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
@@ -2131,6 +2132,11 @@ button.seg[aria-pressed="true"] { background: var(--accent); border-color: var(-
         <label for="set-staleHours" data-i18n="stale_hours"></label>
         <input id="set-staleHours" type="number" min="10" max="36" data-setting="staleHours">
       </div>
+      <div class="field">
+        <span data-i18n="initial_target"></span>
+        <div><span id="target-summary"></span>
+          <div class="row"><button type="button" class="btn" id="target-edit" data-i18n="change"></button><button type="button" class="btn" id="target-clear" data-i18n="clear"></button></div></div>
+      </div>
     </details>
     <details class="settings-section" data-section="data">
       <summary data-i18n="tab_data"></summary>
@@ -2189,7 +2195,7 @@ button.seg[aria-pressed="true"] { background: var(--accent); border-color: var(-
     <div id="sheet-body"></div>
     <div class="dialog-actions">
       <button id="sheet-delete" class="btn danger" type="button" data-i18n="delete" hidden></button>
-      <button id="sheet-cancel" class="btn" type="button" data-i18n="cancel"></button>
+      <button id="sheet-cancel" class="btn" type="button"></button>
       <button id="sheet-ok" class="btn" type="submit" value="ok" data-i18n="save"></button>
     </div>
   </form>
@@ -2340,7 +2346,29 @@ const Logic = (() => {
       diff_late_t: '目標 {t} より {n} 分遅い',
       diff_on_t: '目標 {t} どおり',
       tile_if_sleep_now: '今寝ると、起きるのは',
-      tile_sleep_mid: '睡眠 {d} ・ 中央 {m}',
+      tile_sleep_mid: '睡眠 {d} ・ 中央 {m}{src}',
+      target_title: '目標の中央時刻を決める',
+      target_intro: '3 つのうち 2 つを入れると、最初の目標ができます。記録が 2 回たまったら記録の平均に切り替わります',
+      mode_bed_wake: '寝る時刻と起きる時刻',
+      mode_bed_sleep: '寝る時刻と睡眠時間',
+      mode_wake_sleep: '起きる時刻と睡眠時間',
+      label_target_bed: '寝る時刻',
+      label_target_wake: '起きる時刻',
+      label_target_sleep: '睡眠時間',
+      target_preview: '中央時刻 {m} ・ 睡眠 {d}',
+      err_same_time: '寝る時刻と起きる時刻が同じです',
+      later: 'あとで',
+      set_target: '目標を決める',
+      target_src_manual: '(設定から)',
+      target_src_records: '(直近 {d} 日)',
+      history_stats_manual: '目標 {t}(設定から) · 記録 {n} 件',
+      initial_target: '初期目標',
+      target_none: 'なし',
+      target_summary_bed_wake: '寝る {b} ・ 起きる {w} → 中央 {m}',
+      target_summary_bed_sleep: '寝る {b} ・ 睡眠 {d} → 中央 {m}',
+      target_summary_wake_sleep: '起きる {w} ・ 睡眠 {d} → 中央 {m}',
+      change: '変更',
+      clear: '消す',
       tile_wake_target: '{t} に起きるなら、寝るのは',
       tile_sleep_left: '睡眠 {d} ・ あと {r}',
       tile_passed: 'もう過ぎています ・ 今寝ると中央は {m}{diff}',
@@ -2431,7 +2459,29 @@ const Logic = (() => {
       diff_late_t: '{n} min later than target {t}',
       diff_on_t: 'on target {t}',
       tile_if_sleep_now: 'Sleep now and wake at',
-      tile_sleep_mid: 'Sleep {d} · mid {m}',
+      tile_sleep_mid: 'Sleep {d} · mid {m}{src}',
+      target_title: 'Set your target mid-sleep time',
+      target_intro: 'Enter two of the three and you get a first target. After two recorded nights the average of your records takes over',
+      mode_bed_wake: 'Bed and wake times',
+      mode_bed_sleep: 'Bed time and sleep length',
+      mode_wake_sleep: 'Wake time and sleep length',
+      label_target_bed: 'Bed time',
+      label_target_wake: 'Wake time',
+      label_target_sleep: 'Sleep length',
+      target_preview: 'Mid {m} · sleep {d}',
+      err_same_time: 'Bed and wake times are the same',
+      later: 'Later',
+      set_target: 'Set a target',
+      target_src_manual: '(from settings)',
+      target_src_records: '(last {d} days)',
+      history_stats_manual: 'Target {t} (from settings) · {n} records',
+      initial_target: 'Initial target',
+      target_none: 'None',
+      target_summary_bed_wake: 'Bed {b} · wake {w} → mid {m}',
+      target_summary_bed_sleep: 'Bed {b} · sleep {d} → mid {m}',
+      target_summary_wake_sleep: 'Wake {w} · sleep {d} → mid {m}',
+      change: 'Change',
+      clear: 'Clear',
       tile_wake_target: 'To wake at {t}, go to bed at',
       tile_sleep_left: 'Sleep {d} · in {r}',
       tile_passed: 'Already passed · sleeping now puts mid at {m}{diff}',
@@ -2813,6 +2863,8 @@ const App = (() => {
     return e;
   }
 
+  const TARGET_ASKED_KEY = 'simplePages.midsleep.targetAsked';
+
   const storage = {
     read() {
       try { return JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch { return null; }
@@ -2825,6 +2877,15 @@ const App = (() => {
     },
     clear() {
       try { localStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+    },
+    getFlag() {
+      try { return localStorage.getItem(TARGET_ASKED_KEY) !== null; } catch { return false; }
+    },
+    setFlag() {
+      try { localStorage.setItem(TARGET_ASKED_KEY, '1'); } catch { /* ignore */ }
+    },
+    clearFlag() {
+      try { localStorage.removeItem(TARGET_ASKED_KEY); } catch { /* ignore */ }
     },
     // 設定を上書きせずに書き込み可否だけ調べる。
     probe() {
@@ -2893,6 +2954,7 @@ const App = (() => {
     applyTheme();
     applyZoom(settings.zoom);
     for (const e of $$('[data-setting]')) e.value = settings[e.dataset.setting];
+    renderTargetSummary();
     syncDataText();
   }
 
@@ -3084,7 +3146,7 @@ const App = (() => {
     const btnWake = $('#btn-wake');
     const rec = Logic.sleepingRecord(data.records);
     const nowM = Logic.truncMin(now);
-    const st = Logic.stats(data.records, settings.avgDays, Logic.todayStr(now));
+    const st = Logic.targetFor(data.records, settings, Logic.todayStr(now));
     const targetMin = st.targetMin;
     $('#tab-today').dataset.state = rec ? 'sleeping' : 'awake';
     $('#today-date').textContent = `${Logic.formatDateShort(nowStr, settings.lang)} ${Logic.formatHM(Logic.minutesOfDay(nowStr))}`;
@@ -3102,10 +3164,15 @@ const App = (() => {
       footNodes.push(el('div', 'tile-label', tr('tile_wake_target', { t: wakeHM })));
       if (targetMin === null) {
         nodes.push(big(tr('no_time'), 'none'), el('div', 'tile-sub', tr('tile_need_more', { n: Math.max(0, 2 - st.count) })));
+        const setBtn = el('button', 'link-btn', tr('set_target'));
+        setBtn.type = 'button';
+        setBtn.id = 'btn-target';
+        setBtn.addEventListener('click', openTargetSheet);
+        nodes.push(setBtn);
         footNodes.push(big(tr('no_time'), 'none'), el('div', 'tile-sub', tr('tile_first_night')));
       } else {
         const w = Logic.wakeFor(nowM, targetMin);
-        nodes.push(big(hmOf(w.wakeAt)), el('div', 'tile-sub', tr('tile_sleep_mid', { d: Logic.formatDuration(w.sleepMin, settings.lang), m: Logic.formatHM(targetMin) })));
+        nodes.push(big(hmOf(w.wakeAt)), el('div', 'tile-sub', tr('tile_sleep_mid', { d: Logic.formatDuration(w.sleepMin, settings.lang), m: Logic.formatHM(targetMin), src: ' ' + (st.source === 'manual' ? tr('target_src_manual') : tr('target_src_records', { d: settings.avgDays })) })));
         const nextWake = Logic.nextOccurrence(nowM, settings.wakeTarget);
         const b = Logic.bedFor(nextWake, targetMin);
         if (b.bedAt.getTime() < now.getTime()) {
@@ -3251,6 +3318,111 @@ const App = (() => {
     recordSheet({ id: Logic.newId(now), bedAt: at(d(-1), 23), wakeAt: at(d(0), 6), createdAt: now.toISOString() }, true);
   }
 
+  function renderTargetSummary() {
+    const box = $('#target-summary');
+    const mt = Logic.manualTarget(settings);
+    $('#target-clear').disabled = !settings.targetMode;
+    if (!mt) { box.textContent = tr('target_none'); return; }
+    const m = Logic.formatHM(mt.targetMin);
+    const d = Logic.formatDuration(mt.sleepMin, settings.lang);
+    const b = Logic.formatHM(mt.bedMin);
+    const w = Logic.formatHM(mt.wakeMin);
+    if (settings.targetMode === 'bed_sleep') box.textContent = tr('target_summary_bed_sleep', { b, d, m });
+    else if (settings.targetMode === 'wake_sleep') box.textContent = tr('target_summary_wake_sleep', { w, d, m });
+    else box.textContent = tr('target_summary_bed_wake', { b, w, m });
+  }
+
+  // 初期目標シート。保存・あとで(Esc 含む)のどちらでも、自動表示は二度としない。
+  function openTargetSheet() {
+    let mode = settings.targetMode || 'bed_wake';
+    let sleepMin = settings.targetSleepMin;
+    let bedIn = null;
+    let wakeIn = null;
+    let sleepSel = null;
+    let preview = null;
+    let err = null;
+    const modeBtns = {};
+    const current = () => Logic.manualTarget({ ...settings, targetMode: mode, targetBed: bedIn.value, targetWake: wakeIn.value, targetSleepMin: Number(sleepSel.value) });
+    const rows = {};
+    const refresh = () => {
+      for (const [k, b] of Object.entries(modeBtns)) b.setAttribute('aria-pressed', String(k === mode));
+      rows.bed.hidden = mode === 'wake_sleep';
+      rows.wake.hidden = mode === 'bed_sleep';
+      rows.sleep.hidden = mode === 'bed_wake';
+      const mt = bedIn.value && wakeIn.value ? current() : null;
+      if (mt) {
+        preview.textContent = tr('target_preview', { m: Logic.formatHM(mt.targetMin), d: Logic.formatDuration(mt.sleepMin, settings.lang) });
+        err.textContent = '';
+      } else {
+        preview.textContent = '';
+        err.textContent = tr('err_same_time');
+      }
+      $('#sheet-ok').disabled = !mt;
+    };
+    const validate = () => {
+      refresh();
+      return !$('#sheet-ok').disabled;
+    };
+    openSheet({
+      title: tr('target_title'),
+      okLabel: 'save',
+      cancelLabel: 'later',
+      build(body) {
+        body.append(el('div', 'sheet-label', tr('target_intro')));
+        const seg = el('div', 'seg-row');
+        seg.setAttribute('role', 'group');
+        for (const [k, key] of [['bed_wake', 'mode_bed_wake'], ['bed_sleep', 'mode_bed_sleep'], ['wake_sleep', 'mode_wake_sleep']]) {
+          const b = el('button', 'seg', tr(key));
+          b.type = 'button';
+          b.addEventListener('click', () => { mode = k; refresh(); });
+          modeBtns[k] = b;
+          seg.append(b);
+        }
+        body.append(seg);
+        const mkRow = (name, labelKey, input) => {
+          const row = el('div');
+          row.append(el('div', 'sheet-label', tr(labelKey)), input);
+          rows[name] = row;
+          body.append(row);
+        };
+        const mkTime = (v) => {
+          const i = el('input');
+          i.type = 'time';
+          i.step = '300';
+          i.value = v;
+          i.addEventListener('input', refresh);
+          i.addEventListener('change', refresh);
+          return i;
+        };
+        bedIn = mkTime(settings.targetBed);
+        wakeIn = mkTime(settings.targetWake);
+        sleepSel = el('select');
+        for (let m = 240; m <= 720; m += 15) {
+          const o = el('option', null, Logic.formatDuration(m, settings.lang));
+          o.value = String(m);
+          sleepSel.append(o);
+        }
+        sleepSel.value = String(sleepMin);
+        sleepSel.addEventListener('change', refresh);
+        mkRow('bed', 'label_target_bed', bedIn);
+        mkRow('wake', 'label_target_wake', wakeIn);
+        mkRow('sleep', 'label_target_sleep', sleepSel);
+        preview = el('div', 'sheet-label');
+        err = el('div', 'sheet-error');
+        body.append(preview, err);
+        refresh();
+      },
+      validate,
+      onOk() {
+        storage.setFlag();
+        const patch = { targetMode: mode, targetBed: bedIn.value, targetWake: wakeIn.value, targetSleepMin: Number(sleepSel.value) };
+        if (mode !== 'bed_sleep') patch.wakeTarget = wakeIn.value;
+        updateSettings(patch);
+      },
+      onCancel() { storage.setFlag(); },
+    });
+  }
+
   function drawChart(model) {
     const W = 360, H = 240, L = 36, B = 20, T = 6, R = 4;
     const plotH = H - B - T;
@@ -3292,11 +3464,13 @@ const App = (() => {
     const days = settings.chartDays;
     const lang = settings.lang;
     for (const b of $$('#chart-days .seg')) b.setAttribute('aria-pressed', String(Number(b.dataset.days) === days));
-    const avg = Logic.stats(data.records, settings.avgDays, today);
+    const avg = Logic.targetFor(data.records, settings, today);
     const cur = Logic.stats(data.records, days, today);
     $('#history-stats').textContent = avg.targetMin === null
       ? tr('not_enough')
-      : tr('history_stats', { t: Logic.formatHM(avg.targetMin), d: settings.avgDays, sd: cur.sdMin === null ? '-' : cur.sdMin, s: cur.avgSleepMin === null ? '-' : Logic.formatDuration(cur.avgSleepMin, lang) });
+      : avg.source === 'manual'
+        ? tr('history_stats_manual', { t: Logic.formatHM(avg.targetMin), n: avg.count })
+        : tr('history_stats', { t: Logic.formatHM(avg.targetMin), d: settings.avgDays, sd: cur.sdMin === null ? '-' : cur.sdMin, s: cur.avgSleepMin === null ? '-' : Logic.formatDuration(cur.avgSleepMin, lang) });
     const chart = $('#history-chart');
     chart.setAttribute('aria-label', tr('chart_label'));
     drawChart(Logic.chartModel(data.records, days, today, avg.targetMin, lang));
@@ -3384,18 +3558,19 @@ const App = (() => {
 
   // シート: build(body) が空にした #sheet-body へ要素を足す。onOk は保存で閉じたとき、
   // onDelete は削除ボタン(true を返すと閉じる)。
-  function openSheet({ title, build, onOk, onDelete, validate = null, okLabel = 'save' }) {
+  function openSheet({ title, build, onOk, onDelete, validate = null, okLabel = 'save', cancelLabel = 'cancel', onCancel = null }) {
     const dlg = $('#sheet');
     const body = $('#sheet-body');
     $('#sheet-title').textContent = title;
     $('#sheet-ok').textContent = tr(okLabel);
+    $('#sheet-cancel').textContent = tr(cancelLabel);
     body.replaceChildren();
     $('#sheet-ok').disabled = false;
     sheetValidate = validate;
     build(body);
     const del = $('#sheet-delete');
     del.hidden = !onDelete;
-    sheetState = { onOk, onDelete };
+    sheetState = { onOk, onDelete, onCancel };
     dlg.returnValue = '';
     dlg.showModal();
     // showModal は最初の入力欄にフォーカスする。日付欄だと iOS でカレンダーが即座に開くので、見出しへ移す。
@@ -3413,7 +3588,9 @@ const App = (() => {
     $('#sheet').addEventListener('close', () => {
       const st = sheetState;
       sheetState = null;
-      if (st && $('#sheet').returnValue === 'ok' && st.onOk) st.onOk();
+      if (!st) return;
+      if ($('#sheet').returnValue === 'ok') { if (st.onOk) st.onOk(); }
+      else if (st.onCancel) st.onCancel();
     });
     $('#sheet-delete').addEventListener('click', async () => {
       const st = sheetState;
@@ -3533,6 +3710,8 @@ const App = (() => {
     for (const e of $$('[data-setting]')) {
       e.addEventListener('change', () => updateSettings({ [e.dataset.setting]: e.value }));
     }
+    $('#target-edit').addEventListener('click', openTargetSheet);
+    $('#target-clear').addEventListener('click', () => updateSettings({ targetMode: '' }));
     $('#data-export').addEventListener('click', () => {
       const blob = new Blob([exportAll()], { type: 'application/json' });
       const a = document.createElement('a');
@@ -3558,6 +3737,7 @@ const App = (() => {
     $('#data-clear').addEventListener('click', async () => {
       if (!(await dialog({ message: tr('confirm_clear') })).ok) return;
       storage.clear();
+      storage.clearFlag();
       try { localStorage.removeItem(DATA_KEY); } catch { /* ignore */ }
       location.href = location.pathname;
     });
@@ -3580,6 +3760,7 @@ const App = (() => {
     const initialTab = new URLSearchParams(location.search).get('tab');
     switchTab(TABS.includes(initialTab) ? initialTab : 'today');
     renderAll();
+    if (!settings.targetMode && Logic.completed(data.records).length < 2 && !storage.getFlag()) openTargetSheet();
     tickClock();
     setInterval(tickClock, 1000);
     document.addEventListener('visibilitychange', onVisibility);

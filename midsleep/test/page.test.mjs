@@ -162,3 +162,21 @@ test('app-logic script parses', () => {
   const logic = src.match(/<script id="app-logic">([\s\S]*?)<\/script>/);
   assert.doesNotThrow(() => new Function(logic[1]));
 });
+
+test('initial target sheet, settings row and first-open flag', () => {
+  const calc = src.match(/data-section="calc"[\s\S]*?<\/details>/)[0];
+  for (const id of ['target-summary', 'target-edit', 'target-clear']) assert.match(calc, new RegExp(`id="${id}"`), id);
+  assert.match(ui[1], /btn-target/);
+  assert.match(src, /targetAsked/);
+  assert.match(src, /simplePages\.midsleep\.targetAsked/);
+  const ja = {
+    target_title: '目標の中央時刻を決める', mode_bed_wake: '寝る時刻と起きる時刻', later: 'あとで', set_target: '目標を決める',
+    history_stats_manual: '目標 {t}(設定から) · 記録 {n} 件', tile_sleep_mid: '睡眠 {d} ・ 中央 {m}{src}', clear: '消す',
+  };
+  for (const [k, v] of Object.entries(ja)) assert.equal(Logic.I18N.ja[k], v, k);
+  for (const k of ['target_title', 'target_intro', 'mode_bed_wake', 'mode_bed_sleep', 'mode_wake_sleep', 'label_target_bed', 'label_target_wake', 'label_target_sleep', 'target_preview', 'err_same_time', 'later', 'set_target', 'target_src_manual', 'target_src_records', 'history_stats_manual', 'initial_target', 'target_none', 'target_summary_bed_wake', 'target_summary_bed_sleep', 'target_summary_wake_sleep', 'change', 'clear']) {
+    assert.equal(typeof Logic.I18N.ja[k], 'string', `ja ${k}`);
+    assert.equal(typeof Logic.I18N.en[k], 'string', `en ${k}`);
+  }
+  assert.match(Logic.I18N.en.tile_sleep_mid, /\{src\}/);
+});
