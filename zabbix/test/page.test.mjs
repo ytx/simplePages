@@ -69,3 +69,23 @@ test('light theme values are defined for both the attribute and the OS preferenc
   assert.match(src, /html\[data-theme="light"\]\s*\{[^}]*--bg:/);
   assert.match(src, /@media \(prefers-color-scheme: light\)\s*\{\s*html:not\(\[data-theme="dark"\]\)\s*\{[^}]*--bg:/);
 });
+
+test('summary-right span sits after the status dot', () => {
+  assert.match(src, /id="summary-right"/);
+  assert.ok(src.indexOf('id="summary-right"') > src.indexOf('id="status-dot"'));
+});
+
+test('classes used by the panes are styled in CSS', () => {
+  const css = src.match(/<style>([\s\S]*?)<\/style>/)[1];
+  for (const c of ['tile', 'problem', 'more', 'sev', 'name', 'sub', 'host', 'desc', 'error', 'stale']) assert.match(css, new RegExp(`\\.${c}\\b`), c);
+  for (let i = 0; i <= 5; i++) assert.match(css, new RegExp(`\\.sev${i}\\b`), `sev${i}`);
+  for (const c of ['ok', 'disabled']) assert.match(css, new RegExp(`\\.tile\\.${c}\\b`), c);
+  assert.match(css, /body\s*\{[^}]*overflow:\s*hidden/);
+});
+
+test('the API call uses requestTimeoutSec, POST JSON and never an Authorization header', () => {
+  assert.match(ui[1], /AbortSignal\.timeout\(\s*settings\.requestTimeoutSec\s*\*\s*1000\s*\)/);
+  assert.match(ui[1], /method:\s*'POST'/);
+  assert.match(ui[1], /\/api_jsonrpc\.php/);
+  assert.doesNotMatch(src, /Authorization/i);
+});
