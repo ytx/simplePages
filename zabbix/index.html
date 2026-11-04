@@ -615,7 +615,61 @@ const Logic = (() => {
     return host.severity < 0 ? 'ok' : 'sev' + host.severity;
   }
 
-  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport, SEVERITY_NAMES, SEVERITY_SHORT, normalizeUrl, parseList, apiRequest, apiResult, orderHosts, mergeData, hostColorKey };
+  // ---- layout arithmetic ----
+  const PANE_GAP = 14;
+  function splitName(name) {
+    const i = name.indexOf('(', 1);
+    return i > 0 ? [name.slice(0, i).trimEnd(), name.slice(i)] : [name, ''];
+  }
+  function fitFontSize(widths100, boxW, scale) {
+    const w = Math.max(0, ...widths100.filter((x) => x > 0));
+    if (!(w > 0) || !(boxW > 0)) return null;
+    return Math.floor(100 * boxW / w / scale);
+  }
+  function tileLayout(n, availW, availH) {
+    if (n === 0) return { cols: 1, rows: 0, tileW: 0, tileH: 0, visible: 0, truncated: false };
+    const aspect = availW / Math.max(availH, 1);
+    const cols = Math.max(1, Math.min(n, 8, Math.round(Math.sqrt(n * aspect))));
+    let rows = Math.ceil(n / cols);
+    const tileW = Math.floor((availW - PANE_GAP * (cols - 1)) / cols);
+    let tileH = Math.floor((availH - PANE_GAP * (rows - 1)) / rows);
+    let visible = n;
+    let truncated = false;
+    if (tileH < 40) {
+      rows = Math.max(1, Math.floor((availH + PANE_GAP) / 54));
+      tileH = Math.floor((availH - PANE_GAP * (rows - 1)) / rows);
+      visible = Math.min(n, cols * rows);
+      truncated = visible < n;
+      if (truncated) tileH = Math.max(40, tileH - Math.floor(30 / rows));
+    }
+    return { cols, rows, tileW, tileH, visible, truncated };
+  }
+  function tileFontSize(tileH, limits, minFont) {
+    let nameSize = Math.min(64, Math.floor(tileH * 0.40));
+    for (const l of limits) if (l != null) nameSize = Math.min(nameSize, l);
+    nameSize = Math.max(minFont, nameSize);
+    return { nameSize, subSize: Math.max(12, Math.floor(nameSize * 0.7)), lineGap: Math.max(2, Math.floor(nameSize / 8)) };
+  }
+  function visibleRows(count, maxRows, paneH) {
+    return Math.min(count, maxRows, Math.max(1, Math.floor((paneH - 24 - 30) / 50)));
+  }
+  function summaryText(summary, lang, tr) {
+    const parts = [];
+    for (let i = 5; i >= 0; i--) if (summary.bySeverity[i] > 0) parts.push(SEVERITY_SHORT[i] + ':' + summary.bySeverity[i]);
+    return {
+      left: tr(lang, 'hosts_summary', { n: summary.hostsTotal, ok: summary.hostsOk, bad: summary.hostsBad }),
+      right: tr(lang, 'problems_summary', { n: summary.problems, sev: parts.length ? parts.join('  ') : '-' }),
+    };
+  }
+  function isStale(lastOkAt, now, staleSec) {
+    return lastOkAt != null && now - lastOkAt >= staleSec * 1000;
+  }
+  function ageText(ms) {
+    const s = Math.floor(ms / 1000);
+    return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+  }
+
+  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport, SEVERITY_NAMES, SEVERITY_SHORT, normalizeUrl, parseList, apiRequest, apiResult, orderHosts, mergeData, hostColorKey, splitName, fitFontSize, tileLayout, tileFontSize, visibleRows, summaryText, isStale, ageText };
 })();
 </script>
 <script id="app-ui">
