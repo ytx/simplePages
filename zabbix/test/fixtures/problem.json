@@ -1,0 +1,4 @@
+[{ "eventid": "905", "objectid": "17", "name": "Free disk space is less than 20%", "severity": "3", "clock": "1762200000" },
+ { "eventid": "904", "objectid": "18", "name": "Zabbix agent is not available", "severity": "4", "clock": "1762190000" },
+ { "eventid": "903", "objectid": "19", "name": "Link down", "severity": "5", "clock": "1762180000" },
+ { "eventid": "902", "objectid": "20", "name": "High CPU", "severity": "2", "clock": "1762170000" }]

@@ -1,0 +1,4 @@
+[{ "hostid": "10084", "host": "alpha", "name": "alpha (web)", "status": "0" },
+ { "hostid": "10085", "host": "bravo", "name": "bravo (db)", "status": "0" },
+ { "hostid": "10086", "host": "charlie", "name": "charlie", "status": "1" },
+ { "hostid": "10087", "host": "delta", "name": "delta", "status": "0" }]

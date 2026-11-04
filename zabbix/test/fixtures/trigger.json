@@ -1,0 +1,4 @@
+[{ "triggerid": "17", "hosts": [{ "hostid": "10084", "name": "alpha (web)" }] },
+ { "triggerid": "18", "hosts": [{ "hostid": "10086", "name": "charlie" }] },
+ { "triggerid": "19", "hosts": [{ "hostid": "99999", "name": "outsider" }, { "hostid": "10085", "name": "bravo (db)" }] },
+ { "triggerid": "20", "hosts": [{ "hostid": "99998", "name": "elsewhere" }] }]

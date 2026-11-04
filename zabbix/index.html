@@ -543,7 +543,79 @@ const Logic = (() => {
     return { ok: true, settings };
   }
 
-  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport };
+  const SEVERITY_NAMES = ['NotCls', 'Info', 'Warn', 'Avg', 'High', 'Disaster'];
+  const SEVERITY_SHORT = ['?', 'I', 'W', 'A', 'H', 'D'];
+
+  function normalizeUrl(s) {
+    let u = String(s == null ? '' : s).replace(/\s+/g, '');
+    u = u.replace(/\/+$/, '').replace(/\/api_jsonrpc\.php$/, '').replace(/\/+$/, '');
+    return /^https?:\/\//.test(u) ? u : '';
+  }
+
+  function parseList(s) {
+    return String(s == null ? '' : s).split(',').map((x) => x.trim()).filter((x) => x !== '');
+  }
+
+  function apiRequest(method, params, token, id) {
+    return { jsonrpc: '2.0', id, method, params, auth: token ? token : null };
+  }
+
+  function apiResult(json) {
+    if (!json || typeof json !== 'object') return { ok: false, error: 'Invalid response' };
+    if (json.result !== undefined) return { ok: true, result: json.result };
+    const e = json.error;
+    return { ok: false, error: (e && (e.data || e.message)) || 'Unknown error' };
+  }
+
+  function orderHosts(hosts, names) {
+    if (!names || names.length === 0) return hosts;
+    const out = [];
+    const seen = new Set();
+    for (const n of names) {
+      const h = hosts.find((x) => x.name === n || x.host === n);
+      if (h && !seen.has(h)) { seen.add(h); out.push(h); }
+    }
+    return out;
+  }
+
+  function mergeData(hosts, problems, triggers) {
+    const inScope = new Set(hosts.map((h) => h.hostid));
+    const trigHosts = new Map();
+    for (const t of triggers) trigHosts.set(t.triggerid, t.hosts || []);
+    const worst = new Map();
+    const outProblems = [];
+    for (const p of problems) {
+      const hs = trigHosts.get(p.objectid) || [];
+      const scoped = hs.filter((h) => inScope.has(h.hostid));
+      if (scoped.length === 0) continue;
+      const sev = Number(p.severity);
+      for (const h of scoped) worst.set(h.hostid, Math.max(worst.has(h.hostid) ? worst.get(h.hostid) : -1, sev));
+      outProblems.push({ ...p, hostName: scoped[0].name });
+    }
+    const outHosts = hosts.map((h) => ({
+      ...h,
+      severity: worst.has(h.hostid) ? worst.get(h.hostid) : -1,
+      disabled: h.status === '1',
+    }));
+    const bySeverity = [0, 0, 0, 0, 0, 0];
+    for (const p of outProblems) {
+      const s = Number(p.severity);
+      if (s >= 0 && s <= 5) bySeverity[s]++;
+    }
+    const hostsOk = outHosts.filter((h) => h.severity < 0 && !h.disabled).length;
+    return {
+      hosts: outHosts,
+      problems: outProblems,
+      summary: { hostsTotal: outHosts.length, hostsOk, hostsBad: outHosts.length - hostsOk, problems: outProblems.length, bySeverity },
+    };
+  }
+
+  function hostColorKey(host) {
+    if (host.disabled) return 'disabled';
+    return host.severity < 0 ? 'ok' : 'sev' + host.severity;
+  }
+
+  return { VERSION, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImport, SEVERITY_NAMES, SEVERITY_SHORT, normalizeUrl, parseList, apiRequest, apiResult, orderHosts, mergeData, hostColorKey };
 })();
 </script>
 <script id="app-ui">
