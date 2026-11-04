@@ -63,3 +63,9 @@ test('zabbix i18n strings carry the placeholders', () => {
   assert.equal(Logic.t('ja', 'conn_failed', { reason: 'x' }), 'CONNECTION FAILED — x');
   assert.equal(Logic.t('en', 'tab_general'), 'Connection');
 });
+
+test('light theme values are defined for both the attribute and the OS preference', () => {
+  assert.match(src, /prefers-color-scheme/);
+  assert.match(src, /html\[data-theme="light"\]\s*\{[^}]*--bg:/);
+  assert.match(src, /@media \(prefers-color-scheme: light\)\s*\{\s*html:not\(\[data-theme="dark"\]\)\s*\{[^}]*--bg:/);
+});

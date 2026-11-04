@@ -42,6 +42,16 @@ html[data-theme="light"] {
   --border: #d9dde3;
   --accent: #2b7de9;
 }
+@media (prefers-color-scheme: light) {
+  html:not([data-theme="dark"]) {
+    --bg: #f6f7f9;
+    --pane: #ffffff;
+    --fg: #1c1f26;
+    --fg-dim: #5c6370;
+    --border: #d9dde3;
+    --accent: #2b7de9;
+  }
+}
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
