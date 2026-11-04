@@ -98,7 +98,7 @@ body {
 }
 .tile .name, .tile .sub { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tile.ok { background: var(--ok); }
-.tile.disabled { background: var(--disabled); }
+.tile.disabled { background: var(--disabled); color: var(--fg-dim); }
 .tile.sev0 { background: var(--sev-0); }
 .tile.sev1 { background: var(--sev-1); }
 .tile.sev2 { background: var(--sev-2); }
@@ -108,7 +108,7 @@ body {
 .more { flex: none; height: 30px; line-height: 30px; text-align: right; color: var(--fg-dim); font-size: 20px; white-space: nowrap; }
 .problem {
   display: grid; grid-template-columns: calc(140px * var(--zoom)) minmax(0, 1fr); grid-template-rows: 1fr 1fr;
-  height: calc(50px * var(--zoom)); flex: none; overflow: hidden;
+  height: calc(44px * var(--zoom)); margin-bottom: calc(6px * var(--zoom)); flex: none; overflow: hidden;
 }
 .problem .sev {
   grid-row: 1 / 3; display: flex; align-items: center; justify-content: center;
@@ -121,8 +121,9 @@ body {
 .sev4 { background: var(--sev-4); }
 .sev5 { background: var(--sev-5); }
 .problem .host, .problem .desc { padding-left: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.problem .host { font-size: calc(22px * var(--zoom)); line-height: calc(25px * var(--zoom)); }
-.problem .desc { font-size: calc(20px * var(--zoom)); line-height: calc(25px * var(--zoom)); color: var(--fg-dim); }
+.problem .host { font-size: calc(22px * var(--zoom)); line-height: calc(22px * var(--zoom)); }
+.problem .desc { font-size: calc(20px * var(--zoom)); line-height: calc(22px * var(--zoom)); color: var(--fg-dim); }
+#pane-problems .more { height: calc(30px * var(--zoom)); line-height: calc(30px * var(--zoom)); font-size: calc(20px * var(--zoom)); }
 .icon-btn.attention { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
 #content {
   flex: 1; min-height: 0; padding: 0 var(--gap) var(--gap);
@@ -425,12 +426,12 @@ const Logic = (() => {
       no_problems: 'No active problems',
       more: '+ {n} more (out of {total})',
       conn_failed: 'CONNECTION FAILED — {reason}',
+      mixed_content: 'https のページから http の Zabbix は呼べません(Zabbix を https にするか、ページを http で開く)',
       stale: 'DATA STALE — Last update {t} (Age {age})',
       hosts_summary: '{n} hosts (OK:{ok} BAD:{bad})',
       problems_summary: '{n} problems  {sev}',
       no_groups: 'No matching host groups: {names}',
       timeout: 'タイムアウト',
-      credit_zabbix: 'データ: Zabbix JSON-RPC API',
       settings: '設定',
       tab_display: '表示',
       tab_data: 'データ',
@@ -493,12 +494,12 @@ const Logic = (() => {
       no_problems: 'No active problems',
       more: '+ {n} more (out of {total})',
       conn_failed: 'CONNECTION FAILED — {reason}',
+      mixed_content: 'An https page cannot call an http Zabbix URL (use https for Zabbix or open the page over http)',
       stale: 'DATA STALE — Last update {t} (Age {age})',
       hosts_summary: '{n} hosts (OK:{ok} BAD:{bad})',
       problems_summary: '{n} problems  {sev}',
       no_groups: 'No matching host groups: {names}',
       timeout: 'Timeout',
-      credit_zabbix: 'Data: Zabbix JSON-RPC API',
       settings: 'Settings',
       tab_display: 'Display',
       tab_data: 'Data',
@@ -597,8 +598,9 @@ const Logic = (() => {
 
   function normalizeUrl(s) {
     let u = String(s == null ? '' : s).replace(/\s+/g, '');
-    u = u.replace(/\/+$/, '').replace(/\/api_jsonrpc\.php$/, '').replace(/\/+$/, '');
-    return /^https?:\/\//.test(u) ? u : '';
+    u = u.replace(/[?#].*$/, '').replace(/\/+$/, '').replace(/\/[^/]*\.php$/i, '').replace(/\/+$/, '');
+    const m = /^(https?):\/\//i.exec(u);
+    return m ? m[1].toLowerCase() + u.slice(m[1].length) : '';
   }
 
   function parseList(s) {
@@ -902,7 +904,7 @@ const App = (() => {
     const b = $('#banner');
     let cls = '';
     let text = '';
-    if (!needSetup && Logic.isStale(lastOkAt, now, settings.staleSec)) {
+    if (!needSetup && Logic.isStale(lastOkAt, now, Math.max(settings.staleSec, settings.refreshSec + 4 * settings.requestTimeoutSec))) {
       cls = 'stale';
       text = tr('stale', { t: formatTime(new Date(lastOkAt)), age: Logic.ageText(now - lastOkAt) });
     } else if (!needSetup && lastError) {
@@ -927,6 +929,7 @@ const App = (() => {
         signal: AbortSignal.timeout(settings.requestTimeoutSec * 1000),
       });
     } catch (e) {
+      if (e instanceof TypeError && location.protocol === 'https:' && /^http:/i.test(Logic.normalizeUrl(settings.zabbixUrl))) throw new Error(tr('mixed_content'));
       throw new Error(e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? tr('timeout') : ((e && e.message) || 'network'));
     }
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1049,7 +1052,9 @@ const App = (() => {
     const all = model.problems;
     if (all.length === 0) { showEmpty(pane, 'no_problems'); return; }
     const zoom = settings.zoom / 100;
-    const rows = Logic.visibleRows(all.length, settings.problemMaxRows, pane.getBoundingClientRect().height / zoom);
+    const rows = Logic.visibleRows(all.length, settings.problemMaxRows, (pane.getBoundingClientRect().height - 28) / zoom + 24);
+    // 行は 44+6=50px、.more は 30px(いずれも zoom 倍)。内寸(パディング 14px×2 を除く)を zoom で割り、visibleRows が仮定する余白 24px を足し戻す。
+    // 例: zoom 50%・ペイン高 400px → (372)/0.5+24=768 → floor((768-54)/50)=14 行。実寸 14×25+15=365 <= 372 で .more が収まる。
     const kids = all.slice(0, rows).map((p) => {
       const sev = Math.min(5, Math.max(0, Number(p.severity) || 0));
       const row = el('div', 'problem');

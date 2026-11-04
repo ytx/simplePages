@@ -7,6 +7,12 @@ import { loadLogic } from './load-logic.mjs';
 const Logic = loadLogic(fileURLToPath(new URL('../index.html', import.meta.url)));
 const fx = (name) => new URL('./fixtures/' + name, import.meta.url);
 
+test('normalizeUrl strips query, hash, .php tail and lowercases the scheme', () => {
+  assert.equal(Logic.normalizeUrl('https://h/zabbix/zabbix.php?action=dashboard.view'), 'https://h/zabbix');
+  assert.equal(Logic.normalizeUrl('HTTPS://H/zabbix/'), 'https://H/zabbix');
+  assert.equal(Logic.normalizeUrl('https://h/zabbix#x'), 'https://h/zabbix');
+});
+
 test('normalizeUrl', () => {
   assert.equal(Logic.normalizeUrl('https://z.example.com/zabbix/'), 'https://z.example.com/zabbix');
   assert.equal(Logic.normalizeUrl('https://z.example.com/zabbix/api_jsonrpc.php'), 'https://z.example.com/zabbix');

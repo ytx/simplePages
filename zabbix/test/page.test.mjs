@@ -89,3 +89,13 @@ test('the API call uses requestTimeoutSec, POST JSON and never an Authorization 
   assert.match(ui[1], /\/api_jsonrpc\.php/);
   assert.doesNotMatch(src, /Authorization/i);
 });
+
+test('request options and wire details', () => {
+  assert.match(ui[1], /monitored: true/);
+  assert.match(ui[1], /sortorder: 'DESC'/);
+  assert.match(ui[1], /cache: 'no-store'/);
+  const css = src.match(/<style>([\s\S]*?)<\/style>/)[1];
+  assert.match(css, /\.tile\s*\{[^}]*color:\s*#000/);
+  assert.ok('mixed_content' in Logic.I18N.ja && 'mixed_content' in Logic.I18N.en);
+  assert.ok(!('credit_zabbix' in Logic.I18N.ja));
+});

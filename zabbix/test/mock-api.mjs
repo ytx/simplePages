@@ -1,7 +1,7 @@
 // 開発用ヘルパー(テストではない)。Zabbix 6.0 の api_jsonrpc.php を fixtures から真似て返し、
 // リポジトリルートを静的配信する。
 //   node zabbix/test/mock-api.mjs 8790 [--hosts N] [--fail]
-//   http://localhost:8790/zabbix/?zabbixUrl=http://localhost:8790/zabbix&token=t&hostGroups=Linux%20servers
+//   http://127.0.0.1:8790/zabbix/?zabbixUrl=http://127.0.0.1:8790/zabbix&token=t&hostGroups=Linux%20servers
 // 実行中の切替: GET /__mock?fail=1|0&hosts=N
 import http from 'node:http';
 import { readFileSync, existsSync, statSync } from 'node:fs';
