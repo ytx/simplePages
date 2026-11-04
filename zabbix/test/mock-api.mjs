@@ -91,11 +91,12 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify(state));
     return;
   }
-  let p = path.normalize(path.join(root, decodeURIComponent(url.pathname)));
+  let p;
+  try { p = path.normalize(path.join(root, decodeURIComponent(url.pathname))); } catch { res.writeHead(400); res.end(); return; }
   if (!p.startsWith(root)) { res.writeHead(403); res.end(); return; }
   if (existsSync(p) && statSync(p).isDirectory()) p = path.join(p, 'index.html');
   if (!existsSync(p)) { res.writeHead(404); res.end('not found'); return; }
   res.writeHead(200, { 'Content-Type': TYPES[path.extname(p)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
   res.end(readFileSync(p));
 });
-server.listen(port, () => console.log(`mock zabbix on http://localhost:${port}/zabbix/  hosts=${state.hosts || 'fixture'} fail=${state.fail}`));
+server.listen(port, '127.0.0.1', () => console.log(`mock zabbix on http://127.0.0.1:${port}/zabbix/  hosts=${state.hosts || 'fixture'} fail=${state.fail}`));

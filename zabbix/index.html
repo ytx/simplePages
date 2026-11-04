@@ -429,6 +429,7 @@ const Logic = (() => {
       hosts_summary: '{n} hosts (OK:{ok} BAD:{bad})',
       problems_summary: '{n} problems  {sev}',
       no_groups: 'No matching host groups: {names}',
+      timeout: 'タイムアウト',
       credit_zabbix: 'データ: Zabbix JSON-RPC API',
       settings: '設定',
       tab_display: '表示',
@@ -496,6 +497,7 @@ const Logic = (() => {
       hosts_summary: '{n} hosts (OK:{ok} BAD:{bad})',
       problems_summary: '{n} problems  {sev}',
       no_groups: 'No matching host groups: {names}',
+      timeout: 'Timeout',
       credit_zabbix: 'Data: Zabbix JSON-RPC API',
       settings: 'Settings',
       tab_display: 'Display',
@@ -925,7 +927,7 @@ const App = (() => {
         signal: AbortSignal.timeout(settings.requestTimeoutSec * 1000),
       });
     } catch (e) {
-      throw new Error(e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? e.name : ((e && e.message) || 'network'));
+      throw new Error(e && (e.name === 'TimeoutError' || e.name === 'AbortError') ? tr('timeout') : ((e && e.message) || 'network'));
     }
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     let json;
@@ -1010,12 +1012,16 @@ const App = (() => {
     const all = model.hosts;
     if (all.length === 0) { showEmpty(pane, 'no_hosts'); return; }
     const rect = pane.getBoundingClientRect();
-    const lay = Logic.tileLayout(all.length, rect.width - 28, rect.height - 28);
+    const availW = rect.width - 28;
+    const availH = rect.height - 28;
+    let lay = Logic.tileLayout(all.length, availW, availH);
+    // ロールの算術では "+ N more" の 30px が確実には空かないので、切り詰めが出たら 30px 引いて配置し直す(ロールからの逸脱)。
+    if (lay.truncated) lay = Logic.tileLayout(all.length, availW, availH - 30);
     const vis = all.slice(0, lay.visible);
     const parts = vis.map((h) => Logic.splitName(h.name));
     const n = settings.tileMinChars;
-    const headLimit = Logic.fitFontSize(measureWidths(parts.map((x) => x[0].slice(0, n))), lay.tileW - 12, 1);
-    const tailLimit = Logic.fitFontSize(measureWidths(parts.map((x) => x[1].slice(0, n))), lay.tileW - 12, 0.7);
+    const headLimit = Logic.fitFontSize(measureWidths(parts.map((x) => x[0].slice(0, n))), lay.tileW - 14, 1);
+    const tailLimit = Logic.fitFontSize(measureWidths(parts.map((x) => x[1].slice(0, n))), lay.tileW - 14, 0.7);
     const fs = Logic.tileFontSize(lay.tileH, [headLimit, tailLimit].filter((x) => x !== null), settings.tileMinFont);
     const grid = el('div', 'tiles');
     grid.style.gridTemplateColumns = `repeat(${lay.cols}, minmax(0, 1fr))`;
