@@ -149,6 +149,11 @@ test('today tab is two tiles', () => {
   assert.doesNotMatch(src, /big-btn|advice-card|today-last|flagLine|lastRecordLine|adviceCard/);
   for (const k of ['tile_if_sleep_now', 'tile_sleep_mid', 'tile_wake_target', 'tile_sleep_left', 'tile_passed', 'tile_need_more', 'tile_first_night', 'no_time']) assert.ok(k in Logic.I18N.ja, k);
   for (const k of ['tile_sleeping_since', 'tile_if_wake_now', 'tile_on_target']) assert.ok(k in Logic.I18N.ja, k);
+  // はじめの説明モーダル: 初回は説明 → 目標のシートの順。About から再表示できる
+  for (const id of ['intro', 'intro-title', 'intro-later', 'intro-go', 'about-intro']) assert.match(src, new RegExp(`id="${id}"`), id);
+  for (const k of ['intro_title', 'intro_p1', 'intro_p2', 'intro_p3', 'intro_p4', 'show_intro']) assert.ok(k in Logic.I18N.ja && k in Logic.I18N.en, k);
+  assert.match(ui[1], /!storage\.getFlag\(\)\) openIntro\(\)/);
+  assert.match(ui[1], /#intro-go'\)\.addEventListener\('click', \(\) => \{ \$\('#intro'\)\.close\('ok'\); openTargetSheet\(\); \}\)/);
   assert.ok(!('sleeping_since' in Logic.I18N.ja));
   assert.ok(!('if_wake_now' in Logic.I18N.ja));
   for (const k of ['need_more', 'target_line', 'target_sub', 'flag_short', 'flag_long', 'last_today', 'already_passed']) assert.ok(!(k in Logic.I18N.ja), 'removed ' + k);
@@ -180,7 +185,7 @@ test('initial target sheet, settings row and first-open flag', () => {
   }
   assert.match(Logic.I18N.en.tile_sleep_mid, /\{src\}/);
   assert.match(ui[1], /data-clear[\s\S]*?storage\.clearFlag\(\)/);
-  assert.match(ui[1], /!settings\.targetMode && Logic\.completed\(data\.records\)\.length < 2 && !storage\.getFlag\(\)\) openTargetSheet\(\)/);
+  assert.match(ui[1], /!settings\.targetMode && Logic\.completed\(data\.records\)\.length < 2 && !storage\.getFlag\(\)\) openIntro\(\)/);
   assert.match(src, /novalidate|formNoValidate/);
   assert.ok('err_empty_time' in Logic.I18N.ja && 'err_empty_time' in Logic.I18N.en);
 });

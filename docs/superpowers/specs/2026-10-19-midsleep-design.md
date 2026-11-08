@@ -235,9 +235,13 @@ About: ページ説明、GitHub リンク、MIT、クレジット(使用 API な
 - ボタンは **保存** と **あとで**(キャンセル)。保存で `targetMode` / `targetBed` / `targetWake` / `targetSleepMin` を設定に書く。起きる時刻を含む 2 択(bed_wake / wake_sleep)で保存したときは `wakeTarget` もその値に更新する(bed_sleep のときは触らない)。
 - 「あとで」は何も保存せず、localStorage `simplePages.midsleep.targetAsked` に `1` を書いて二度と自動では開かない(全消去で消える)。
 
+### はじめの説明(2026-11-08 追加)
+
+初期目標のシートの前に、`dialog#intro`(見出し `intro_title`、段落 `intro_p1`〜`intro_p4`、ボタン **目標を決める**(`set_target`、primary)/ **あとで**(`later`))を出す。文面は会話で決めた案 A(中央時刻の定義、揃えると体内時計が安定しやすいこと、ページがすること、次の画面で 2 つ入力すること)。「目標を決める」で閉じて `openTargetSheet()`、「あとで」(Esc を含む `ok` 以外の close)で `targetAsked` を書く。設定＞About の **はじめの説明を見る**(`show_intro`)でいつでも開ける(そこから「目標を決める」に進める)。
+
 ### 自動で開く条件
 
-初回表示のあと(`init` の描画後)に、`targetMode === ''` かつ 完了した記録が 2 件未満 かつ `targetAsked` が無いときだけ、このシートを開く。記録がすでに 2 件以上ある(以前から使っている)人には出さない。
+初回表示のあと(`init` の描画後)に、`targetMode === ''` かつ 完了した記録が 2 件未満 かつ `targetAsked` が無いときだけ、はじめの説明(→ このシート)を開く。記録がすでに 2 件以上ある(以前から使っている)人には出さない。
 
 ### 目標の決め方(`Logic.targetFor`)
 
