@@ -199,4 +199,8 @@ test('today tab: sleep button in the head row, boundary chart svg, 50:50 tiles',
   assert.equal(Logic.I18N.ja.target_label, '目標 {t}');
   assert.equal(Logic.I18N.en.target_label, 'Target {t}');
   assert.match(src, /function drawTodayChart\(/);
+  assert.doesNotMatch(src, /preserveAspectRatio="none"/);
+  assert.match(src, /bandHalf >= 40/);
+  assert.match(src, /mid-line-halo/);
+  assert.match(src, /document\.fonts\.ready/);
 });

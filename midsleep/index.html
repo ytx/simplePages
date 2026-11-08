@@ -1941,7 +1941,7 @@ html[data-theme="dark"] {
 #today-chart { position: absolute; left: calc(var(--gap) * 1.5); width: calc(100% - var(--gap) * 3); pointer-events: none; z-index: 0; overflow: visible; }
 #today-chart .bar-top { fill: rgba(255,255,255,0.35); } #today-chart .bar-bottom { fill: rgba(0,0,0,0.12); }
 #today-chart .tick-top { stroke: rgba(255,255,255,0.25); } #today-chart .tick-bottom { stroke: rgba(0,0,0,0.12); }
-#today-chart .mid-line { fill: none; stroke: #e45959; stroke-width: 2.5; stroke-linejoin: round; } #today-chart .mid-point { fill: #e45959; }
+#today-chart .mid-line-halo { fill: none; stroke: rgba(255,255,255,0.7); stroke-width: 5; stroke-linejoin: round; } #today-chart .mid-line { fill: none; stroke: #e45959; stroke-width: 2.5; stroke-linejoin: round; } #today-chart .mid-point { fill: #e45959; stroke: rgba(255,255,255,0.7); stroke-width: 1.5; }
 #today-chart text { font-size: calc(10px * var(--zoom)); } #today-chart .lbl-top { fill: rgba(255,255,255,0.8); } #today-chart .lbl-bottom { fill: rgba(0,0,0,0.55); }
 .tile-date { font-size: min(var(--fs-small), 2.4dvh); opacity: 0.7; }
 .tile-main { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
@@ -3311,11 +3311,11 @@ const App = (() => {
     const nightEnd = (lastNight || $('.tile-head')).getBoundingClientRect().bottom;
     const firstMorn = $('#today-foot').firstElementChild;
     const mornStart = (firstMorn || $('#morning-foot')).getBoundingClientRect().top;
-    const half = Math.min(boundary - nightEnd, mornStart - boundary, 0.22 * paneRect.height) - 4;
-    if (!(half >= 40)) { root.style.display = 'none'; return; }
+    const bandHalf = Math.min(boundary - nightEnd, mornStart - boundary, 0.22 * paneRect.height) - 4;
+    if (!(bandHalf >= 40)) { root.style.display = 'none'; return; }
     root.style.display = '';
-    root.style.top = (boundary - paneRect.top + pane.scrollTop - half) + 'px';
-    root.style.height = (2 * half) + 'px';
+    root.style.top = (boundary - paneRect.top + pane.scrollTop - bandHalf) + 'px';
+    root.style.height = (2 * bandHalf) + 'px';
   }
 
   function drawTodayChart(model, targetMin) {
@@ -3331,10 +3331,13 @@ const App = (() => {
     const xOf = (c) => (c + 0.5) * colW;
     const bw = colW * 0.6;
     const nodes = [];
+    // 目標ラベルを最初に積み、点や線に隠れないようにする
+    nodes.push(svg('text', { class: 'lbl-top', x: W - 2, y: H / 2 - 4 * z, 'text-anchor': 'end' }, tr('target_label', { t: Logic.formatHM(targetMin) })));
     for (const t of model.ticks) {
       const cls = t.y < 0.5 ? 'top' : 'bottom';
       nodes.push(svg('line', { class: 'tick-' + cls, x1: 0, x2: W, y1: t.y * H, y2: t.y * H }));
-      if (t.label) nodes.push(svg('text', { class: 'lbl-' + cls, x: 2, y: t.y * H - 4 * z, 'text-anchor': 'start' }, t.label));
+      // 帯の外にはみ出すラベルは描かない(目盛り線は残す)
+      if (t.label && t.y * H - 12 * z >= 0) nodes.push(svg('text', { class: 'lbl-' + cls, x: 2, y: t.y * H - 4 * z, 'text-anchor': 'start' }, t.label));
     }
     for (const b of model.bars) {
       const x = xOf(b.x) - bw / 2;
@@ -3350,10 +3353,10 @@ const App = (() => {
     for (const c of model.cols) nodes.push(svg('text', { class: 'lbl-top', x: xOf(c.x), y: 10 * z, 'text-anchor': 'middle' }, c.label));
     for (const sg of model.segments) {
       const pts = sg.map((i) => `${xOf(model.points[i].x)},${model.points[i].y * H}`).join(' ');
+      nodes.push(svg('polyline', { class: 'mid-line-halo', points: pts }));
       nodes.push(svg('polyline', { class: 'mid-line', points: pts }));
     }
     for (const p of model.points) nodes.push(svg('circle', { class: 'mid-point', cx: xOf(p.x), cy: p.y * H, r: 3.5 }));
-    nodes.push(svg('text', { class: 'lbl-top', x: W - 2, y: H / 2 - 4 * z, 'text-anchor': 'end' }, tr('target_label', { t: Logic.formatHM(targetMin) })));
     root.replaceChildren(...nodes);
   }
 
@@ -3878,6 +3881,7 @@ const App = (() => {
     tickClock();
     setInterval(tickClock, 1000);
     document.addEventListener('visibilitychange', onVisibility);
+    if (document.fonts) document.fonts.ready.then(() => { if (activeTab === 'today') renderToday(); });
     let resizeRaf = 0;
     window.addEventListener('resize', () => {
       if (resizeRaf) return;
