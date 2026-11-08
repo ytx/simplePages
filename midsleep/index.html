@@ -2704,6 +2704,43 @@ const Logic = (() => {
   }
   function relMinutes(s, wd) { return Math.round((parseLocal(s) - parseLocal(wd.slice(0, 10))) / 60000); }
   function targetRel(targetMin) { return targetMin > 720 ? targetMin - 1440 : targetMin; }
+  function todayChart(records, today, targetMin, days = 7) {
+    if (targetMin === null || targetMin === undefined) return null;
+    const round6 = (v) => Math.round(v * 1e6) / 1e6;
+    const first = addDays(today, -(days - 1));
+    const cols = [];
+    for (let i = 0; i < days; i++) {
+      const date = addDays(first, i);
+      cols.push({ x: i, date, label: String(parseLocal(date).getDate()) });
+    }
+    const rows = [];
+    for (const r of completed(records)) {
+      if (isNap(r)) continue;
+      const x = cols.findIndex((c) => c.date === wakeDate(r));
+      if (x < 0) continue;
+      rows.push({
+        x,
+        bed: circularDiff(minutesOfDay(r.bedAt), targetMin),
+        wake: circularDiff(minutesOfDay(r.wakeAt), targetMin),
+        mid: circularDiff(midMinutes(r.bedAt, r.wakeAt), targetMin),
+      });
+    }
+    rows.sort((a, b) => a.x - b.x);
+    let maxAbs = 0;
+    for (const w of rows) maxAbs = Math.max(maxAbs, Math.abs(w.bed), Math.abs(w.wake));
+    const half = Math.max(240, Math.ceil(maxAbs / 60) * 60);
+    const ratio = (rel) => round6(0.5 + rel / (2 * half));
+    const bars = rows.map((w) => ({ x: w.x, yBed: ratio(w.bed), yWake: ratio(w.wake) }));
+    const points = rows.map((w) => ({ x: w.x, y: ratio(w.mid) }));
+    const segments = [];
+    for (let i = 0; i + 1 < points.length; i++) if (points[i + 1].x === points[i].x + 1) segments.push([i, i + 1]);
+    const ticks = [];
+    for (let rel = -half; rel <= half; rel += 60) {
+      if (rel === 0) continue;
+      ticks.push({ y: ratio(rel), rel, label: rel % 120 === 0 ? `${rel < 0 ? '-' : '+'}${Math.abs(rel) / 60}h` : '' });
+    }
+    return { half, cols, bars, points, segments, ticks };
+  }
   function chartModel(records, days, today, targetMin, lang) {
     const first = addDays(today, -(days - 1));
     const used = completed(records).filter((r) => inWindow(r, days, today)).sort((a, b) => (a.wakeAt < b.wakeAt ? -1 : a.wakeAt > b.wakeAt ? 1 : 0));
@@ -2824,7 +2861,7 @@ const Logic = (() => {
     if (sleepMin > 720) return 'long';
     return null;
   }
-  return { relMinutes, targetRel, chartModel, summaryLine, truncMin, nextOccurrence, wakeFor, bedFor, adviceFlags, isNap, wakeDate, sleepingRecord, completed, inWindow, stats, manualTarget, targetFor, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, durationParts, midOf, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
+  return { relMinutes, targetRel, chartModel, todayChart, summaryLine, truncMin, nextOccurrence, wakeFor, bedFor, adviceFlags, isNap, wakeDate, sleepingRecord, completed, inWindow, stats, manualTarget, targetFor, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, durationParts, midOf, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
 })();
 </script>
 <script id="app-ui">

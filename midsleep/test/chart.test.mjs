@@ -24,3 +24,31 @@ test('chart model and summary line', () => {
   assert.equal(Logic.summaryLine(recs[0], 'ja'), '23:12 → 6:31 · 中央 2:51 · 7 時間 19 分');
   assert.equal(Logic.summaryLine(recs[1], 'en'), '13:05 → 13:50 · nap 45 min');
 });
+
+test('todayChart: columns, bars, points, segments, ticks', () => {
+  const recs = [
+    R('a', '2026-11-01T23:00', '2026-11-02T06:30'),   // x0: bedRel -240, wakeRel 210, mid 2:45 → -15
+    R('b', '2026-11-03T00:30', '2026-11-03T07:00'),   // x1: -150, 240, mid 3:45 → +45
+    R('nap', '2026-11-04T14:00', '2026-11-04T15:00'), // nap, excluded
+    R('c', '2026-11-05T22:00', '2026-11-06T05:00'),   // x4: -300, 120, mid 1:30 → -90
+    R('open', '2026-11-07T23:00', null),               // open, excluded
+  ];
+  const m = Logic.todayChart(recs, '2026-11-08', 180);
+  assert.equal(m.half, 300);
+  assert.deepEqual(m.cols.map((c) => [c.x, c.date, c.label]), [[0, '2026-11-02', '2'], [1, '2026-11-03', '3'], [2, '2026-11-04', '4'], [3, '2026-11-05', '5'], [4, '2026-11-06', '6'], [5, '2026-11-07', '7'], [6, '2026-11-08', '8']]);
+  assert.deepEqual(m.bars, [{ x: 0, yBed: 0.1, yWake: 0.85 }, { x: 1, yBed: 0.25, yWake: 0.9 }, { x: 4, yBed: 0, yWake: 0.7 }]);
+  assert.deepEqual(m.points, [{ x: 0, y: 0.475 }, { x: 1, y: 0.575 }, { x: 4, y: 0.35 }]);
+  assert.deepEqual(m.segments, [[0, 1]]);
+  assert.deepEqual(m.ticks.map((t) => [t.rel, t.y, t.label]), [[-300, 0, ''], [-240, 0.1, '-4h'], [-180, 0.2, ''], [-120, 0.3, '-2h'], [-60, 0.4, ''], [60, 0.6, ''], [120, 0.7, '+2h'], [180, 0.8, ''], [240, 0.9, '+4h'], [300, 1, '']]);
+});
+test('todayChart: empty, no target, late bed, custom days', () => {
+  const e = Logic.todayChart([], '2026-11-08', 180);
+  assert.equal(e.half, 240); assert.deepEqual(e.bars, []); assert.deepEqual(e.points, []); assert.deepEqual(e.segments, []);
+  assert.deepEqual(e.ticks.map((t) => [t.rel, t.label]), [[-240, '-4h'], [-180, ''], [-120, '-2h'], [-60, ''], [60, ''], [120, '+2h'], [180, ''], [240, '+4h']]);
+  assert.equal(Logic.todayChart([], '2026-11-08', null), null);
+  const late = Logic.todayChart([R('l', '2026-11-08T04:00', '2026-11-08T10:00')], '2026-11-08', 180); // bedRel +60, wakeRel 420, mid 7:00 → +240
+  assert.equal(late.half, 420);
+  assert.deepEqual(late.bars, [{ x: 6, yBed: 0.571429, yWake: 1 }]);
+  assert.deepEqual(late.points, [{ x: 6, y: 0.785714 }]);
+  assert.equal(Logic.todayChart([], '2026-11-08', 180, 3).cols.length, 3);
+});
