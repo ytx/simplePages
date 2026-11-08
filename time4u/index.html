@@ -1974,7 +1974,8 @@ body {
 #page-title { margin: 0 0 calc(var(--gap) / 2); text-align: left; font-size: var(--fs-base); font-weight: 400; color: var(--fg-muted); }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; flex: 1; min-height: 0; position: relative; overflow: hidden; }
-#tab-settings.active { overflow: auto; padding-bottom: var(--gap); }
+#tab-settings.active { overflow-x: hidden; overflow-y: auto; padding-bottom: var(--gap); }
+.about { overflow-wrap: anywhere; }
 .view {
   position: absolute; inset: 0; overflow: auto;
   transform: translateX(100%); visibility: hidden;
