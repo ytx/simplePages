@@ -184,3 +184,19 @@ test('initial target sheet, settings row and first-open flag', () => {
   assert.match(src, /novalidate|formNoValidate/);
   assert.ok('err_empty_time' in Logic.I18N.ja && 'err_empty_time' in Logic.I18N.en);
 });
+
+test('today tab: sleep button in the head row, boundary chart svg, 50:50 tiles', () => {
+  const pane = src.match(/<section class="tab-pane active" id="tab-today">([\s\S]*?)<\/section>/)[1];
+  const head = pane.match(/<div class="tile-head">([\s\S]*?)<\/div>\s*<div id="today-body"/);
+  assert.ok(head, 'tile-head row precedes today-body');
+  assert.match(head[1], /id="today-date"/);
+  assert.match(head[1], /id="btn-sleep"/);
+  assert.match(pane, /<svg id="today-chart"[^>]*aria-hidden="true"[^>]*><\/svg>/);
+  assert.ok(pane.indexOf('id="today-chart"') > pane.indexOf('id="tile-morning"'));
+  assert.doesNotMatch(src, /flex: 7 1 0/);
+  assert.match(src, /\.tile-morning \.tile-main \{ justify-content: flex-end/);
+  assert.match(src, /#today-chart \{/);
+  assert.equal(Logic.I18N.ja.target_label, '目標 {t}');
+  assert.equal(Logic.I18N.en.target_label, 'Target {t}');
+  assert.match(src, /function drawTodayChart\(/);
+});

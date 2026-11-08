@@ -1932,8 +1932,17 @@ html[data-theme="dark"] {
 .tile { display: flex; flex-direction: column; padding: min(var(--gap), 2dvh) calc(var(--gap) * 1.5); min-height: min-content; position: relative; }
 .tile-night { background: var(--tile-night-bg); color: var(--tile-night-fg); flex: 5 1 0; }
 .tile-morning { background: var(--tile-morning-bg); color: var(--tile-morning-fg); flex: 5 1 0; }
-#tab-today[data-state="sleeping"] .tile-night { background: var(--tile-night-deep); flex: 7 1 0; }
-#tab-today[data-state="sleeping"] .tile-morning { flex: 3 1 0; }
+#tab-today[data-state="sleeping"] .tile-night { background: var(--tile-night-deep); }
+#tab-today.active { position: relative; }
+.tile-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--gap); }
+.tile-night .tile-main { justify-content: flex-start; }
+.tile-morning .tile-main { justify-content: flex-end; }
+.tile > * { position: relative; z-index: 1; }
+#today-chart { position: absolute; left: calc(var(--gap) * 1.5); width: calc(100% - var(--gap) * 3); top: 30%; height: 40%; pointer-events: none; z-index: 0; overflow: visible; }
+#today-chart .bar-top { fill: rgba(255,255,255,0.35); } #today-chart .bar-bottom { fill: rgba(0,0,0,0.12); }
+#today-chart .tick-top { stroke: rgba(255,255,255,0.25); } #today-chart .tick-bottom { stroke: rgba(0,0,0,0.12); }
+#today-chart .mid-line { fill: none; stroke: #e45959; stroke-width: 2.5; stroke-linejoin: round; } #today-chart .mid-point { fill: #e45959; }
+#today-chart text { font-size: 10px; } #today-chart .lbl-top { fill: rgba(255,255,255,0.8); } #today-chart .lbl-bottom { fill: rgba(0,0,0,0.55); }
 .tile-date { font-size: min(var(--fs-small), 2.4dvh); opacity: 0.7; }
 .tile-main { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
 .tile-label { font-size: min(calc(var(--fs-base) * 0.9), 2.6dvh); opacity: 0.9; }
@@ -2088,14 +2097,17 @@ button.seg[aria-pressed="true"] { background: var(--accent); border-color: var(-
   <h1 id="page-title" data-i18n="page_title"></h1>
   <section class="tab-pane active" id="tab-today">
     <div id="tile-night" class="tile tile-night">
-      <div id="today-date" class="tile-date"></div>
+      <div class="tile-head">
+        <div id="today-date" class="tile-date"></div>
+        <button id="btn-sleep" class="pill fill" type="button" hidden></button>
+      </div>
       <div id="today-body" class="tile-main"></div>
-      <div class="tile-foot"><button id="btn-sleep" class="pill fill" type="button" hidden></button></div>
     </div>
     <div id="tile-morning" class="tile tile-morning">
       <div id="today-foot" class="tile-main"></div>
       <div class="tile-foot" id="morning-foot"><button id="btn-wake" class="pill" type="button" hidden></button></div>
     </div>
+    <svg id="today-chart" aria-hidden="true" viewBox="0 0 700 440" preserveAspectRatio="none"></svg>
   </section>
   <section class="tab-pane" id="tab-history">
     <div id="chart-days" class="seg-group" role="group">
@@ -2360,6 +2372,7 @@ const Logic = (() => {
       err_empty_time: '時刻を入力してください',
       later: 'あとで',
       set_target: '目標を決める',
+      target_label: '目標 {t}',
       target_src_manual: '(設定から)',
       target_src_records: '(直近 {d} 日)',
       history_stats_manual: '目標 {t}(設定から) · 記録 {n} 件',
@@ -2474,6 +2487,7 @@ const Logic = (() => {
       err_empty_time: 'Enter a time',
       later: 'Later',
       set_target: 'Set a target',
+      target_label: 'Target {t}',
       target_src_manual: '(from settings)',
       target_src_records: '(last {d} days)',
       history_stats_manual: 'Target {t} (from settings) · {n} records',
@@ -3283,6 +3297,42 @@ const App = (() => {
     }
     body.replaceChildren(...nodes);
     foot.replaceChildren(...footNodes);
+    drawTodayChart(targetMin === null ? null : Logic.todayChart(data.records, Logic.todayStr(now), targetMin), targetMin);
+  }
+
+  function drawTodayChart(model, targetMin) {
+    const root = $('#today-chart');
+    if (!model) { root.replaceChildren(); return; }
+    const W = 700, H = 440;
+    const n = model.cols.length;
+    const colW = W / n;
+    const xOf = (c) => (c + 0.5) * colW;
+    const bw = colW * 0.6;
+    const nodes = [];
+    for (const t of model.ticks) {
+      const cls = t.y < 0.5 ? 'top' : 'bottom';
+      nodes.push(svg('line', { class: 'tick-' + cls, x1: 0, x2: W, y1: t.y * H, y2: t.y * H }));
+      if (t.label) nodes.push(svg('text', { class: 'lbl-' + cls, x: 2, y: t.y * H - 4, 'text-anchor': 'start' }, t.label));
+    }
+    for (const b of model.bars) {
+      const x = xOf(b.x) - bw / 2;
+      if (b.yBed < 0.5) {
+        const end = Math.min(b.yWake, 0.5);
+        nodes.push(svg('rect', { class: 'bar-top', x, y: b.yBed * H, width: bw, height: Math.max(0, (end - b.yBed) * H), rx: 4 }));
+      }
+      if (b.yWake > 0.5) {
+        const start = Math.max(b.yBed, 0.5);
+        nodes.push(svg('rect', { class: 'bar-bottom', x, y: start * H, width: bw, height: Math.max(0, (b.yWake - start) * H), rx: 4 }));
+      }
+    }
+    for (const c of model.cols) nodes.push(svg('text', { class: 'lbl-top', x: xOf(c.x), y: 10, 'text-anchor': 'middle' }, c.label));
+    for (const sg of model.segments) {
+      const pts = sg.map((i) => `${xOf(model.points[i].x)},${model.points[i].y * H}`).join(' ');
+      nodes.push(svg('polyline', { class: 'mid-line', points: pts }));
+    }
+    for (const p of model.points) nodes.push(svg('circle', { class: 'mid-point', cx: xOf(p.x), cy: p.y * H, r: 3.5 }));
+    nodes.push(svg('text', { class: 'lbl-top', x: W - 2, y: H / 2 - 4, 'text-anchor': 'end' }, tr('target_label', { t: Logic.formatHM(targetMin) })));
+    root.replaceChildren(...nodes);
   }
 
   function svg(tag, attrs, text) {
