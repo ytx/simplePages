@@ -1934,7 +1934,9 @@ html[data-theme="dark"] {
 .tile-morning { background: var(--tile-morning-bg); color: var(--tile-morning-fg); flex: 5 1 0; }
 #tab-today[data-state="sleeping"] .tile-night { background: var(--tile-night-deep); }
 #tab-today.active { position: relative; }
-.tile-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: var(--gap); }
+.tile-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--gap); position: relative; min-height: 44px; }
+/* 「今から寝る」は日時の行と上端を揃える(日時は行の中央のまま、ボタンだけ下げる) */
+.tile-head #btn-sleep { position: absolute; right: 0; top: calc(50% - 0.7 * var(--date-fs)); }
 .tile-night .tile-main { justify-content: flex-start; }
 .tile-morning .tile-main { justify-content: flex-end; }
 .tile > * { position: relative; z-index: 1; }
@@ -1943,7 +1945,8 @@ html[data-theme="dark"] {
 #today-chart .tick-top { stroke: rgba(255,255,255,0.25); } #today-chart .tick-bottom { stroke: rgba(0,0,0,0.12); }
 #today-chart .mid-line-halo { fill: none; stroke: rgba(255,255,255,0.7); stroke-width: 5; stroke-linejoin: round; } #today-chart .mid-line { fill: none; stroke: #e45959; stroke-width: 2.5; stroke-linejoin: round; } #today-chart .mid-point { fill: #e45959; stroke: rgba(255,255,255,0.7); stroke-width: 1.5; }
 #today-chart text { font-size: calc(10px * var(--zoom)); } #today-chart .lbl-top { fill: rgba(255,255,255,0.8); } #today-chart .lbl-bottom { fill: rgba(0,0,0,0.55); }
-.tile-date { font-size: min(var(--fs-small), 2.4dvh); opacity: 0.7; }
+.tile { --date-fs: min(var(--fs-small), 2.4dvh); }
+.tile-date { font-size: var(--date-fs); line-height: 1.4; opacity: 0.7; }
 .tile-main { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
 .tile-label { font-size: min(calc(var(--fs-base) * 0.9), 2.6dvh); opacity: 0.9; }
 .tile-big { font-weight: 700; font-size: clamp(1.6em, min(16vw, 7dvh), calc(var(--fs-base) * 3.8)); line-height: 1.05; letter-spacing: -0.02em; }
