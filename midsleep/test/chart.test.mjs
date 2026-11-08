@@ -36,19 +36,30 @@ test('todayChart: columns, bars, points, segments, ticks', () => {
   const m = Logic.todayChart(recs, '2026-11-08', 180);
   assert.equal(m.half, 300);
   assert.deepEqual(m.cols.map((c) => [c.x, c.date, c.label]), [[0, '2026-11-02', '2'], [1, '2026-11-03', '3'], [2, '2026-11-04', '4'], [3, '2026-11-05', '5'], [4, '2026-11-06', '6'], [5, '2026-11-07', '7'], [6, '2026-11-08', '8']]);
-  assert.deepEqual(m.bars, [{ x: 0, yBed: 0.1, yWake: 0.85 }, { x: 1, yBed: 0.25, yWake: 0.9 }, { x: 4, yBed: 0, yWake: 0.7 }]);
+  assert.deepEqual(m.bars, [{ x: 0, yBed: 0.1, yWake: 0.85, label: '7.5' }, { x: 1, yBed: 0.25, yWake: 0.9, label: '6.5' }, { x: 4, yBed: 0, yWake: 0.7, label: '7.0' }]);
   assert.deepEqual(m.points, [{ x: 0, y: 0.475 }, { x: 1, y: 0.575 }, { x: 4, y: 0.35 }]);
   assert.deepEqual(m.segments, [[0, 1]]);
-  assert.deepEqual(m.ticks.map((t) => [t.rel, t.y, t.label]), [[-300, 0, ''], [-240, 0.1, '-4h'], [-180, 0.2, ''], [-120, 0.3, '-2h'], [-60, 0.4, ''], [60, 0.6, ''], [120, 0.7, '+2h'], [180, 0.8, ''], [240, 0.9, '+4h'], [300, 1, '']]);
+  assert.deepEqual(m.ticks.map((t) => [t.rel, t.y, t.label]), [[-240, 0.1, '-4h'], [-120, 0.3, '-2h'], [120, 0.7, '+2h'], [240, 0.9, '+4h']]);
 });
 test('todayChart: empty, no target, late bed, custom days', () => {
   const e = Logic.todayChart([], '2026-11-08', 180);
   assert.equal(e.half, 240); assert.deepEqual(e.bars, []); assert.deepEqual(e.points, []); assert.deepEqual(e.segments, []);
-  assert.deepEqual(e.ticks.map((t) => [t.rel, t.label]), [[-240, '-4h'], [-180, ''], [-120, '-2h'], [-60, ''], [60, ''], [120, '+2h'], [180, ''], [240, '+4h']]);
+  assert.deepEqual(e.ticks.map((t) => [t.rel, t.y, t.label]), [[-240, 0, '-4h'], [-120, 0.25, '-2h'], [120, 0.75, '+2h'], [240, 1, '+4h']]);
   assert.equal(Logic.todayChart([], '2026-11-08', null), null);
   const late = Logic.todayChart([R('l', '2026-11-08T04:00', '2026-11-08T10:00')], '2026-11-08', 180); // bedRel +60, wakeRel 420, mid 7:00 → +240
   assert.equal(late.half, 420);
-  assert.deepEqual(late.bars, [{ x: 6, yBed: 0.571429, yWake: 1 }]);
+  assert.deepEqual(late.bars, [{ x: 6, yBed: 0.571429, yWake: 1, label: '6.0' }]);
+  assert.deepEqual(late.ticks.map((t) => t.y), [0.214286, 0.357143, 0.642857, 0.785714]);
   assert.deepEqual(late.points, [{ x: 6, y: 0.785714 }]);
   assert.equal(Logic.todayChart([], '2026-11-08', 180, 3).cols.length, 3);
+});
+
+test('sleepHoursLabel rounds to one decimal, integers from 10 h', () => {
+  assert.equal(Logic.sleepHoursLabel(450), '7.5');
+  assert.equal(Logic.sleepHoursLabel(423), '7.1');
+  assert.equal(Logic.sleepHoursLabel(594), '9.9');
+  assert.equal(Logic.sleepHoursLabel(597), '10');
+  assert.equal(Logic.sleepHoursLabel(600), '10');
+  assert.equal(Logic.sleepHoursLabel(1568), '26');
+  assert.equal(Logic.sleepHoursLabel(0), '0.0');
 });

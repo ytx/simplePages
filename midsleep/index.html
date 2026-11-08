@@ -2737,6 +2737,7 @@ const Logic = (() => {
         bed: circularDiff(minutesOfDay(r.bedAt), targetMin),
         wake: circularDiff(minutesOfDay(r.wakeAt), targetMin),
         mid: circularDiff(midMinutes(r.bedAt, r.wakeAt), targetMin),
+        sleepMin: durationMin(r.bedAt, r.wakeAt),
       });
     }
     rows.sort((a, b) => a.x - b.x);
@@ -2744,16 +2745,18 @@ const Logic = (() => {
     for (const w of rows) maxAbs = Math.max(maxAbs, Math.abs(w.bed), Math.abs(w.wake));
     const half = Math.max(240, Math.ceil(maxAbs / 60) * 60);
     const ratio = (rel) => round6(0.5 + rel / (2 * half));
-    const bars = rows.map((w) => ({ x: w.x, yBed: ratio(w.bed), yWake: ratio(w.wake) }));
+    const bars = rows.map((w) => ({ x: w.x, yBed: ratio(w.bed), yWake: ratio(w.wake), label: sleepHoursLabel(w.sleepMin) }));
     const points = rows.map((w) => ({ x: w.x, y: ratio(w.mid) }));
     const segments = [];
     for (let i = 0; i + 1 < points.length; i++) if (points[i + 1].x === points[i].x + 1) segments.push([i, i + 1]);
-    const ticks = [];
-    for (let rel = -half; rel <= half; rel += 60) {
-      if (rel === 0) continue;
-      ticks.push({ y: ratio(rel), rel, label: rel % 120 === 0 ? `${rel < 0 ? '-' : '+'}${Math.abs(rel) / 60}h` : '' });
-    }
+    // 目盛は ±2h と ±4h の 4 本だけ(half は 240 以上なので必ず帯の中に入る)
+    const ticks = [-240, -120, 120, 240].map((rel) => ({ y: ratio(rel), rel, label: `${rel < 0 ? '-' : '+'}${Math.abs(rel) / 60}h` }));
     return { half, cols, bars, points, segments, ticks };
+  }
+  // 睡眠時間の短い表記: 小数 1 桁に丸め、10 時間以上は整数(7.5 / 10)
+  function sleepHoursLabel(min) {
+    const h = Math.round(min / 6) / 10;
+    return h >= 10 ? String(Math.round(h)) : h.toFixed(1);
   }
   function chartModel(records, days, today, targetMin, lang) {
     const first = addDays(today, -(days - 1));
@@ -2875,7 +2878,7 @@ const Logic = (() => {
     if (sleepMin > 720) return 'long';
     return null;
   }
-  return { relMinutes, targetRel, chartModel, todayChart, summaryLine, truncMin, nextOccurrence, wakeFor, bedFor, adviceFlags, isNap, wakeDate, sleepingRecord, completed, inWindow, stats, manualTarget, targetFor, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, durationParts, midOf, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
+  return { relMinutes, targetRel, chartModel, todayChart, sleepHoursLabel, summaryLine, truncMin, nextOccurrence, wakeFor, bedFor, adviceFlags, isNap, wakeDate, sleepingRecord, completed, inWindow, stats, manualTarget, targetFor, validateRecord, invalidCount, isStale, newId, VERSION, DATA_VERSION, parseLocal, formatLocal, minutesOfDay, durationMin, midMinutes, circularMean, circularDiff, formatHM, formatDuration, durationParts, midOf, formatDateShort, todayStr, addDays, SCHEMA, fixupSettings, normalizeData, coerce, resolveSettings, migrateStored, I18N, t, detectLang, effectiveTheme, stepZoom, toggleTheme, toggleLang, parseImportAll };
 })();
 </script>
 <script id="app-ui">
@@ -3337,7 +3340,8 @@ const App = (() => {
       const cls = t.y < 0.5 ? 'top' : 'bottom';
       nodes.push(svg('line', { class: 'tick-' + cls, x1: 0, x2: W, y1: t.y * H, y2: t.y * H }));
       // 帯の外にはみ出すラベルは描かない(目盛り線は残す)
-      if (t.label && t.y * H - 12 * z >= 0) nodes.push(svg('text', { class: 'lbl-' + cls, x: 2, y: t.y * H - 4 * z, 'text-anchor': 'start' }, t.label));
+      // ラベルは線の境目側(上半分は線の下、下半分は線の上)に置き、帯の外へ出さない
+      nodes.push(svg('text', { class: 'lbl-' + cls, x: 2, y: t.y * H + (t.rel < 0 ? 11 * z : -4 * z), 'text-anchor': 'start' }, t.label));
     }
     for (const b of model.bars) {
       const x = xOf(b.x) - bw / 2;
@@ -3351,6 +3355,8 @@ const App = (() => {
       }
     }
     for (const c of model.cols) nodes.push(svg('text', { class: 'lbl-top', x: xOf(c.x), y: 10 * z, 'text-anchor': 'middle' }, c.label));
+    // 棒の下(日付の反対側)に睡眠時間(7.5 / 10)
+    for (const b of model.bars) nodes.push(svg('text', { class: 'lbl-bottom', x: xOf(b.x), y: H - 3 * z, 'text-anchor': 'middle' }, b.label));
     for (const sg of model.segments) {
       const pts = sg.map((i) => `${xOf(model.points[i].x)},${model.points[i].y * H}`).join(' ');
       nodes.push(svg('polyline', { class: 'mid-line-halo', points: pts }));
