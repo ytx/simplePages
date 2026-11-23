@@ -1982,7 +1982,7 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 }
 #content { display: grid; grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; column-gap: 0; position: relative; }
 /* 左下のサイト案内(QR + URL)。操作の邪魔をしないよう pointer-events なし、700px 未満では出さない */
-#site-link { position: absolute; left: var(--gap); bottom: var(--gap); display: flex; align-items: flex-end; gap: calc(var(--gap) / 2); font-size: var(--fs-small); color: var(--fg-muted); pointer-events: none; }
+#site-link { position: absolute; left: var(--gap); bottom: var(--gap); display: flex; flex-direction: column; align-items: flex-start; gap: calc(var(--gap) / 3); font-size: var(--fs-base); color: var(--fg-muted); pointer-events: none; }
 #site-link svg { width: calc(120px * var(--zoom)); height: calc(120px * var(--zoom)); border-radius: 4px; }
 @media (max-width: 699px) { #site-link { display: none; } }
 #content.editor-on { grid-template-columns: var(--left-width) 8px minmax(0, 1fr); }
