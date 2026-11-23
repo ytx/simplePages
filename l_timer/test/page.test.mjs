@@ -44,6 +44,14 @@ test('Courier Prime is bundled and used for the timer digits', () => {
   assert.match(src, /name: 'Courier Prime', url: 'https:\/\/github\.com\/quoteunquoteapps\/CourierPrime'/);
 });
 
+test('site link: QR code and URL at the bottom left', () => {
+  const block = src.match(/<div id="site-link"[^>]*>([\s\S]*?)<\/div>/);
+  assert.ok(block, 'site-link block');
+  assert.match(block[1], /<svg viewBox="-2 -2 29 29"[^>]*><rect[^>]*fill="#fff"\/><path d="M0 0h7v1h-7z/);
+  assert.match(block[1], /<span>https:\/\/ytx\.github\.io\/<\/span>/);
+  assert.match(src, /#site-link \{[^}]*position: absolute;[^}]*left: var\(--gap\);[^}]*bottom: var\(--gap\)/);
+});
+
 test('every data-i18n key and every t() key exists in ja and en', () => {
   const keys = new Set();
   for (const m of src.matchAll(/data-i18n(?:-label|-placeholder)?="([\w-]+)"/g)) keys.add(m[1]);

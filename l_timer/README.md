@@ -64,6 +64,10 @@ localStorage キー `simplePages.l_timer.data`(文書・下書き・演習タイ
 
 データタブの書き出しは `{ "version": 1, "settings": …, "data": … }`。読み込みは設定を置き換え、文書は追加(id が重なれば改名)、履歴は結合する。旧 l_timer の書き出し JSON(`version: "1.0"`、`settings.timerSettings`、`documents.documents[]`)も読み込め、Quill の HTML は太字・箇条書き・見出しだけ残して取り込む。
 
+## 左下のサイト案内
+
+画面の左下に、サイト <https://ytx.github.io/> の QR コードと URL を小さく表示する(幅 700px 未満では出さない)。QR コードは index.html に埋め込んだ静的な SVG(version 2、誤り訂正レベル M)で、外部の生成ライブラリは使っていない。
+
 ## 書体
 
 残り時間・終了時刻・演習タイマーの数字と、エディタの拡大率表示には Courier Prime(The Courier Prime Project Authors、SIL Open Font License 1.1)の Regular を `fonts/courier-prime/CourierPrime-Regular-latin.woff2`(Google Fonts の latin 分割、11 KB)として同梱し、CSS 変数 `--font-num` で当てている(Courier Prime にない文字、たとえば「終了」は `--font` に落ちる)。太字は使わない。ライセンス全文は同ディレクトリの `OFL.txt`。他の文字は Zen Maru Gothic(The Zen Maru Gothic Project Authors、SIL Open Font License 1.1)の Regular を `fonts/zen-maru-gothic/`(Google Fonts の unicode-range 分割 woff2 122 本、合計 2.2 MB。midsleep と同じもの)として同梱し、`--font` の先頭に置いている。ライセンス全文は同ディレクトリの `OFL.txt`。

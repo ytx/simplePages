@@ -1980,7 +1980,11 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime: #f06060; --c-exercise: #f39c12; }
 }
-#content { display: grid; grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; column-gap: 0; }
+#content { display: grid; grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; column-gap: 0; position: relative; }
+/* 左下のサイト案内(QR + URL)。操作の邪魔をしないよう pointer-events なし、700px 未満では出さない */
+#site-link { position: absolute; left: var(--gap); bottom: var(--gap); display: flex; align-items: flex-end; gap: calc(var(--gap) / 2); font-size: var(--fs-small); color: var(--fg-muted); pointer-events: none; }
+#site-link svg { width: calc(72px * var(--zoom)); height: calc(72px * var(--zoom)); border-radius: 4px; }
+@media (max-width: 699px) { #site-link { display: none; } }
 #content.editor-on { grid-template-columns: var(--left-width) 8px minmax(0, 1fr); }
 #page-title { grid-column: 1 / -1; }
 #page-title.lecture { color: var(--c-lecture); }
@@ -2230,6 +2234,11 @@ dialog#dialog::backdrop { background: rgba(0,0,0,0.5); }
       <button id="doc-delete" class="icon-btn" type="button" disabled data-i18n-label="doc_delete"><svg aria-hidden="true"><use href="#icon-delete"></use></svg></button>
     </div>
   </aside>
+  <!-- 左下: サイトの QR コードと URL(静的。https://ytx.github.io/ を version 2 / 誤り訂正 M で符号化したもの) -->
+  <div id="site-link" aria-hidden="true">
+    <svg viewBox="-2 -2 29 29" shape-rendering="crispEdges"><rect x="-2" y="-2" width="29" height="29" fill="#fff"/><path d="M0 0h7v1h-7zM9 0h1v1h-1zM14 0h2v1h-2zM18 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM8 1h3v1h-3zM12 1h1v1h-1zM15 1h2v1h-2zM18 1h1v1h-1zM24 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM10 2h2v1h-2zM14 2h1v1h-1zM18 2h1v1h-1zM20 2h3v1h-3zM24 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM9 3h2v1h-2zM12 3h1v1h-1zM15 3h2v1h-2zM18 3h1v1h-1zM20 3h3v1h-3zM24 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM8 4h3v1h-3zM13 4h3v1h-3zM18 4h1v1h-1zM20 4h3v1h-3zM24 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM9 5h1v1h-1zM11 5h1v1h-1zM14 5h2v1h-2zM18 5h1v1h-1zM24 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h7v1h-7zM9 7h2v1h-2zM13 7h1v1h-1zM15 7h1v1h-1zM0 8h1v1h-1zM2 8h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM13 8h1v1h-1zM15 8h2v1h-2zM20 8h1v1h-1zM23 8h1v1h-1zM2 9h1v1h-1zM7 9h1v1h-1zM10 9h3v1h-3zM16 9h1v1h-1zM18 9h1v1h-1zM24 9h1v1h-1zM0 10h2v1h-2zM3 10h1v1h-1zM5 10h3v1h-3zM9 10h1v1h-1zM11 10h2v1h-2zM14 10h1v1h-1zM16 10h5v1h-5zM22 10h3v1h-3zM0 11h1v1h-1zM2 11h1v1h-1zM5 11h1v1h-1zM8 11h1v1h-1zM11 11h7v1h-7zM19 11h2v1h-2zM23 11h1v1h-1zM0 12h1v1h-1zM2 12h2v1h-2zM6 12h1v1h-1zM9 12h2v1h-2zM13 12h1v1h-1zM17 12h3v1h-3zM21 12h1v1h-1zM23 12h2v1h-2zM1 13h1v1h-1zM4 13h2v1h-2zM7 13h1v1h-1zM11 13h1v1h-1zM16 13h1v1h-1zM18 13h1v1h-1zM21 13h1v1h-1zM24 13h1v1h-1zM0 14h1v1h-1zM2 14h2v1h-2zM6 14h1v1h-1zM9 14h1v1h-1zM13 14h1v1h-1zM19 14h1v1h-1zM22 14h3v1h-3zM1 15h1v1h-1zM3 15h1v1h-1zM9 15h1v1h-1zM11 15h1v1h-1zM13 15h3v1h-3zM17 15h1v1h-1zM20 15h1v1h-1zM23 15h1v1h-1zM0 16h1v1h-1zM2 16h1v1h-1zM5 16h2v1h-2zM9 16h2v1h-2zM12 16h10v1h-10zM8 17h1v1h-1zM11 17h2v1h-2zM15 17h2v1h-2zM20 17h2v1h-2zM23 17h2v1h-2zM0 18h7v1h-7zM9 18h1v1h-1zM11 18h3v1h-3zM15 18h2v1h-2zM18 18h1v1h-1zM20 18h2v1h-2zM23 18h2v1h-2zM0 19h1v1h-1zM6 19h1v1h-1zM10 19h1v1h-1zM12 19h3v1h-3zM16 19h1v1h-1zM20 19h2v1h-2zM23 19h2v1h-2zM0 20h1v1h-1zM2 20h3v1h-3zM6 20h1v1h-1zM8 20h4v1h-4zM14 20h1v1h-1zM16 20h6v1h-6zM23 20h2v1h-2zM0 21h1v1h-1zM2 21h3v1h-3zM6 21h1v1h-1zM9 21h1v1h-1zM11 21h1v1h-1zM16 21h2v1h-2zM19 21h4v1h-4zM0 22h1v1h-1zM2 22h3v1h-3zM6 22h1v1h-1zM8 22h3v1h-3zM13 22h1v1h-1zM15 22h2v1h-2zM20 22h1v1h-1zM24 22h1v1h-1zM0 23h1v1h-1zM6 23h1v1h-1zM10 23h2v1h-2zM15 23h2v1h-2zM18 23h1v1h-1zM20 23h2v1h-2zM23 23h1v1h-1zM0 24h7v1h-7zM8 24h1v1h-1zM10 24h1v1h-1zM12 24h1v1h-1zM15 24h2v1h-2zM19 24h1v1h-1zM23 24h2v1h-2z" fill="#000"/></svg>
+    <span>https://ytx.github.io/</span>
+  </div>
 </main>
 <audio id="audio-warning" preload="auto"></audio>
 <audio id="audio-end" preload="auto"></audio>
