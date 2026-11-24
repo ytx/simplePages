@@ -1981,8 +1981,9 @@ html[data-theme="dark"] { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime
   html:not([data-theme="light"]) { --c-lecture: #5b9cf5; --c-break: #4caf50; --c-overtime: #f06060; --c-exercise: #f39c12; }
 }
 #content { display: grid; grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; column-gap: 0; position: relative; }
-/* 左下のサイト案内(QR + URL)。操作の邪魔をしないよう pointer-events なし、700px 未満では出さない */
-#site-link { position: absolute; left: var(--gap); bottom: var(--gap); display: flex; flex-direction: column; align-items: flex-start; gap: calc(var(--gap) / 3); font-size: var(--fs-base); color: var(--fg-muted); pointer-events: none; }
+/* 左下のサイト案内(QR + URL)。クリックで表示/非表示を切り替える(状態は保存しない)。700px 未満では出さない */
+#site-link { position: absolute; left: var(--gap); bottom: var(--gap); display: flex; flex-direction: column; align-items: flex-start; gap: calc(var(--gap) / 3); font-size: var(--fs-base); color: var(--fg-muted); cursor: pointer; user-select: none; }
+#site-link.off > * { visibility: hidden; }
 #site-link svg { width: calc(120px * var(--zoom)); height: calc(120px * var(--zoom)); border-radius: 4px; }
 @media (max-width: 699px) { #site-link { display: none; } }
 #content.editor-on { grid-template-columns: var(--left-width) 8px minmax(0, 1fr); }
@@ -3163,6 +3164,7 @@ const App = (() => {
     $('#btn-zoom-in').addEventListener('click', () => updateSettings({ zoom: Logic.stepZoom(settings.zoom, 1) }));
     $('#btn-zoom-out').addEventListener('click', () => updateSettings({ zoom: Logic.stepZoom(settings.zoom, -1) }));
     $('#btn-fullscreen').addEventListener('click', toggleFullscreen);
+    $('#site-link').addEventListener('click', (e) => e.currentTarget.classList.toggle('off')); // 左下の QR + URL。状態は保存しない
     document.addEventListener('fullscreenchange', updateFullscreenButton);
     $('#btn-lang').addEventListener('click', () => updateSettings({ lang: Logic.toggleLang(settings.lang) }));
     $('#btn-settings').addEventListener('click', () => {
